@@ -37,6 +37,16 @@ const nextConfig = {
   },
   // Compress responses
   compress: true,
+  // Redirect old demo slug so bookmarked links don't 404
+  async redirects() {
+    return [
+      {
+        source: '/demo-wedding',
+        destination: '/bride-and-groom',
+        permanent: true,
+      },
+    ]
+  },
   // Power headers for security
   async headers() {
     return [
