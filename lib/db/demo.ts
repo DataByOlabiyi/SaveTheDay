@@ -8,7 +8,7 @@ import type { Wedding, Guest, GalleryAlbum, GalleryPhoto, StoryMilestone, EventS
 
 export const DEMO_WEDDING: Wedding = {
   id: 'demo-wedding-id',
-  slug: 'demo-wedding',
+  slug: 'bride-and-groom',
   couple_names: { name1: 'Mojirade', name2: 'Olabiyi' },
   wedding_date: '2026-08-22T00:00:00.000Z', // 22 August 2026
   venue: 'Eko Hotel & Suites',

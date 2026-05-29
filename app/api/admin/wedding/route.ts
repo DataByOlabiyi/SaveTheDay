@@ -46,6 +46,7 @@ const configSchema = z.object({
 const patchSchema = z.object({
   weddingId:     z.string().uuid(),
   secret:        z.string(),
+  slug:          z.string().min(3).max(100).regex(/^[a-z0-9-]+$/).optional(),
   venue:         z.string().min(1).max(200).optional(),
   venue_address: z.string().max(300).optional().nullable(),
   city:          z.string().max(100).optional(),
@@ -68,7 +69,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 422 })
   }
 
-  const { weddingId, secret, venue, venue_address, city, config } = parsed.data
+  const { weddingId, secret, slug, venue, venue_address, city, config } = parsed.data
 
   if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
@@ -86,7 +87,22 @@ export async function PATCH(req: NextRequest) {
 
     if (fetchError) throw fetchError
 
+    // Check slug uniqueness — reject if another wedding already uses it
+    if (slug) {
+      const { data: existing } = await supabase
+        .from('weddings')
+        .select('id')
+        .eq('slug', slug)
+        .neq('id', weddingId)
+        .maybeSingle()
+
+      if (existing) {
+        return NextResponse.json({ error: 'This URL is already taken. Try adding the year, e.g. mojirade-and-olabiyi-2026.' }, { status: 409 })
+      }
+    }
+
     const updates: Record<string, unknown> = {}
+    if (slug)            updates.slug          = slug
     if (venue)           updates.venue         = sanitizeText(venue)
     if (venue_address !== undefined) updates.venue_address = venue_address ? sanitizeText(venue_address) : null
     if (city)            updates.city          = sanitizeText(city)

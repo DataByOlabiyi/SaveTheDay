@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { motion } from 'framer-motion'
+import { useRouter } from 'next/navigation'
 import type { Wedding, WeddingConfig, DressCodeColor } from '@/lib/db/types'
 
 /* ─────────────────────────────────────────────────────────
@@ -177,6 +178,7 @@ interface WeddingSettingsEditorProps {
 }
 
 export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: WeddingSettingsEditorProps) {
+  const router = useRouter()
   const [config, setConfig] = useState<WeddingConfig>({
     ...{
       show_countdown: true, show_guestbook: true, show_story: true,
@@ -192,6 +194,13 @@ export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: Wedding
   const [saving, setSaving]       = useState(false)
   const [saved, setSaved]         = useState(false)
   const [error, setError]         = useState<string | null>(null)
+
+  // Slug editor state
+  const [slug, setSlug]               = useState(wedding.slug)
+  const [slugSaving, setSlugSaving]   = useState(false)
+  const [slugSaved, setSlugSaved]     = useState(false)
+  const [slugError, setSlugError]     = useState<string | null>(null)
+  const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
 
   const setToggle = (key: keyof WeddingConfig) => (val: boolean) =>
     setConfig(prev => ({ ...prev, [key]: val }))
@@ -233,8 +242,86 @@ export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: Wedding
     }
   }
 
+  const handleSlugSave = async () => {
+    const trimmed = slug.trim()
+    if (trimmed === wedding.slug) return
+
+    setSlugSaving(true)
+    setSlugError(null)
+
+    try {
+      const res = await fetch('/api/admin/wedding', {
+        method:  'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weddingId: wedding.id, secret: adminSecret, slug: trimmed }),
+      })
+
+      if (!res.ok) {
+        const err = await res.json()
+        throw new Error(err.error ?? 'Failed to update URL')
+      }
+
+      setSlugSaved(true)
+      setTimeout(() => setSlugSaved(false), 2000)
+      // Redirect to new admin URL since the slug changed
+      router.push(`/admin/${trimmed}?secret=${adminSecret}`)
+    } catch (err) {
+      setSlugError(err instanceof Error ? err.message : 'Failed to update URL')
+    } finally {
+      setSlugSaving(false)
+    }
+  }
+
   return (
     <div className="space-y-8">
+
+      {/* ── Wedding URL ── */}
+      <div className="admin-card p-5">
+        <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-1">Wedding URL</h3>
+        <p className="text-[11px] text-ivory/25 mb-5">
+          This is the link guests use to open their invitation.
+        </p>
+
+        <div className="mb-4">
+          <label className="rsvp-label">URL Slug</label>
+          <div className="flex gap-2 items-center">
+            <span className="text-xs text-ivory/25 flex-shrink-0 hidden sm:block">
+              {appUrl}/
+            </span>
+            <input
+              type="text"
+              value={slug}
+              onChange={e => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              placeholder="name1-and-name2"
+              className="rsvp-input flex-1 font-mono text-sm"
+            />
+          </div>
+          <p className="text-[11px] text-ivory/20 mt-1 font-mono break-all">
+            {appUrl}/{slug}
+          </p>
+        </div>
+
+        {slug !== wedding.slug && (
+          <div className="rounded-xl border border-red-500/30 bg-red-500/[0.07] px-4 py-3 mb-4">
+            <p className="text-xs text-red-400 leading-relaxed">
+              <span className="font-semibold">Heads up:</span> Changing this URL will break all existing guest links that have already been shared. Only do this before sending out invitations.
+            </p>
+          </div>
+        )}
+
+        {slugError && (
+          <p className="text-xs text-red-400 mb-3">{slugError}</p>
+        )}
+
+        <motion.button
+          onClick={handleSlugSave}
+          disabled={slugSaving || slug.trim() === wedding.slug || slug.trim().length < 3}
+          className="btn-gold w-full py-3"
+          whileTap={{ scale: 0.98 }}
+        >
+          {slugSaving ? 'Updating…' : slugSaved ? '✓ Updated' : 'Update URL'}
+        </motion.button>
+      </div>
 
       {/* ── Venue Details ── */}
       <div className="admin-card p-5">
