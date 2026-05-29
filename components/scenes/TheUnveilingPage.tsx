@@ -1,0 +1,657 @@
+'use client'
+
+import { useState, useEffect, useRef, useCallback } from 'react'
+import { motion, AnimatePresence } from 'framer-motion'
+import { EnvelopeScene } from '@/components/organisms/EnvelopeScene'
+import { MontageScene } from '@/components/organisms/MontageScene'
+import { LoveStoryScene } from '@/components/organisms/LoveStoryScene'
+import { GalleryScene } from '@/components/organisms/GalleryScene'
+import { VenueSection } from '@/components/organisms/VenueSection'
+import { RSVPForm } from '@/components/organisms/RSVPForm'
+import { GuestbookScene } from '@/components/organisms/GuestbookScene'
+import { CountdownTimer } from '@/components/molecules/CountdownTimer'
+import { NameReveal } from '@/components/molecules/NameReveal'
+import { GoldDivider } from '@/components/atoms/GoldText'
+import { ParticleField } from '@/components/atoms/ParticleField'
+import { RSVPButton } from '@/components/molecules/RSVPButton'
+import { ShareableCard } from '@/components/molecules/ShareableCard'
+import { AddToCalendarButton } from '@/components/molecules/AddToCalendarButton'
+import { SectionDots } from '@/components/atoms/SectionDots'
+import { MusicPlayer } from '@/components/molecules/MusicPlayer'
+import { GiftRegistry } from '@/components/molecules/GiftRegistry'
+import { QRCodeModal } from '@/components/molecules/QRCodeModal'
+import { ThemeToggle } from '@/components/atoms/ThemeToggle'
+import { Events } from '@/lib/analytics/events'
+import { formatWeddingDate } from '@/lib/personalization/guest'
+import type { Wedding, Guest, EventScheduleItem, StoryMilestone, GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
+
+type AppPhase = 'intro' | 'revealed' | 'rsvp'
+
+interface TheUnveilingPageProps {
+  wedding:    Wedding
+  guest?:     Guest | null
+  schedule?:  EventScheduleItem[]
+  milestones?: StoryMilestone[]
+  albums?:     GalleryAlbum[]
+  photos?:     GalleryPhoto[]
+}
+
+// Build section list dynamically based on config
+function buildSections(config: Wedding['config']) {
+  const sections = [{ id: 'section-hero', label: 'Welcome' }]
+  if (config.show_story   !== false) sections.push({ id: 'section-story',    label: 'Our Story'  })
+  if (config.montage_images || config.montage_video)
+    sections.push({ id: 'section-montage', label: 'Gallery' })
+  if (config.show_gallery !== false) sections.push({ id: 'section-gallery',  label: 'Photos'    })
+  if (config.show_countdown !== false) sections.push({ id: 'section-countdown', label: 'Countdown' })
+  sections.push({ id: 'section-rsvp', label: 'RSVP' })
+  if (config.show_schedule || config.show_venue_map || config.dress_code)
+    sections.push({ id: 'section-venue', label: 'Details' })
+  if (config.show_gift_registry) sections.push({ id: 'section-registry', label: 'Gifts' })
+  if (config.show_guestbook !== false) sections.push({ id: 'section-guestbook', label: 'Guestbook' })
+  return sections
+}
+
+export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, albums, photos }: TheUnveilingPageProps) {
+  const [phase, setPhase]                     = useState<AppPhase>('intro')
+  const [nameRevealDone, setNameRevealDone]   = useState(false)
+  const [showRSVP, setShowRSVP]               = useState(false)
+  const [rsvpDone, setRsvpDone]               = useState(false)
+  const [rsvpStatus, setRsvpStatus]           = useState<'attending' | 'declined' | null>(null)
+  const [hashtagCopied, setHashtagCopied]     = useState(false)
+  const [showQR, setShowQR]                   = useState(false)
+  const [showRSVPBurst, setShowRSVPBurst]     = useState(false)
+  const [rsvpBurstOrigin, setRsvpBurstOrigin] = useState<{ x: number; y: number } | null>(null)
+  const rsvpSectionRef = useRef<HTMLDivElement>(null)
+  const rsvpRef        = useRef<HTMLDivElement>(null)
+
+  const { couple_names, wedding_date, venue, venue_address, city, config } = wedding
+  const weddingDate = formatWeddingDate(wedding_date)
+  const guestName   = guest?.name
+  const firstName   = guestName?.split(' ')[0]
+  const monogram    = (couple_names.name1[0] ?? '') + (couple_names.name2[0] ?? '')
+
+  // Determine music: prefer multi-track playlist, fall back to single track
+  const musicTracks = config.music_tracks?.length
+    ? config.music_tracks
+    : config.music_track
+    ? [{ url: config.music_track, title: 'Background Music' }]
+    : []
+
+  const activeSections = buildSections(config)
+
+  // Track page open
+  useEffect(() => {
+    Events.opened(wedding.id, guest?.id)
+    if (guest?.id && !guest.opened_at) {
+      fetch('/api/guest/mark-opened', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ guestId: guest.id }),
+      })
+    }
+  }, [wedding.id, guest?.id, guest?.opened_at])
+
+  // Lock body scroll during intro
+  useEffect(() => {
+    if (phase === 'intro') document.body.classList.add('scroll-locked')
+    else document.body.classList.remove('scroll-locked')
+    return () => document.body.classList.remove('scroll-locked')
+  }, [phase])
+
+  const handleSealCracked = () => {
+    Events.sealTapped(wedding.id, guest?.id)
+    setPhase('revealed')
+  }
+
+  const handleScrollToRSVP = () => {
+    setShowRSVP(true)
+    setTimeout(() => rsvpRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 100)
+  }
+
+  const handleRSVPSuccess = useCallback((status: 'attending' | 'declined') => {
+    setRsvpDone(true)
+    setRsvpStatus(status)
+    if (status === 'attending' && rsvpSectionRef.current) {
+      const rect = rsvpSectionRef.current.getBoundingClientRect()
+      setRsvpBurstOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
+      setShowRSVPBurst(true)
+    }
+  }, [])
+
+  const handleCopyHashtag = async () => {
+    const tag = config.hashtag ?? ''
+    try { await navigator.clipboard.writeText(tag) }
+    catch { /* fallback not needed for hashtag */ }
+    setHashtagCopied(true)
+    setTimeout(() => setHashtagCopied(false), 2200)
+  }
+
+  const handleShareInvitation = () => {
+    const url = typeof window !== 'undefined' ? window.location.href : ''
+    if (navigator.share) {
+      navigator.share({
+        title: `${couple_names.name1} & ${couple_names.name2}'s Wedding`,
+        text:  guestName
+          ? `${guestName} was personally invited! Open their invitation:`
+          : `You're invited to ${couple_names.name1} & ${couple_names.name2}'s Wedding`,
+        url,
+      }).catch(() => {})
+    } else {
+      window.open(
+        `https://wa.me/?text=${encodeURIComponent(`${couple_names.name1} & ${couple_names.name2}'s wedding invitation: ${url}`)}`,
+        '_blank'
+      )
+    }
+    Events.shared(wedding.id, guest?.id, 'invite_link')
+  }
+
+  const calendarEvent = {
+    title:       `${couple_names.name1} & ${couple_names.name2}'s Wedding`,
+    startDate:   wedding_date,
+    location:    `${venue}${venue_address ? `, ${venue_address}` : ''}, ${city}`,
+    description: `You're invited to the wedding of ${couple_names.name1} & ${couple_names.name2}`,
+    startTime:   config.start_time,
+    endTime:     config.end_time,
+  } as const
+
+  const inviteUrl = typeof window !== 'undefined' ? window.location.href : ''
+
+  return (
+    <div className="min-h-screen bg-obsidian">
+      {/* Skip navigation for screen readers */}
+      <a href="#section-hero" className="skip-nav">Skip to content</a>
+
+      {/* Theme toggle */}
+      <ThemeToggle />
+
+      {/* ── PHASE 1: Intro ── */}
+      <AnimatePresence>
+        {phase === 'intro' && (
+          <motion.div
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5 }}
+            className="fixed inset-0 z-50"
+          >
+            <EnvelopeScene
+              visible
+              onSealCracked={handleSealCracked}
+              monogram={monogram}
+            />
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ── PHASE 2+: Main content ── */}
+      <AnimatePresence>
+        {phase !== 'intro' && (
+          <motion.main
+            id="main-content"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8 }}
+            className="relative"
+          >
+            {/* Ambient particles */}
+            <ParticleField className="fixed inset-0 w-full h-full pointer-events-none" count={30} />
+
+            {/* Section progress dots */}
+            <SectionDots sections={activeSections} />
+
+            {/* Music player — multi-track */}
+            {musicTracks.length > 0 && (
+              <MusicPlayer tracks={musicTracks} />
+            )}
+
+            {/* RSVP confetti burst */}
+            {showRSVPBurst && rsvpBurstOrigin && (
+              <div className="fixed inset-0 pointer-events-none z-50">
+                <ParticleField
+                  className="w-full h-full" burst
+                  burstOrigin={rsvpBurstOrigin}
+                  onBurstComplete={() => setShowRSVPBurst(false)}
+                />
+              </div>
+            )}
+
+            {/* QR Modal */}
+            <AnimatePresence>
+              {showQR && (
+                <QRCodeModal
+                  url={inviteUrl}
+                  title="Save the Date"
+                  subtitle={`${couple_names.name1} & ${couple_names.name2}`}
+                  whatsappText={`You're invited! ${couple_names.name1} & ${couple_names.name2}'s wedding: ${inviteUrl}`}
+                  emailSubject={`You're invited — ${couple_names.name1} & ${couple_names.name2}`}
+                  emailBody={`Open your personal wedding invitation:`}
+                  onClose={() => setShowQR(false)}
+                />
+              )}
+            </AnimatePresence>
+
+            {/* ── HERO ── */}
+            <section
+              id="section-hero"
+              tabIndex={-1}
+              className="relative min-h-screen flex flex-col items-center justify-center px-6 py-20"
+              aria-label="Wedding invitation hero"
+            >
+              <div className="absolute inset-0 pointer-events-none" style={{
+                background: 'radial-gradient(ellipse 80% 60% at 50% 40%, rgba(12, 168, 110, 0.07) 0%, transparent 70%)',
+              }} />
+
+              {guestName && (
+                <motion.p
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.3, duration: 0.8 }}
+                  className="font-body text-xs tracking-[0.35em] uppercase text-emerald-DEFAULT/60 mb-8"
+                >
+                  {firstName ? `For ${firstName}` : 'For You'}
+                </motion.p>
+              )}
+
+              <NameReveal
+                name1={couple_names.name1}
+                name2={couple_names.name2}
+                delay={400}
+                onComplete={() => setNameRevealDone(true)}
+                className="mb-10 w-full max-w-sm mx-auto"
+              />
+
+              <motion.div
+                initial={{ opacity: 0, scaleX: 0 }}
+                animate={nameRevealDone ? { opacity: 1, scaleX: 1 } : {}}
+                transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+              >
+                <GoldDivider wide className="mb-10" />
+              </motion.div>
+
+              <AnimatePresence>
+                {nameRevealDone && (
+                  <>
+                    <motion.div
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
+                      className="text-center mb-10"
+                    >
+                      <p className="font-body tracking-[0.35em] uppercase mb-3"
+                        style={{ fontSize: '0.7rem', color: 'rgba(12, 168, 110, 0.6)' }}>
+                        Save the date
+                      </p>
+                      <p className="font-display text-gold-gradient"
+                        style={{ fontSize: 'clamp(1.25rem, 4vw, 2rem)', fontWeight: 300, letterSpacing: '0.08em' }}>
+                        {weddingDate.day} {weddingDate.month}
+                      </p>
+                      <p className="font-display text-ivory/60"
+                        style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1.125rem)', fontWeight: 300, letterSpacing: '0.2em' }}>
+                        {weddingDate.year}
+                      </p>
+                      {config.intro_text && (
+                        <motion.p
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.4, duration: 0.8 }}
+                          className="font-display text-ivory/35 mt-3"
+                          style={{ fontSize: 'clamp(0.75rem, 2vw, 0.9rem)', fontStyle: 'italic', fontWeight: 300, letterSpacing: '0.08em' }}
+                        >
+                          {config.intro_text}
+                        </motion.p>
+                      )}
+                    </motion.div>
+
+                    {/* Venue */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 16 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ duration: 0.8, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                      className="text-center mb-12"
+                    >
+                      <div className="flex items-center justify-center gap-2 mb-1">
+                        <svg width="12" height="14" viewBox="0 0 12 14" fill="none" aria-hidden="true">
+                          <path d="M6 0C2.68 0 0 2.68 0 6C0 10.5 6 14 6 14C6 14 12 10.5 12 6C12 2.68 9.32 0 6 0ZM6 8C4.9 8 4 7.1 4 6C4 4.9 4.9 4 6 4C7.1 4 8 4.9 8 6C8 7.1 7.1 8 6 8Z" fill="rgba(12, 168, 110, 0.6)" />
+                        </svg>
+                        <p className="font-body tracking-widest uppercase"
+                          style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.6)' }}>
+                          {city}
+                        </p>
+                      </div>
+                      <p className="font-display text-ivory/70"
+                        style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1.25rem)', fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em' }}>
+                        {venue}
+                      </p>
+                      {venue_address && (
+                        <p className="font-body text-ivory/35 mt-1" style={{ fontSize: '0.8rem', letterSpacing: '0.04em' }}>
+                          {venue_address}
+                        </p>
+                      )}
+                    </motion.div>
+
+                    {/* Scroll indicator + QR */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      transition={{ delay: 1 }}
+                      className="flex flex-col items-center gap-4"
+                    >
+                      {/* QR code button */}
+                      <button
+                        onClick={() => setShowQR(true)}
+                        className="flex items-center gap-1.5 font-body text-ivory/25 hover:text-ivory/50 transition-colors"
+                        style={{ fontSize: '0.65rem', letterSpacing: '0.2em', textTransform: 'uppercase' }}
+                        aria-label="Show QR code for this invitation"
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                          <rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="3" height="3"/>
+                        </svg>
+                        QR Code
+                      </button>
+
+                      <p className="font-body text-xs tracking-[0.3em] uppercase text-ivory/25">Scroll</p>
+                      <motion.div animate={{ y: [0, 6, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
+                        <svg width="16" height="24" viewBox="0 0 16 24" fill="none" aria-hidden="true">
+                          <rect x="1" y="1" width="14" height="22" rx="7" stroke="rgba(12, 168, 110, 0.3)" strokeWidth="1.5" />
+                          <motion.rect x="6.5" y="5" width="3" height="5" rx="1.5" fill="rgba(12, 168, 110, 0.6)"
+                            animate={{ y: [5, 11, 5] }} transition={{ duration: 1.5, repeat: Infinity }} />
+                        </svg>
+                      </motion.div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </section>
+
+            {/* ── LOVE STORY ── */}
+            {config.show_story !== false && (
+              <LoveStoryScene
+                weddingId={wedding.id}
+                guestId={guest?.id}
+                initialMilestones={milestones}
+              />
+            )}
+
+            {/* ── MONTAGE (legacy) — shown if montage images configured ── */}
+            {(config.montage_images?.length || config.montage_video) && (
+              <section id="section-montage" className="relative py-16 px-0">
+                <div className="text-center mb-10 px-6">
+                  <p className="font-body tracking-[0.3em] uppercase mb-3"
+                    style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.5)' }}>
+                    Moments
+                  </p>
+                  <GoldDivider className="mx-auto" />
+                </div>
+                <MontageScene
+                  images={config.montage_images?.map(id => ({ publicId: id }))}
+                  videoPublicId={config.montage_video}
+                  weddingId={wedding.id}
+                  guestId={guest?.id}
+                />
+              </section>
+            )}
+
+            {/* ── GALLERY ── */}
+            {config.show_gallery !== false && (
+              <GalleryScene
+                weddingId={wedding.id}
+                guestId={guest?.id}
+                allowDownloads={config.allow_downloads !== false}
+                initialAlbums={albums}
+                initialPhotos={photos}
+                galleryHref={
+                  guest?.slug
+                    ? `/${wedding.slug}/gallery?guest=${guest.slug}`
+                    : `/${wedding.slug}/gallery`
+                }
+              />
+            )}
+
+            {/* ── COUNTDOWN ── */}
+            {config.show_countdown !== false && (
+              <motion.section
+                id="section-countdown"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ duration: 1 }}
+                className="py-20 px-6"
+                aria-label="Wedding countdown"
+              >
+                <div className="text-center mb-10">
+                  <p className="font-body tracking-[0.3em] uppercase mb-3"
+                    style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.5)' }}>
+                    Counting down
+                  </p>
+                  <GoldDivider />
+                </div>
+                <CountdownTimer weddingDate={wedding_date} className="justify-center" />
+              </motion.section>
+            )}
+
+            {/* ── RSVP ── */}
+            <section
+              id="section-rsvp"
+              ref={rsvpSectionRef}
+              className="relative py-20 px-6 overflow-hidden"
+              style={{ background: 'linear-gradient(180deg, transparent 0%, rgba(11, 82, 64, 0.08) 50%, transparent 100%)' }}
+              aria-label="RSVP"
+            >
+              <div className="absolute inset-0 pointer-events-none"
+                style={{ background: 'radial-gradient(ellipse 70% 50% at 50% 60%, rgba(12, 168, 110, 0.06) 0%, transparent 70%)' }} />
+              <div className="relative max-w-sm mx-auto">
+                {guestName ? (
+                  <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }} transition={{ duration: 0.8 }} className="text-center mb-14">
+                    <p className="font-display text-ivory/90 mb-4"
+                      style={{ fontSize: 'clamp(1.5rem, 5vw, 2.5rem)', fontWeight: 300, fontStyle: 'italic', lineHeight: 1.2 }}>
+                      {firstName}, you&apos;re invited.
+                    </p>
+                    <GoldDivider className="mb-4" />
+                    <p className="font-body text-ivory/50 text-sm leading-relaxed">
+                      {couple_names.name1} &amp; {couple_names.name2} can&apos;t imagine<br className="hidden sm:block" />
+                      this day without you.
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }} transition={{ duration: 0.8 }} className="text-center mb-14">
+                    <p className="font-display text-ivory/80"
+                      style={{ fontSize: 'clamp(1.25rem, 4vw, 2rem)', fontWeight: 300, fontStyle: 'italic' }}>
+                      You&apos;re invited.
+                    </p>
+                    <GoldDivider className="mt-4" />
+                  </motion.div>
+                )}
+
+                {!showRSVP ? (
+                  <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.3 }}
+                    className="flex flex-col items-center gap-4">
+                    {config.rsvp_deadline && (
+                      <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }}
+                        transition={{ delay: 0.6 }}
+                        className="flex items-center gap-1.5 px-3 py-1 rounded-full"
+                        style={{ background: 'rgba(12,168,110,0.08)', border: '1px solid rgba(12,168,110,0.2)' }}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="rgba(12,168,110,0.7)" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
+                          <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
+                        </svg>
+                        <span className="font-body text-emerald-DEFAULT/70" style={{ fontSize: '0.65rem', letterSpacing: '0.12em' }}>
+                          RSVP by {new Date(config.rsvp_deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+                        </span>
+                      </motion.div>
+                    )}
+                    <RSVPButton onClick={handleScrollToRSVP} className="w-full max-w-xs" />
+                    <AddToCalendarButton {...calendarEvent} className="w-full max-w-xs" />
+
+                    {/* Share row */}
+                    <div className="flex items-center gap-4 mt-1">
+                      <motion.button
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 0.9 }}
+                        onClick={handleShareInvitation}
+                        className="flex items-center gap-1.5 font-body text-ivory/35 hover:text-ivory/60 transition-colors"
+                        style={{ fontSize: '0.7rem', letterSpacing: '0.12em' }}
+                        aria-label="Share this invitation"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                          <line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+                        </svg>
+                        Share
+                      </motion.button>
+                      <motion.button
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 1.0 }}
+                        onClick={() => setShowQR(true)}
+                        className="flex items-center gap-1.5 font-body text-ivory/35 hover:text-ivory/60 transition-colors"
+                        style={{ fontSize: '0.7rem', letterSpacing: '0.12em' }}
+                        aria-label="Show QR code"
+                      >
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                          <rect x="3" y="14" width="7" height="7"/>
+                        </svg>
+                        QR Code
+                      </motion.button>
+                    </div>
+                  </motion.div>
+                ) : (
+                  <motion.div ref={rsvpRef} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.6 }} className="pt-4">
+                    {config.rsvp_deadline && (
+                      <p className="text-center text-xs text-ivory/30 mb-6 tracking-wider">
+                        Please RSVP by {new Date(config.rsvp_deadline).toLocaleDateString('en-GB', { day: 'numeric', month: 'long' })}
+                      </p>
+                    )}
+                    <RSVPForm
+                      guestId={guest?.id}
+                      guestName={guestName}
+                      weddingId={wedding.id}
+                      allowPlusOne={config.allow_plus_one}
+                      maxPartySize={config.max_party_size}
+                      collectDietary={config.collect_dietary}
+                      onSuccess={handleRSVPSuccess}
+                      existingStatus={guest?.rsvp_status}
+                    />
+                  </motion.div>
+                )}
+              </div>
+            </section>
+
+            {/* ── Post-RSVP card ── */}
+            <AnimatePresence>
+              {rsvpDone && rsvpStatus && (
+                <motion.section
+                  initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.8, delay: 0.5 }}
+                  className="py-16 px-6"
+                  aria-label="Your invitation card"
+                >
+                  <div className="max-w-sm mx-auto">
+                    <GoldDivider wide className="mb-8" />
+                    <p className="font-body text-xs tracking-[0.3em] uppercase text-ivory/30 mb-8 text-center">
+                      Your invitation card
+                    </p>
+                    <ShareableCard
+                      weddingSlug={wedding.slug} guestName={guestName} status={rsvpStatus}
+                      weddingId={wedding.id} guestId={guest?.id}
+                      coupleName1={couple_names.name1} coupleName2={couple_names.name2}
+                    />
+                    <AddToCalendarButton {...calendarEvent} className="mt-3" />
+                  </div>
+                </motion.section>
+              )}
+            </AnimatePresence>
+
+            {/* ── VENUE / SCHEDULE / DRESS CODE ── */}
+            {(config.show_schedule || config.show_venue_map || config.dress_code || venue) && (
+              <VenueSection
+                venue={venue}
+                venueAddress={venue_address}
+                city={city}
+                config={config}
+                schedule={schedule}
+              />
+            )}
+
+            {/* ── GIFT REGISTRY ── */}
+            {config.show_gift_registry && (
+              <GiftRegistry
+                registryUrl={config.gift_registry_url}
+                registryNote={config.gift_registry_note}
+                coupleName1={couple_names.name1}
+                coupleName2={couple_names.name2}
+              />
+            )}
+
+            {/* ── GUESTBOOK ── */}
+            {config.show_guestbook !== false && (
+              <motion.div
+                id="section-guestbook"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-80px' }}
+                transition={{ duration: 0.8 }}
+              >
+                <div className="px-6 mb-0"><GoldDivider wide /></div>
+                <GuestbookScene
+                  weddingId={wedding.id}
+                  guestId={guest?.id}
+                  guestName={guestName}
+                  coupleName1={couple_names.name1}
+                  coupleName2={couple_names.name2}
+                  showReactions
+                />
+              </motion.div>
+            )}
+
+            {/* ── FOOTER ── */}
+            <footer className="py-16 px-6 text-center safe-bottom" aria-label="Footer">
+              <GoldDivider wide className="mb-8" />
+              <p className="font-display text-ivory/30"
+                style={{ fontSize: 'clamp(1.125rem, 3vw, 1.5rem)', fontStyle: 'italic', fontWeight: 300 }}>
+                {couple_names.name1} &amp; {couple_names.name2}
+              </p>
+              <p className="font-body text-ivory/15 text-xs tracking-widest mt-2 uppercase">
+                {weddingDate.numeric}
+              </p>
+
+              {config.hashtag && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }} whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.2 }}
+                  className="mt-6"
+                >
+                  <button
+                    onClick={handleCopyHashtag}
+                    aria-label={`Copy wedding hashtag ${config.hashtag}`}
+                    className="group inline-flex flex-col items-center gap-2"
+                  >
+                    <span className="font-display text-gold-gradient group-hover:opacity-80 transition-opacity"
+                      style={{ fontSize: 'clamp(1.25rem, 4vw, 2rem)', fontStyle: 'italic', fontWeight: 300, letterSpacing: '0.04em' }}>
+                      {config.hashtag}
+                    </span>
+                    <AnimatePresence mode="wait">
+                      {hashtagCopied ? (
+                        <motion.span key="copied" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }} className="font-body text-emerald-DEFAULT/60"
+                          style={{ fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                          ✓ Copied
+                        </motion.span>
+                      ) : (
+                        <motion.span key="hint" initial={{ opacity: 0, y: -4 }} animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 4 }} className="font-body text-ivory/20 group-hover:text-ivory/40 transition-colors"
+                          style={{ fontSize: '0.6rem', letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                          Tap to copy
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </button>
+                </motion.div>
+              )}
+            </footer>
+          </motion.main>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}

@@ -1,0 +1,60 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="goldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#E8CC7A;stop-opacity:1" />
+      <stop offset="60%" style="stop-color:#C9A84C;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#A8852A;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="emeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3DD9A0;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#0CA86E;stop-opacity:1" />
+    </linearGradient>
+    <radialGradient id="bgGlow" cx="50%" cy="45%" r="55%">
+      <stop offset="0%" style="stop-color:#0F1F18;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#080C0A;stop-opacity:1" />
+    </radialGradient>
+  </defs>
+
+  <!-- Background -->
+  <rect width="512" height="512" rx="96" fill="url(#bgGlow)" />
+
+  <!-- Outer decorative ring (gold, faint) -->
+  <circle cx="256" cy="256" r="215" fill="none" stroke="#C9A84C" stroke-width="1.5" opacity="0.25" />
+
+  <!-- Subtle inner emerald ring -->
+  <circle cx="256" cy="256" r="190" fill="none" stroke="#0CA86E" stroke-width="1" opacity="0.15" />
+
+  <!-- Ornamental horizontal rule — top -->
+  <line x1="160" y1="148" x2="352" y2="148" stroke="#C9A84C" stroke-width="1" opacity="0.4" />
+  <circle cx="160" cy="148" r="2.5" fill="#C9A84C" opacity="0.5" />
+  <circle cx="352" cy="148" r="2.5" fill="#C9A84C" opacity="0.5" />
+  <circle cx="256" cy="148" r="3" fill="#C9A84C" opacity="0.6" />
+
+  <!-- Ornamental horizontal rule — bottom -->
+  <line x1="160" y1="364" x2="352" y2="364" stroke="#C9A84C" stroke-width="1" opacity="0.4" />
+  <circle cx="160" cy="364" r="2.5" fill="#C9A84C" opacity="0.5" />
+  <circle cx="352" cy="364" r="2.5" fill="#C9A84C" opacity="0.5" />
+  <circle cx="256" cy="364" r="3" fill="#C9A84C" opacity="0.6" />
+
+  <!-- Letter S — geometric, bold, centered -->
+  <!-- Top arc of S -->
+  <path d="M 310 195
+             C 310 165, 285 152, 256 155
+             C 225 158, 200 175, 200 203
+             C 200 228, 220 242, 246 250
+             L 266 256
+             C 300 265, 318 280, 318 310
+             C 318 342, 292 360, 256 360
+             C 218 360, 194 342, 194 313"
+        fill="none"
+        stroke="url(#goldGrad)"
+        stroke-width="28"
+        stroke-linecap="round"
+        stroke-linejoin="round" />
+
+  <!-- Emerald dot accent — top serif -->
+  <circle cx="310" cy="195" r="7" fill="#0CA86E" opacity="0.85" />
+  <!-- Emerald dot accent — bottom serif -->
+  <circle cx="194" cy="313" r="7" fill="#0CA86E" opacity="0.85" />
+
+</svg>

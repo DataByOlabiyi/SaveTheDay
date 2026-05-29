@@ -1,0 +1,628 @@
+/* Google Fonts — loaded at runtime, cached after first visit */
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap');
+
+/* Font variable definitions — used throughout the design system */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ──────────────────────────────────────────────────────────────
+   CSS Custom Properties — The Unveiling Design System (Emerald)
+   Supports dark mode (default) and light mode via .light class
+   ────────────────────────────────────────────────────────────── */
+:root,
+:root.dark {
+  /* Core palette — dark mode */
+  --obsidian: #080C0A;
+  --deep-charcoal: #111A15;
+  --emerald-primary: #0CA86E;
+  --emerald-light: #3DD9A0;
+  --emerald-pale: #C0EDD9;
+  --ivory: #FAF7F2;
+  --forest: #0B5240;
+  --forest-deep: #073628;
+  --cream: #EEF5F0;
+
+  /* Semantic tokens — dark */
+  --text-primary: var(--ivory);
+  --text-secondary: rgba(250, 247, 242, 0.55);
+  --text-muted: rgba(250, 247, 242, 0.35);
+  --surface-1: var(--obsidian);
+  --surface-2: var(--deep-charcoal);
+  --accent: var(--emerald-primary);
+  --cta-bg: var(--emerald-primary);
+  --cta-text: var(--obsidian);
+  --card-bg: rgba(12, 168, 110, 0.03);
+  --card-border: rgba(12, 168, 110, 0.1);
+  --input-bg: rgba(12, 168, 110, 0.03);
+  --input-border: rgba(12, 168, 110, 0.2);
+
+  /* Typography */
+  --font-cormorant: 'Cormorant Garamond', Georgia, serif;
+  --font-jost: 'Jost', system-ui, sans-serif;
+  --font-display: var(--font-cormorant);
+  --font-body: var(--font-jost);
+
+  /* Motion */
+  --ease-expo-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-dramatic: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-expo-in: cubic-bezier(0.7, 0, 1, 1);
+
+  /* Safe area support (notched phones) */
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Light Mode Overrides
+   Apply by adding class="light" to <html>
+   ────────────────────────────────────────────────────────────── */
+:root.light {
+  --obsidian: #F8F5EF;
+  --deep-charcoal: #EEE9E0;
+  --emerald-primary: #0A8A59;      /* slightly darker for contrast on white */
+  --emerald-light: #0CA86E;
+  --emerald-pale: #073628;
+  --ivory: #1A1A1A;
+  --forest: #D0EAD9;
+  --forest-deep: #B8DCC6;
+  --cream: #FFFFFF;
+
+  /* Semantic tokens — light */
+  --text-primary: #1A1A1A;
+  --text-secondary: rgba(26, 26, 26, 0.65);
+  --text-muted: rgba(26, 26, 26, 0.40);
+  --surface-1: #F8F5EF;
+  --surface-2: #EEE9E0;
+  --accent: #0A8A59;
+  --cta-bg: #0A8A59;
+  --cta-text: #FFFFFF;
+  --card-bg: rgba(10, 138, 89, 0.04);
+  --card-border: rgba(10, 138, 89, 0.15);
+  --input-bg: rgba(10, 138, 89, 0.04);
+  --input-border: rgba(10, 138, 89, 0.3);
+}
+
+/* System preference — applies only when no explicit .dark/.light class is set */
+@media (prefers-color-scheme: light) {
+  :root:not(.dark):not(.light) {
+    --obsidian: #F8F5EF;
+    --deep-charcoal: #EEE9E0;
+    --emerald-primary: #0A8A59;
+    --emerald-light: #0CA86E;
+    --emerald-pale: #073628;
+    --ivory: #1A1A1A;
+    --forest: #D0EAD9;
+    --forest-deep: #B8DCC6;
+    --cream: #FFFFFF;
+    --text-primary: #1A1A1A;
+    --text-secondary: rgba(26, 26, 26, 0.65);
+    --text-muted: rgba(26, 26, 26, 0.40);
+    --surface-1: #F8F5EF;
+    --surface-2: #EEE9E0;
+    --accent: #0A8A59;
+    --cta-bg: #0A8A59;
+    --cta-text: #FFFFFF;
+    --card-bg: rgba(10, 138, 89, 0.04);
+    --card-border: rgba(10, 138, 89, 0.15);
+    --input-bg: rgba(10, 138, 89, 0.04);
+    --input-border: rgba(10, 138, 89, 0.3);
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Accessibility — Skip Navigation Link
+   ────────────────────────────────────────────────────────────── */
+.skip-nav {
+  position: absolute;
+  top: -40px;
+  left: 6px;
+  background: var(--emerald-primary);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 0 0 4px 4px;
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  z-index: 9999;
+  transition: top 0.2s;
+  text-decoration: none;
+}
+.skip-nav:focus {
+  top: 0;
+  outline: 2px solid var(--emerald-light);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Base Reset & Defaults
+   ────────────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+  /* Prevent iOS bounce scroll during locked animations */
+  overscroll-behavior: none;
+}
+
+body {
+  background-color: var(--obsidian);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  font-weight: 300;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Prevent text selection on interactive elements during animations */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Typography
+   ────────────────────────────────────────────────────────────── */
+.font-display {
+  font-family: var(--font-display);
+}
+
+.text-emerald {
+  color: var(--emerald-primary);
+}
+
+.text-gold-gradient {
+  background: linear-gradient(
+    135deg,
+    var(--emerald-primary) 0%,
+    var(--emerald-light) 40%,
+    var(--emerald-pale) 55%,
+    var(--emerald-light) 70%,
+    var(--emerald-primary) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+}
+
+.text-gold-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--emerald-primary) 0%,
+    var(--emerald-light) 30%,
+    var(--emerald-pale) 50%,
+    var(--emerald-light) 70%,
+    var(--emerald-primary) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  color: transparent;
+  animation: shimmer 3s linear infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: 0% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Scroll Lock (used during animation sequence)
+   ────────────────────────────────────────────────────────────── */
+.scroll-locked {
+  overflow: hidden;
+  height: 100vh;
+  position: fixed;
+  width: 100%;
+}
+
+.scroll-unlocked {
+  overflow: auto;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   3D CSS Envelope Components
+   ────────────────────────────────────────────────────────────── */
+.envelope-container {
+  perspective: 800px;
+  perspective-origin: center center;
+}
+
+.envelope-flap {
+  transform-origin: top center;
+  transform-style: preserve-3d;
+  backface-visibility: hidden;
+}
+
+.envelope-body {
+  transform-style: preserve-3d;
+  position: relative;
+}
+
+/* Paper texture inner card */
+.paper-texture {
+  background:
+    linear-gradient(
+      135deg,
+      rgba(192, 237, 217, 0.06) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      225deg,
+      rgba(192, 237, 217, 0.06) 25%,
+      transparent 25%
+    ),
+    linear-gradient(
+      var(--cream) 0%,
+      #D8EEE5 100%
+    );
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Wax Seal
+   ────────────────────────────────────────────────────────────── */
+.wax-seal {
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  /* Large touch target per WCAG */
+  min-width: 80px;
+  min-height: 80px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.wax-seal:focus-visible {
+  outline: 2px solid var(--emerald-primary);
+  outline-offset: 4px;
+  border-radius: 50%;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Emerald Glow Effects
+   ────────────────────────────────────────────────────────────── */
+.glow-gold {
+  filter: drop-shadow(0 0 12px rgba(12, 168, 110, 0.6))
+          drop-shadow(0 0 24px rgba(12, 168, 110, 0.3));
+}
+
+.glow-gold-lg {
+  filter: drop-shadow(0 0 20px rgba(12, 168, 110, 0.8))
+          drop-shadow(0 0 40px rgba(12, 168, 110, 0.4))
+          drop-shadow(0 0 80px rgba(12, 168, 110, 0.2));
+}
+
+.box-glow-gold {
+  box-shadow:
+    0 0 20px rgba(12, 168, 110, 0.2),
+    0 0 40px rgba(12, 168, 110, 0.1),
+    inset 0 1px 0 rgba(12, 168, 110, 0.1);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   CTA Buttons
+   ────────────────────────────────────────────────────────────── */
+.btn-gold {
+  background: linear-gradient(135deg, var(--emerald-primary) 0%, var(--emerald-light) 100%);
+  color: var(--obsidian);
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.875rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 1rem 2.5rem;
+  border: none;
+  cursor: pointer;
+  position: relative;
+  overflow: hidden;
+  transition:
+    transform 150ms var(--ease-expo-out),
+    box-shadow 300ms ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.btn-gold::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.25) 50%,
+    transparent 100%
+  );
+  transform: translateX(-100%);
+  transition: transform 0.4s ease;
+}
+
+.btn-gold:hover::after,
+.btn-gold:focus-visible::after {
+  transform: translateX(100%);
+}
+
+.btn-gold:active {
+  transform: scale(0.97);
+}
+
+.btn-gold:focus-visible {
+  outline: 2px solid var(--emerald-light);
+  outline-offset: 3px;
+}
+
+.btn-outline-gold {
+  background: transparent;
+  color: var(--emerald-primary);
+  border: 1px solid rgba(12, 168, 110, 0.5);
+  font-family: var(--font-body);
+  font-weight: 400;
+  font-size: 0.875rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  padding: 0.875rem 2rem;
+  cursor: pointer;
+  transition:
+    background 200ms ease,
+    border-color 200ms ease,
+    color 200ms ease;
+}
+
+.btn-outline-gold:hover,
+.btn-outline-gold:focus-visible {
+  background: rgba(12, 168, 110, 0.1);
+  border-color: var(--emerald-primary);
+  color: var(--emerald-light);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   RSVP Form
+   ────────────────────────────────────────────────────────────── */
+.rsvp-input {
+  background: rgba(12, 168, 110, 0.03);
+  border: 1px solid rgba(12, 168, 110, 0.2);
+  color: var(--ivory);
+  font-family: var(--font-body);
+  font-size: 1rem;
+  padding: 0.875rem 1rem;
+  width: 100%;
+  transition: border-color 200ms ease, background 200ms ease;
+  border-radius: 0;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.rsvp-input::placeholder {
+  color: var(--text-muted);
+  font-weight: 300;
+}
+
+.rsvp-input:focus {
+  outline: none;
+  border-color: rgba(12, 168, 110, 0.6);
+  background: rgba(12, 168, 110, 0.06);
+}
+
+.rsvp-input:focus-visible {
+  outline: 2px solid rgba(12, 168, 110, 0.4);
+  outline-offset: 2px;
+}
+
+.rsvp-label {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Montage / Photo Grid
+   ────────────────────────────────────────────────────────────── */
+.montage-slide {
+  position: relative;
+  overflow: hidden;
+}
+
+.montage-slide::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to bottom,
+    transparent 40%,
+    rgba(8, 12, 10, 0.7) 100%
+  );
+  pointer-events: none;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Countdown Timer
+   ────────────────────────────────────────────────────────────── */
+.countdown-unit {
+  min-width: 3.5rem;
+  perspective: 300px;
+}
+
+.countdown-digit {
+  font-family: var(--font-display);
+  font-weight: 300;
+  font-size: clamp(2.5rem, 8vw, 4.5rem);
+  line-height: 1;
+  color: var(--emerald-primary);
+  display: block;
+}
+
+.countdown-label {
+  font-family: var(--font-body);
+  font-size: 0.625rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  display: block;
+  margin-top: 0.5rem;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Dividers
+   ────────────────────────────────────────────────────────────── */
+.divider-gold {
+  width: 60px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--emerald-primary) 50%,
+    transparent 100%
+  );
+  margin: 0 auto;
+}
+
+.divider-gold-wide {
+  width: 120px;
+  height: 1px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--emerald-primary) 50%,
+    transparent 100%
+  );
+  margin: 0 auto;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Accessibility — Reduced Motion
+   ────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .text-gold-shimmer {
+    animation: none;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Scrollbar Styling
+   ────────────────────────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--obsidian);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(12, 168, 110, 0.3);
+  border-radius: 2px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(12, 168, 110, 0.5);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Selection
+   ────────────────────────────────────────────────────────────── */
+::selection {
+  background: rgba(12, 168, 110, 0.25);
+  color: var(--ivory);
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Loading skeleton
+   ────────────────────────────────────────────────────────────── */
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(17, 26, 21, 0.8) 25%,
+    rgba(28, 44, 34, 0.9) 50%,
+    rgba(17, 26, 21, 0.8) 75%
+  );
+  background-size: 200% 100%;
+  animation: skeletonShimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeletonShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Utility Classes
+   ────────────────────────────────────────────────────────────── */
+.safe-bottom {
+  padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-top {
+  padding-top: max(1rem, env(safe-area-inset-top));
+}
+
+/* Full viewport height — accounts for iOS Chrome address bar */
+.h-screen-safe {
+  height: 100vh;
+  height: 100svh;
+}
+
+/* Hide scrollbar but keep functionality */
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* ──────────────────────────────────────────────────────────────
+   Admin Dashboard
+   ────────────────────────────────────────────────────────────── */
+.admin-body {
+  background-color: #080C0A;
+  color: var(--ivory);
+  font-family: var(--font-body);
+}
+
+.admin-card {
+  background: rgba(12, 168, 110, 0.03);
+  border: 1px solid rgba(12, 168, 110, 0.1);
+  border-radius: 8px;
+}
+
+.status-badge-attending {
+  background: rgba(61, 217, 160, 0.1);
+  color: #3DD9A0;
+  border: 1px solid rgba(61, 217, 160, 0.2);
+}
+
+.status-badge-declined {
+  background: rgba(248, 113, 113, 0.1);
+  color: #f87171;
+  border: 1px solid rgba(248, 113, 113, 0.2);
+}
+
+.status-badge-pending {
+  background: rgba(12, 168, 110, 0.1);
+  color: var(--emerald-primary);
+  border: 1px solid rgba(12, 168, 110, 0.2);
+}
