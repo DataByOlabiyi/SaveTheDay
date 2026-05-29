@@ -35,7 +35,8 @@ export function createAdminClient() {
 
 export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
   // Demo mode — return mock data without hitting Supabase
-  if (isDemoMode() && slug === 'bride-and-groom') return DEMO_WEDDING
+  // Always serve demo data for the reserved demo slug, in any environment
+  if (slug === 'bride-and-groom') return DEMO_WEDDING
 
   try {
     const { data, error } = await supabase
