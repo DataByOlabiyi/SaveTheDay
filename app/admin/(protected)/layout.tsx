@@ -1,7 +1,6 @@
 import { redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import Link from 'next/link'
-import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { requireAdmin } from '@/lib/utils/adminAuth'
 
 export const metadata: Metadata = {
@@ -19,7 +18,7 @@ const NAV = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const identity = await requireAdmin()
-  if (!identity) redirect('/login?next=/admin')
+  if (!identity) redirect('/admin/login')
 
   return (
     <div className="min-h-screen bg-obsidian text-ivory flex">
@@ -46,7 +45,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
         <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
           {NAV.map(item => {
-            // Team page visible to super_admin only
             if (item.href === '/admin/team' && identity.role !== 'super_admin') return null
             return (
               <Link
@@ -62,12 +60,6 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
         <div className="px-3 py-4 border-t border-white/[0.05]">
           <p className="font-body text-[10px] text-ivory/25 truncate px-3 mb-2">{identity.email}</p>
-          <Link
-            href="/studio"
-            className="flex items-center px-3 py-2 rounded-xl font-body text-xs text-ivory/25 hover:text-ivory/50 transition-colors tracking-wide"
-          >
-            ← Back to Studio
-          </Link>
           <form action="/auth/signout" method="POST" className="mt-1">
             <button
               type="submit"
