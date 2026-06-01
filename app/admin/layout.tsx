@@ -19,7 +19,7 @@ const NAV = [
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const identity = await requireAdmin()
-  if (!identity) redirect('/')
+  if (!identity) redirect('/login?next=/admin')
 
   return (
     <div className="min-h-screen bg-obsidian text-ivory flex">
