@@ -59,9 +59,7 @@ export default function AdminUsersPage() {
           <thead>
             <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
               {['Email', 'Name', 'Type', 'Role', 'Weddings', 'Joined', ''].map(h => (
-                <th key={h} className="text-left py-3 px-4 font-body text-[11px] tracking-[0.2em] uppercase text-ivory/25">
-                  {h}
-                </th>
+                <th key={h} className="text-left py-3 px-4 font-body text-[11px] tracking-[0.2em] uppercase text-ivory/25">{h}</th>
               ))}
             </tr>
           </thead>
@@ -84,10 +82,8 @@ export default function AdminUsersPage() {
                 </td>
                 <td className="py-3 px-4">
                   {u.role !== 'super_admin' && (
-                    <button
-                      onClick={() => deleteUser(u.id, u.email)}
-                      className="font-body text-xs text-red-500/30 hover:text-red-400/70 transition-colors"
-                    >
+                    <button onClick={() => deleteUser(u.id, u.email)}
+                      className="font-body text-xs text-red-500/30 hover:text-red-400/70 transition-colors">
                       Delete
                     </button>
                   )}
@@ -96,20 +92,14 @@ export default function AdminUsersPage() {
             ))}
           </tbody>
         </table>
-
-        {/* Pagination */}
         {total > 50 && (
           <div className="px-4 py-3 flex items-center justify-between border-t border-white/[0.05]">
             <p className="font-body text-xs text-ivory/20">{page * 50 + 1}–{Math.min((page + 1) * 50, total)} of {total}</p>
             <div className="flex gap-2">
               <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                className="font-body text-xs text-ivory/30 hover:text-ivory/60 disabled:opacity-25 transition-colors px-3 py-1">
-                ← Prev
-              </button>
+                className="font-body text-xs text-ivory/30 hover:text-ivory/60 disabled:opacity-25 transition-colors px-3 py-1">← Prev</button>
               <button onClick={() => setPage(p => p + 1)} disabled={(page + 1) * 50 >= total}
-                className="font-body text-xs text-ivory/30 hover:text-ivory/60 disabled:opacity-25 transition-colors px-3 py-1">
-                Next →
-              </button>
+                className="font-body text-xs text-ivory/30 hover:text-ivory/60 disabled:opacity-25 transition-colors px-3 py-1">Next →</button>
             </div>
           </div>
         )}

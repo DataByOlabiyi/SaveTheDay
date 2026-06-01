@@ -28,7 +28,7 @@ function StatCard({ label, value, sub, accent = false }: {
 
 export default async function AdminOverviewPage() {
   const identity = await requireAdmin()
-  if (!identity) redirect('/')
+  if (!identity) redirect('/admin/login')
 
   const stats = await getPlatformStats()
 
@@ -40,7 +40,6 @@ export default async function AdminOverviewPage() {
         <h1 className="font-display text-3xl text-ivory" style={{ fontWeight: 300 }}>Platform Overview</h1>
       </div>
 
-      {/* Growth row */}
       <section className="mb-8">
         <p className="font-body text-[11px] tracking-[0.2em] uppercase text-ivory/25 mb-4">Growth</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -51,7 +50,6 @@ export default async function AdminOverviewPage() {
         </div>
       </section>
 
-      {/* Engagement row */}
       <section className="mb-8">
         <p className="font-body text-[11px] tracking-[0.2em] uppercase text-ivory/25 mb-4">Engagement</p>
         <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
@@ -66,7 +64,6 @@ export default async function AdminOverviewPage() {
         </div>
       </section>
 
-      {/* Quick links */}
       <section>
         <p className="font-body text-[11px] tracking-[0.2em] uppercase text-ivory/25 mb-4">Manage</p>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
