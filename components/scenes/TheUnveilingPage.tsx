@@ -36,13 +36,21 @@ interface TheUnveilingPageProps {
   photos?:     GalleryPhoto[]
 }
 
-// Build section list dynamically based on config
-function buildSections(config: Wedding['config']) {
+// Build section list — only include sections that have actual content to show
+function buildSections(
+  config: Wedding['config'],
+  milestonesCount: number,
+  albumsCount: number,
+) {
   const sections = [{ id: 'section-hero', label: 'Welcome' }]
-  if (config.show_story   !== false) sections.push({ id: 'section-story',    label: 'Our Story'  })
+  // Story: only show if config allows AND there are milestones with descriptions
+  if (config.show_story !== false && milestonesCount > 0)
+    sections.push({ id: 'section-story', label: 'Our Story' })
   if (config.montage_images || config.montage_video)
     sections.push({ id: 'section-montage', label: 'Gallery' })
-  if (config.show_gallery !== false) sections.push({ id: 'section-gallery',  label: 'Photos'    })
+  // Gallery: only show if config allows AND there are albums with photos
+  if (config.show_gallery !== false && albumsCount > 0)
+    sections.push({ id: 'section-gallery', label: 'Photos' })
   if (config.show_countdown !== false) sections.push({ id: 'section-countdown', label: 'Countdown' })
   sections.push({ id: 'section-rsvp', label: 'RSVP' })
   if (config.show_schedule || config.show_venue_map || config.dress_code)
@@ -78,7 +86,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
     ? [{ url: config.music_track, title: 'Background Music' }]
     : []
 
-  const activeSections = buildSections(config)
+  const activeSections = buildSections(config, milestones?.length ?? 0, albums?.length ?? 0)
 
   // Track page open
   useEffect(() => {

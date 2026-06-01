@@ -1,12 +1,12 @@
-'use client'
+﻿'use client'
 
 import { useEffect, useState } from 'react'
 
-// ──────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // Offline Fallback Page
 // Shown by the service worker when a navigation request fails
 // because the device is offline and the page isn't cached.
-// ──────────────────────────────────────────────────────────────
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 export default function OfflinePage() {
   const [isOnline, setIsOnline] = useState(false)
@@ -37,7 +37,7 @@ export default function OfflinePage() {
         background: 'radial-gradient(ellipse at 50% 40%, rgba(12,168,110,0.06) 0%, #080C0A 70%)',
       }}
     >
-      {/* ── Brand monogram ──────────────────────────────────────── */}
+      {/* â”€â”€ Brand monogram â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="relative mb-10">
         {/* Outer glow ring */}
         <div
@@ -66,14 +66,14 @@ export default function OfflinePage() {
         </div>
       </div>
 
-      {/* ── Ornamental divider ───────────────────────────────────── */}
+      {/* â”€â”€ Ornamental divider â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div className="flex items-center gap-3 mb-8 opacity-30">
-        <div className="h-px w-16 bg-gold-DEFAULT" />
-        <div className="w-1.5 h-1.5 rounded-full bg-gold-DEFAULT" />
-        <div className="h-px w-16 bg-gold-DEFAULT" />
+        <div className="h-px w-16 bg-gold" />
+        <div className="w-1.5 h-1.5 rounded-full bg-gold" />
+        <div className="h-px w-16 bg-gold" />
       </div>
 
-      {/* ── Heading ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Heading â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <h1
         className="font-display text-ivory mb-3"
         style={{
@@ -87,7 +87,7 @@ export default function OfflinePage() {
         You&rsquo;re offline
       </h1>
 
-      {/* ── Sub-copy ─────────────────────────────────────────────── */}
+      {/* â”€â”€ Sub-copy â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <p
         className="font-body text-ivory/50 mb-10 max-w-xs"
         style={{ fontSize: '0.9rem', letterSpacing: '0.04em', lineHeight: 1.7 }}
@@ -95,7 +95,7 @@ export default function OfflinePage() {
         Your invitation will be right here the moment your connection returns.
       </p>
 
-      {/* ── Connection status pill ───────────────────────────────── */}
+      {/* â”€â”€ Connection status pill â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <div
         className="flex items-center gap-2 px-4 py-2 rounded-full mb-10"
         style={{
@@ -120,11 +120,11 @@ export default function OfflinePage() {
           className="font-body text-ivory/70"
           style={{ fontSize: '0.75rem', letterSpacing: '0.12em', textTransform: 'uppercase' }}
         >
-          {isOnline ? 'Reconnecting…' : 'No connection'}
+          {isOnline ? 'Reconnecting...' : 'No connection'}
         </span>
       </div>
 
-      {/* ── Retry button ─────────────────────────────────────────── */}
+      {/* â”€â”€ Retry button â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <button
         onClick={() => window.location.reload()}
         className="font-body transition-all duration-300"
@@ -151,7 +151,7 @@ export default function OfflinePage() {
         Try again
       </button>
 
-      {/* ── Footer note ──────────────────────────────────────────── */}
+      {/* â”€â”€ Footer note â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ */}
       <p
         className="font-body text-ivory/20 mt-14"
         style={{ fontSize: '0.7rem', letterSpacing: '0.1em', textTransform: 'uppercase' }}
@@ -161,3 +161,4 @@ export default function OfflinePage() {
     </main>
   )
 }
+

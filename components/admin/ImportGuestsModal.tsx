@@ -23,7 +23,6 @@ interface ImportResult {
 
 interface ImportGuestsModalProps {
   weddingId: string
-  adminSecret: string
   onClose: () => void
   onSuccess: (count: number) => void
 }
@@ -152,7 +151,6 @@ async function parseExcel(file: File): Promise<ParsedRow[]> {
 
 export function ImportGuestsModal({
   weddingId,
-  adminSecret,
   onClose,
   onSuccess,
 }: ImportGuestsModalProps) {
@@ -222,7 +220,6 @@ export function ImportGuestsModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          secret: adminSecret,
           weddingId,
           guests: validRows.map(r => ({ name: r.name, email: r.email, phone: r.phone })),
         }),

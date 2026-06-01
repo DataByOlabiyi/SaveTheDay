@@ -58,8 +58,6 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1, // Prevent zoom on form inputs
-  userScalable: false,
   viewportFit: 'cover', // Respect notch/safe areas (iPhone X+)
   themeColor: [
     // Match system preference — dark (default brand) / light

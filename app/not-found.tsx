@@ -11,7 +11,7 @@ export default function NotFound() {
         }}
       >
         <span
-          className="font-display text-gold-DEFAULT"
+          className="font-display text-gold"
           style={{ fontSize: '1.5rem', fontStyle: 'italic' }}
         >
           ?
