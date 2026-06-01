@@ -48,12 +48,7 @@ const nextConfig = {
         destination: '/e/demo-wedding',
         permanent: true,
       },
-      // Legacy admin routes → studio
-      {
-        source: '/admin/:weddingSlug*',
-        destination: '/studio/:weddingSlug*',
-        permanent: true,
-      },
+
       // Old /dashboard → /studio
       {
         source: '/dashboard',
