@@ -35,20 +35,19 @@ export async function GET(request: NextRequest) {
         // Non-fatal — profile will be created on next dashboard visit
       }
 
-      // Route admin/super_admin users to /admin unless a specific destination was requested
+      // Route to the correct area based on role when no specific destination is set
       let destination = next
-      if (next === '/studio') {
+      if (next === '/studio' || next === '/admin') {
         try {
           const { data: profile } = await admin
             .from('user_profiles')
             .select('role')
             .eq('id', data.user.id)
             .single()
-          if (profile?.role === 'admin' || profile?.role === 'super_admin') {
-            destination = '/admin'
-          }
+          const isAdmin = profile?.role === 'admin' || profile?.role === 'super_admin'
+          destination = isAdmin ? '/admin' : '/studio'
         } catch {
-          // Fall through to default destination
+          destination = next
         }
       }
 

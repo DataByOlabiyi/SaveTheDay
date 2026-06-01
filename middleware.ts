@@ -23,28 +23,20 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // ── Protect /studio, /create, /account (must be logged in) ────
-  if (
-    pathname.startsWith('/studio') ||
-    pathname.startsWith('/create') ||
-    pathname.startsWith('/account')
-  ) {
-    if (!user) {
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('next', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
+  // ── /studio/* — must be logged in, scoped to /studio/login ─────
+  if (pathname.startsWith('/studio') && !pathname.startsWith('/studio/login')) {
+    if (!user) return NextResponse.redirect(new URL('/studio/login', request.url))
   }
 
-  // ── Protect /admin (must be admin or super_admin) ──────────────
-  if (pathname.startsWith('/admin')) {
-    if (!user) {
-      const loginUrl = new URL('/login', request.url)
-      loginUrl.searchParams.set('next', pathname)
-      return NextResponse.redirect(loginUrl)
-    }
+  // ── /studio/login — redirect logged-in users to /studio ───────
+  if (pathname.startsWith('/studio/login') && user) {
+    return NextResponse.redirect(new URL('/studio', request.url))
+  }
 
-    // Check role from user_profiles via service role
+  // ── /admin/* — must be admin/super_admin, scoped to /admin/login
+  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
+    if (!user) return NextResponse.redirect(new URL('/admin/login', request.url))
+
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (serviceKey) {
       const { createClient } = await import('@supabase/supabase-js')
@@ -59,15 +51,45 @@ export async function middleware(request: NextRequest) {
 
       const role = profile?.role ?? 'user'
       if (role !== 'admin' && role !== 'super_admin') {
-        return new NextResponse(null, { status: 404 })
+        return NextResponse.redirect(new URL('/admin/login', request.url))
       }
     } else {
-      // No service key — block admin access in misconfigured environments
-      return new NextResponse(null, { status: 404 })
+      return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }
 
-  // ── Redirect logged-in users away from auth pages ─────────────
+  // ── /admin/login — redirect logged-in admins to /admin ────────
+  if (pathname.startsWith('/admin/login') && user) {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (serviceKey) {
+      const { createClient } = await import('@supabase/supabase-js')
+      const adminDb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      const { data: profile } = await adminDb
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const role = profile?.role ?? 'user'
+      if (role === 'admin' || role === 'super_admin') {
+        return NextResponse.redirect(new URL('/admin', request.url))
+      }
+    }
+    // Logged in but not admin — let the page render (shows form with no redirect)
+  }
+
+  // ── /create, /account — must be logged in, use global /login ──
+  if (pathname.startsWith('/create') || pathname.startsWith('/account')) {
+    if (!user) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+
+  // ── Redirect logged-in users away from global auth pages ──────
   if ((pathname === '/login' || pathname === '/signup') && user) {
     return NextResponse.redirect(new URL('/studio', request.url))
   }
