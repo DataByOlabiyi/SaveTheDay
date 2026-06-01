@@ -1,11 +1,11 @@
 'use client'
 
-import { useState } from 'react'
+import { Suspense, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
-export default function LoginPage() {
+function LoginContent() {
   const searchParams = useSearchParams()
   const next = searchParams.get('next') ?? '/studio'
   const hasError = searchParams.get('error') === 'auth_failed'
@@ -141,5 +141,13 @@ export default function LoginPage() {
         )}
       </div>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   )
 }
