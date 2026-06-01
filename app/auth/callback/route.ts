@@ -22,9 +22,10 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
+      const admin = await createSupabaseServerAdminClient()
+
       // Upsert user profile so the dashboard can look up their weddings
       try {
-        const admin = await createSupabaseServerAdminClient()
         await admin.from('user_profiles').upsert({
           id:        data.user.id,
           email:     data.user.email ?? '',
@@ -34,7 +35,24 @@ export async function GET(request: NextRequest) {
         // Non-fatal — profile will be created on next dashboard visit
       }
 
-      return NextResponse.redirect(`${origin}${next}`)
+      // Route admin/super_admin users to /admin unless a specific destination was requested
+      let destination = next
+      if (next === '/studio') {
+        try {
+          const { data: profile } = await admin
+            .from('user_profiles')
+            .select('role')
+            .eq('id', data.user.id)
+            .single()
+          if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+            destination = '/admin'
+          }
+        } catch {
+          // Fall through to default destination
+        }
+      }
+
+      return NextResponse.redirect(`${origin}${destination}`)
     }
   }
 
