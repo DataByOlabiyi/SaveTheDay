@@ -39,8 +39,9 @@ export async function middleware(request: NextRequest) {
   // ── Protect /admin (must be admin or super_admin) ──────────────
   if (pathname.startsWith('/admin')) {
     if (!user) {
-      // Return 404 — never reveal the admin route exists to unauthenticated users
-      return new NextResponse(null, { status: 404 })
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
     }
 
     // Check role from user_profiles via service role
