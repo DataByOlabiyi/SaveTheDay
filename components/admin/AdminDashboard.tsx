@@ -14,6 +14,7 @@ import { GalleryManager } from './GalleryManager'
 import { WeddingSettingsEditor } from './WeddingSettingsEditor'
 import { AnalyticsPanel } from './AnalyticsPanel'
 import { DashboardOverview } from './DashboardOverview'
+import { ScheduleEditor } from './ScheduleEditor'
 import { QRCodeModal } from '@/components/molecules/QRCodeModal'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -80,13 +81,13 @@ const NAV_ITEMS: { id: Section; label: string }[] = [
   { id: 'guestbook',  label: 'Guestbook' },
   { id: 'story',      label: 'Our Story' },
   { id: 'gallery',    label: 'Gallery' },
+  { id: 'timeline',   label: 'Programme' },
   { id: 'analytics',  label: 'Analytics' },
   { id: 'settings',   label: 'Settings' },
 ]
 
 const COMING_SOON: { id: Section; label: string }[] = [
   { id: 'invitations', label: 'Invitations' },
-  { id: 'timeline',    label: 'Timeline' },
 ]
 
 // ── Sidebar nav item ───────────────────────────────────────────────────────────
@@ -1055,8 +1056,8 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
               )}
               {activeSection === 'timeline' && (
                 <motion.div key="timeline" {...fadeProps}>
-                  <SectionHeading title="Timeline" />
-                  <ComingSoonSection label="Wedding Timeline" />
+                  <SectionHeading title="Programme" description="Build your day-of schedule. Guests see this on the invitation page." />
+                  <ScheduleEditor weddingId={wedding.id} />
                 </motion.div>
               )}
 
