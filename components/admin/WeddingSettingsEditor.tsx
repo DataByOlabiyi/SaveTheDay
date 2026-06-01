@@ -172,12 +172,11 @@ function ToggleSwitch({ checked, onChange, label, id }: ToggleSwitchProps) {
    Main Editor Component
    ───────────────────────────────────────────────────────── */
 interface WeddingSettingsEditorProps {
-  wedding:     Wedding
-  adminSecret: string
-  onSaved?:    (updated: Wedding) => void
+  wedding:  Wedding
+  onSaved?: (updated: Wedding) => void
 }
 
-export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: WeddingSettingsEditorProps) {
+export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEditorProps) {
   const router = useRouter()
   const [config, setConfig] = useState<WeddingConfig>({
     ...{
@@ -188,6 +187,11 @@ export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: Wedding
     },
     ...wedding.config,
   })
+  const [name1, setName1]         = useState(wedding.couple_names.name1)
+  const [name2, setName2]         = useState(wedding.couple_names.name2)
+  const [weddingDate, setWeddingDate] = useState(
+    wedding.wedding_date ? wedding.wedding_date.split('T')[0] : ''
+  )
   const [venue, setVenue]         = useState(wedding.venue)
   const [venueAddress, setVenueAddr] = useState(wedding.venue_address ?? '')
   const [city, setCity]           = useState(wedding.city)
@@ -217,8 +221,9 @@ export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: Wedding
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          weddingId:     wedding.id,
-          secret:        adminSecret,
+          weddingId:    wedding.id,
+          couple_names: { name1: name1.trim(), name2: name2.trim() },
+          wedding_date: weddingDate || undefined,
           venue,
           venue_address: venueAddress || null,
           city,
@@ -253,7 +258,7 @@ export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: Wedding
       const res = await fetch('/api/admin/wedding', {
         method:  'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ weddingId: wedding.id, secret: adminSecret, slug: trimmed }),
+        body: JSON.stringify({ weddingId: wedding.id, slug: trimmed }),
       })
 
       if (!res.ok) {
@@ -264,7 +269,7 @@ export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: Wedding
       setSlugSaved(true)
       setTimeout(() => setSlugSaved(false), 2000)
       // Redirect to new admin URL since the slug changed
-      router.push(`/admin/${trimmed}?secret=${adminSecret}`)
+      router.push(`/studio/${trimmed}`)
     } catch (err) {
       setSlugError(err instanceof Error ? err.message : 'Failed to update URL')
     } finally {
@@ -321,6 +326,46 @@ export function WeddingSettingsEditor({ wedding, adminSecret, onSaved }: Wedding
         >
           {slugSaving ? 'Updating…' : slugSaved ? '✓ Updated' : 'Update URL'}
         </motion.button>
+      </div>
+
+      {/* ── Couple & Event ── */}
+      <div className="admin-card p-5">
+        <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-5">Couple &amp; Event</h3>
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="rsvp-label">Partner 1</label>
+              <input
+                type="text"
+                value={name1}
+                onChange={e => setName1(e.target.value)}
+                placeholder="Adaeze"
+                maxLength={60}
+                className="rsvp-input"
+              />
+            </div>
+            <div>
+              <label className="rsvp-label">Partner 2</label>
+              <input
+                type="text"
+                value={name2}
+                onChange={e => setName2(e.target.value)}
+                placeholder="Emeka"
+                maxLength={60}
+                className="rsvp-input"
+              />
+            </div>
+          </div>
+          <div>
+            <label className="rsvp-label">Wedding Date</label>
+            <input
+              type="date"
+              value={weddingDate}
+              onChange={e => setWeddingDate(e.target.value)}
+              className="rsvp-input [color-scheme:dark]"
+            />
+          </div>
+        </div>
       </div>
 
       {/* ── Venue Details ── */}

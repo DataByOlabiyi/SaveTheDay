@@ -6,14 +6,12 @@ import type { Guest } from '@/lib/db/types'
 
 interface AddGuestModalProps {
   weddingId: string
-  adminSecret: string
   onClose: () => void
-  onSuccess: (guest: Guest) => void   // returns the newly created guest
+  onSuccess: (guest: Guest) => void
 }
 
 export function AddGuestModal({
   weddingId,
-  adminSecret,
   onClose,
   onSuccess,
 }: AddGuestModalProps) {
@@ -35,7 +33,6 @@ export function AddGuestModal({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          secret: adminSecret,
           weddingId,
           name: name.trim(),
           email: email.trim() || undefined,
