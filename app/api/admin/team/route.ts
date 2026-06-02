@@ -67,6 +67,8 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json({ error: 'Cannot remove your own admin access' }, { status: 400 })
   }
 
+  const db = createAdminClient()
+
   const result = await setUserRole(userId, 'user')
   if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 })
 
