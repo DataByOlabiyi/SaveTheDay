@@ -5,7 +5,7 @@
 export type WeddingTheme = 'unveiling' | 'pages' | 'signal' | 'passport'
 export type RSVPStatus = 'pending' | 'attending' | 'declined'
 export type WeddingStatus = 'draft' | 'ready' | 'published'
-export type AccountType = 'couple' | 'planner'
+export type AccountType = 'couple' | 'planner' | 'staff'
 export type UserRole = 'user' | 'admin' | 'super_admin'
 export type AnalyticsEventType =
   | 'opened' | 'seal_tapped' | 'video_watched' | 'rsvp_submitted'

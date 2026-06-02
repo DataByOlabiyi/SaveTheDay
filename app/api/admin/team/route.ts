@@ -44,6 +44,8 @@ export async function POST(req: NextRequest) {
   const result = await setUserRole(profile.id, 'admin')
   if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 })
 
+  await db.from('user_profiles').update({ account_type: 'staff' }).eq('id', profile.id)
+
   await writeAuditLog({
     admin_id: admin.id, admin_email: admin.email,
     action: 'promote_to_admin', resource_type: 'user', resource_id: profile.id,
@@ -67,6 +69,8 @@ export async function DELETE(req: NextRequest) {
 
   const result = await setUserRole(userId, 'user')
   if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 })
+
+  await db.from('user_profiles').update({ account_type: 'couple' }).eq('id', userId)
 
   await writeAuditLog({
     admin_id: admin.id, admin_email: admin.email,
