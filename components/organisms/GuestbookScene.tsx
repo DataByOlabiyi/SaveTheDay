@@ -153,12 +153,13 @@ function ReactionPicker({
 }
 
 interface GuestbookSceneProps {
-  weddingId:   string
-  guestId?:    string
-  guestName?:  string
-  coupleName1: string
-  coupleName2: string
+  weddingId:    string
+  guestId?:     string
+  guestName?:   string
+  coupleName1:  string
+  coupleName2:  string
   showReactions?: boolean
+  readonly?:    boolean
 }
 
 export function GuestbookScene({
@@ -168,6 +169,7 @@ export function GuestbookScene({
   coupleName1,
   coupleName2,
   showReactions = true,
+  readonly      = false,
 }: GuestbookSceneProps) {
   const [entries, setEntries]       = useState<GuestbookEntry[]>([])
   const [loading, setLoading]       = useState(true)
@@ -259,8 +261,18 @@ export function GuestbookScene({
         </motion.div>
 
         {/* ── Write form ── */}
+        {readonly && (
+          <motion.p
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="text-center font-body text-ivory/25 text-xs tracking-wide mb-14"
+          >
+            Open your personal invitation to leave a message
+          </motion.p>
+        )}
         <AnimatePresence mode="wait">
-          {!submitted ? (
+          {!readonly && !submitted ? (
             <motion.form
               key="form"
               initial={{ opacity: 0, y: 20 }}
@@ -338,7 +350,7 @@ export function GuestbookScene({
                 )}
               </motion.button>
             </motion.form>
-          ) : (
+          ) : submitted && !readonly ? (
             <motion.div
               key="success"
               initial={{ opacity: 0, scale: 0.95 }}
@@ -379,7 +391,7 @@ export function GuestbookScene({
                 Your message has been added to the guestbook
               </p>
             </motion.div>
-          )}
+          ) : null}
         </AnimatePresence>
 
         {/* ── Existing entries ── */}

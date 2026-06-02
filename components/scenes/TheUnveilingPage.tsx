@@ -16,6 +16,7 @@ import { ParticleField } from '@/components/atoms/ParticleField'
 import { RSVPButton } from '@/components/molecules/RSVPButton'
 import { ShareableCard } from '@/components/molecules/ShareableCard'
 import { AddToCalendarButton } from '@/components/molecules/AddToCalendarButton'
+import { GuestPhotoUpload } from '@/components/molecules/GuestPhotoUpload'
 import { SectionDots } from '@/components/atoms/SectionDots'
 import { MusicPlayer } from '@/components/molecules/MusicPlayer'
 import { GiftRegistry } from '@/components/molecules/GiftRegistry'
@@ -255,7 +256,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   transition={{ delay: 0.3, duration: 0.8 }}
                   className="font-body text-xs tracking-[0.35em] uppercase text-emerald-DEFAULT/60 mb-8"
                 >
-                  {firstName ? `For ${firstName}` : 'For You'}
+                  {firstName ? `Welcome, ${firstName}` : 'Welcome'}
                 </motion.p>
               )}
 
@@ -472,7 +473,17 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   </motion.div>
                 )}
 
-                {!showRSVP ? (
+                {!guest ? (
+                  <motion.p
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                    className="text-center font-body text-ivory/25 text-xs tracking-wide"
+                  >
+                    Open your personal invitation to RSVP
+                  </motion.p>
+                ) : !showRSVP ? (
                   <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.3 }}
                     className="flex flex-col items-center gap-4">
@@ -608,8 +619,18 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   coupleName1={couple_names.name1}
                   coupleName2={couple_names.name2}
                   showReactions
+                  readonly={!guest}
                 />
               </motion.div>
+            )}
+
+            {/* ── GUEST PHOTO UPLOAD ── */}
+            {config.show_post_uploads && guest && (
+              <GuestPhotoUpload
+                weddingId={wedding.id}
+                guestId={guest.id}
+                guestName={guest.name}
+              />
             )}
 
             {/* ── FOOTER ── */}

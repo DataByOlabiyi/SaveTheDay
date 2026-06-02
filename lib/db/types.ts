@@ -187,17 +187,18 @@ export interface GalleryAlbum {
 }
 
 export interface GalleryPhoto {
-  id:             string
-  wedding_id:     string
-  album_id?:      string
-  url:            string
-  thumbnail_url?: string
-  caption?:       string
-  width?:         number
-  height?:        number
-  download_count: number
-  sort_order:     number
-  created_at:     string
+  id:                    string
+  wedding_id:            string
+  album_id?:             string
+  url:                   string
+  thumbnail_url?:        string
+  caption?:              string
+  width?:                number
+  height?:               number
+  download_count:        number
+  sort_order:            number
+  created_at:            string
+  uploaded_by_guest_id?: string | null
 }
 
 export interface EventScheduleItem {
