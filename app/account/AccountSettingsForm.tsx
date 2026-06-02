@@ -1,10 +1,11 @@
 'use client'
 
 import { useState } from 'react'
+import type { AccountType } from '@/lib/db/types'
 
 interface Props {
   userId:              string
-  initialAccountType:  'couple' | 'planner'
+  initialAccountType:  AccountType
   initialBusinessName: string
   initialFullName:     string
 }
@@ -14,7 +15,7 @@ export function AccountSettingsForm({
   initialBusinessName,
   initialFullName,
 }: Props) {
-  const [accountType,  setAccountType]  = useState<'couple' | 'planner'>(initialAccountType)
+  const [accountType,  setAccountType]  = useState<AccountType>(initialAccountType)
   const [businessName, setBusinessName] = useState(initialBusinessName)
   const [fullName,     setFullName]     = useState(initialFullName)
   const [saving,       setSaving]       = useState(false)
@@ -73,34 +74,46 @@ export function AccountSettingsForm({
         />
       </div>
 
-      <div>
-        <label className="font-body text-ivory/40 text-xs tracking-widest uppercase block mb-3">
-          Account Type
-        </label>
-        <div className="grid grid-cols-2 gap-3">
-          {(['couple', 'planner'] as const).map(type => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => setAccountType(type)}
-              className={`p-4 border rounded-sm text-left transition-colors ${
-                accountType === type
-                  ? 'border-gold/40 bg-gold/5'
-                  : 'border-white/10 hover:border-white/20'
-              }`}
-            >
-              <p className={`font-display text-sm mb-1 capitalize ${accountType === type ? 'text-gold' : 'text-ivory/60'}`}>
-                {type === 'couple' ? '💍 Couple' : '📋 Planner'}
-              </p>
-              <p className="font-body text-ivory/30 text-xs leading-relaxed">
-                {type === 'couple'
-                  ? 'Planning your own wedding'
-                  : 'Managing client weddings'}
-              </p>
-            </button>
-          ))}
+      {accountType === 'staff' ? (
+        <div>
+          <label className="font-body text-ivory/40 text-xs tracking-widest uppercase block mb-3">
+            Account Type
+          </label>
+          <div className="p-4 border border-gold/20 bg-gold/5 rounded-sm">
+            <p className="font-display text-sm text-gold mb-1">Team Member</p>
+            <p className="font-body text-ivory/30 text-xs">Internal Save The Day staff account</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        <div>
+          <label className="font-body text-ivory/40 text-xs tracking-widest uppercase block mb-3">
+            Account Type
+          </label>
+          <div className="grid grid-cols-2 gap-3">
+            {(['couple', 'planner'] as const).map(type => (
+              <button
+                key={type}
+                type="button"
+                onClick={() => setAccountType(type)}
+                className={`p-4 border rounded-sm text-left transition-colors ${
+                  accountType === type
+                    ? 'border-gold/40 bg-gold/5'
+                    : 'border-white/10 hover:border-white/20'
+                }`}
+              >
+                <p className={`font-display text-sm mb-1 capitalize ${accountType === type ? 'text-gold' : 'text-ivory/60'}`}>
+                  {type === 'couple' ? '💍 Couple' : '📋 Planner'}
+                </p>
+                <p className="font-body text-ivory/30 text-xs leading-relaxed">
+                  {type === 'couple'
+                    ? 'Planning your own wedding'
+                    : 'Managing client weddings'}
+                </p>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       {accountType === 'planner' && (
         <div>
