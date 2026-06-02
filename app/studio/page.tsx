@@ -122,12 +122,17 @@ function EmptyState() {
 export default async function StudioPage() {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  if (!user) redirect('/studio/login')
 
   const [weddings, profile] = await Promise.all([
     getWeddingsByUser(user.id),
     getUserProfile(user.id),
   ])
+
+  // Staff/admin accounts belong in /admin, not /studio
+  if (profile?.role === 'admin' || profile?.role === 'super_admin') {
+    redirect('/admin')
+  }
 
   const isPlanner = profile?.account_type === 'planner'
 
