@@ -13,7 +13,7 @@ export default function Loading() {
           }}
         >
           <span
-            className="font-display text-gold-DEFAULT"
+            className="font-display text-gold"
             style={{ fontSize: '1.25rem', fontStyle: 'italic', opacity: 0.4 }}
           >
             S

@@ -16,6 +16,7 @@ import { ParticleField } from '@/components/atoms/ParticleField'
 import { RSVPButton } from '@/components/molecules/RSVPButton'
 import { ShareableCard } from '@/components/molecules/ShareableCard'
 import { AddToCalendarButton } from '@/components/molecules/AddToCalendarButton'
+import { GuestPhotoUpload } from '@/components/molecules/GuestPhotoUpload'
 import { SectionDots } from '@/components/atoms/SectionDots'
 import { MusicPlayer } from '@/components/molecules/MusicPlayer'
 import { GiftRegistry } from '@/components/molecules/GiftRegistry'
@@ -36,13 +37,21 @@ interface TheUnveilingPageProps {
   photos?:     GalleryPhoto[]
 }
 
-// Build section list dynamically based on config
-function buildSections(config: Wedding['config']) {
+// Build section list — only include sections that have actual content to show
+function buildSections(
+  config: Wedding['config'],
+  milestonesCount: number,
+  albumsCount: number,
+) {
   const sections = [{ id: 'section-hero', label: 'Welcome' }]
-  if (config.show_story   !== false) sections.push({ id: 'section-story',    label: 'Our Story'  })
+  // Story: only show if config allows AND there are milestones with descriptions
+  if (config.show_story !== false && milestonesCount > 0)
+    sections.push({ id: 'section-story', label: 'Our Story' })
   if (config.montage_images || config.montage_video)
     sections.push({ id: 'section-montage', label: 'Gallery' })
-  if (config.show_gallery !== false) sections.push({ id: 'section-gallery',  label: 'Photos'    })
+  // Gallery: only show if config allows AND there are albums with photos
+  if (config.show_gallery !== false && albumsCount > 0)
+    sections.push({ id: 'section-gallery', label: 'Photos' })
   if (config.show_countdown !== false) sections.push({ id: 'section-countdown', label: 'Countdown' })
   sections.push({ id: 'section-rsvp', label: 'RSVP' })
   if (config.show_schedule || config.show_venue_map || config.dress_code)
@@ -78,7 +87,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
     ? [{ url: config.music_track, title: 'Background Music' }]
     : []
 
-  const activeSections = buildSections(config)
+  const activeSections = buildSections(config, milestones?.length ?? 0, albums?.length ?? 0)
 
   // Track page open
   useEffect(() => {
@@ -247,7 +256,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   transition={{ delay: 0.3, duration: 0.8 }}
                   className="font-body text-xs tracking-[0.35em] uppercase text-emerald-DEFAULT/60 mb-8"
                 >
-                  {firstName ? `For ${firstName}` : 'For You'}
+                  {firstName ? `Welcome, ${firstName}` : 'Welcome'}
                 </motion.p>
               )}
 
@@ -464,7 +473,17 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   </motion.div>
                 )}
 
-                {!showRSVP ? (
+                {!guest ? (
+                  <motion.p
+                    initial={{ opacity: 0, y: 12 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 0.8, delay: 0.3 }}
+                    className="text-center font-body text-ivory/25 text-xs tracking-wide"
+                  >
+                    Open your personal invitation to RSVP
+                  </motion.p>
+                ) : !showRSVP ? (
                   <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.3 }}
                     className="flex flex-col items-center gap-4">
@@ -600,8 +619,18 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   coupleName1={couple_names.name1}
                   coupleName2={couple_names.name2}
                   showReactions
+                  readonly={!guest}
                 />
               </motion.div>
+            )}
+
+            {/* ── GUEST PHOTO UPLOAD ── */}
+            {config.show_post_uploads && guest && (
+              <GuestPhotoUpload
+                weddingId={wedding.id}
+                guestId={guest.id}
+                guestName={guest.name}
+              />
             )}
 
             {/* ── FOOTER ── */}

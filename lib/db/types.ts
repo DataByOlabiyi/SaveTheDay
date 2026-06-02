@@ -4,32 +4,58 @@
 
 export type WeddingTheme = 'unveiling' | 'pages' | 'signal' | 'passport'
 export type RSVPStatus = 'pending' | 'attending' | 'declined'
+export type WeddingStatus = 'draft' | 'ready' | 'published'
+export type AccountType = 'couple' | 'planner' | 'staff'
+export type UserRole = 'user' | 'admin' | 'super_admin'
 export type AnalyticsEventType =
   | 'opened' | 'seal_tapped' | 'video_watched' | 'rsvp_submitted'
   | 'shared' | 'guestbook_written' | 'gallery_viewed' | 'photo_downloaded'
   | 'story_viewed' | 'reaction_added' | 'page_viewed'
 
+export interface UserProfile {
+  id: string
+  email: string
+  full_name?: string
+  account_type: AccountType
+  business_name?: string
+  role: UserRole
+  created_at: string
+}
+
+export interface AdminAuditLog {
+  id:            string
+  admin_id:      string
+  admin_email:   string
+  action:        string
+  resource_type: string
+  resource_id:   string
+  details?:      Record<string, unknown>
+  created_at:    string
+}
+
 export interface Wedding {
   id: string
+  user_id?: string
   slug: string
   couple_names: { name1: string; name2: string }
-  wedding_date: string // ISO timestamp
+  wedding_date: string
   venue: string
   venue_address?: string
   city: string
   theme: WeddingTheme
   config: WeddingConfig
-  created_at: string
+  status: WeddingStatus
   is_active: boolean
+  created_at: string
 }
 
 export interface DressCodeColor {
-  color: string   // hex e.g. "#C9A84C"
-  label: string   // "Gold", "Ivory", "Sage"
+  color: string
+  label: string
 }
 
 export interface DressCode {
-  title:       string             // "Black Tie" / "Smart Casual"
+  title:       string
   description?: string
   colors?:     DressCodeColor[]
 }
@@ -58,21 +84,21 @@ export interface WeddingConfig {
   max_party_size?:  number
 
   // ── Media ──
-  montage_images?:  string[]     // Cloudinary public IDs (legacy)
-  montage_video?:   string       // Cloudinary public ID (legacy)
-  intro_video_url?: string       // URL for couple intro video splash
+  montage_images?:  string[]
+  montage_video?:   string
+  intro_video_url?: string
 
   // ── Music ──
-  music_track?:    string        // single track URL (legacy)
-  music_tracks?:   MusicTrack[]  // multi-track playlist
+  music_track?:    string
+  music_tracks?:   MusicTrack[]
 
   // ── Copy ──
   intro_text?:     string
   hashtag?:        string
-  hashtag_feed_tag?: string      // for social embed
+  hashtag_feed_tag?: string
 
   // ── Event timing ──
-  start_time?: string            // "HH:MM" WAT
+  start_time?: string
   end_time?:   string
 
   // ── Venue ──
@@ -82,7 +108,7 @@ export interface WeddingConfig {
   // ── Gallery controls ──
   allow_downloads:      boolean
   watermark_downloads?: boolean
-  download_limit?:      number   // max downloads per guest per day
+  download_limit?:      number
 
   // ── Gift registry ──
   gift_registry_url?:  string
@@ -90,7 +116,7 @@ export interface WeddingConfig {
 
   // ── Privacy ──
   is_private?:        boolean
-  privacy_password?:  string     // bcrypt hash in production
+  privacy_password?:  string
 
   // ── Custom colors ──
   colors?: { primary?: string; accent?: string; background?: string }
@@ -100,7 +126,7 @@ export interface Guest {
   id: string
   wedding_id: string
   name: string
-  slug: string // URL-safe identifier e.g. "temi-johnson"
+  slug: string
   phone?: string
   email?: string
   plus_one: boolean
@@ -119,7 +145,7 @@ export interface GuestbookEntry {
   guest_id?: string
   guest_name: string
   message: string
-  reactions: Record<string, number>  // {"❤️": 3, "🥂": 2}
+  reactions: Record<string, number>
   created_at: string
 }
 
@@ -131,8 +157,6 @@ export interface AnalyticsEvent {
   metadata?: Record<string, unknown>
   created_at: string
 }
-
-// ── New tables ────────────────────────────────────────────────
 
 export interface StoryMilestone {
   id:          string
@@ -163,17 +187,18 @@ export interface GalleryAlbum {
 }
 
 export interface GalleryPhoto {
-  id:             string
-  wedding_id:     string
-  album_id?:      string
-  url:            string
-  thumbnail_url?: string
-  caption?:       string
-  width?:         number
-  height?:        number
-  download_count: number
-  sort_order:     number
-  created_at:     string
+  id:                    string
+  wedding_id:            string
+  album_id?:             string
+  url:                   string
+  thumbnail_url?:        string
+  caption?:              string
+  width?:                number
+  height?:               number
+  download_count:        number
+  sort_order:            number
+  created_at:            string
+  uploaded_by_guest_id?: string | null
 }
 
 export interface EventScheduleItem {
@@ -186,8 +211,6 @@ export interface EventScheduleItem {
   emoji?:       string
   sort_order:   number
 }
-
-// ── Analytics summary ─────────────────────────────────────────
 
 export interface AnalyticsSummary {
   total_views:       number
@@ -217,4 +240,13 @@ export interface RSVPFormData {
 export interface GuestPageProps {
   wedding: Wedding
   guest?: Guest | null
+}
+
+export interface CreateWeddingInput {
+  name1: string
+  name2: string
+  wedding_date: string
+  venue: string
+  city?: string
+  client_label?: string  // planners only: e.g. "Adaeze & Emeka Wedding"
 }

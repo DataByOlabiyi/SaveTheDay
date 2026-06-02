@@ -1,31 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/db/client'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText } from '@/lib/utils/sanitize'
 
-// ──────────────────────────────────────────────────────────────
-// Validation schema
-// ──────────────────────────────────────────────────────────────
 const rsvpRequestSchema = z.object({
-  weddingId: z.string().uuid(),
-  guestId: z.string().uuid().optional(),
-  name: z.string().min(2).max(100),
-  email: z.string().email().optional().or(z.literal('')),
-  phone: z.string().min(7).max(20).optional().or(z.literal('')),
-  status: z.enum(['attending', 'declined']),
+  weddingId:  z.string().uuid(),
+  guestId:    z.string().uuid().optional(),
+  name:       z.string().min(2).max(100),
+  email:      z.string().email().optional().or(z.literal('')),
+  phone:      z.string().min(7).max(20).optional().or(z.literal('')),
+  status:     z.enum(['attending', 'declined']),
   party_size: z.number().min(1).max(20).default(1),
-  dietary: z.string().max(200).optional().or(z.literal('')),
-  note: z.string().max(500).optional().or(z.literal('')),
+  dietary:    z.string().max(200).optional().or(z.literal('')),
+  note:       z.string().max(500).optional().or(z.literal('')),
 })
 
-// ──────────────────────────────────────────────────────────────
-// POST /api/rsvp
-// ──────────────────────────────────────────────────────────────
-export async function POST(request: NextRequest) {
-  // Rate limiting — 10 RSVPs per minute per IP
+export async function POST(request: NextRequest): Promise<Response> {
   const ip = request.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `rsvp:${ip}`, limit: 10, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `rsvp:${ip}`, limit: 10, windowMs: 60_000 })
   if (!rl.allowed) {
     return NextResponse.json(
       { error: 'Too many requests. Please try again in a moment.' },
@@ -33,15 +26,11 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  // Parse body
   let body: unknown
-  try {
-    body = await request.json()
-  } catch {
+  try { body = await request.json() } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  // Validate
   const parsed = rsvpRequestSchema.safeParse(body)
   if (!parsed.success) {
     return NextResponse.json(
@@ -50,26 +39,23 @@ export async function POST(request: NextRequest) {
     )
   }
 
-  const data = parsed.data
+  const data     = parsed.data
   const supabase = createAdminClient()
-
   const partySize = data.party_size
   const plusOne   = partySize > 1
 
-  // Sanitize free-text fields
   const safeName    = sanitizeText(data.name)
   const safeDietary = data.dietary ? sanitizeText(data.dietary) : null
   const safeNote    = data.note    ? sanitizeText(data.note)    : null
 
-  // If we have a guestId, update that guest's record
   if (data.guestId) {
     const { error } = await supabase
       .from('guests')
       .update({
         rsvp_status: data.status,
         rsvp_at:     new Date().toISOString(),
-        email:       data.email    || null,
-        phone:       data.phone    || null,
+        email:       data.email || null,
+        phone:       data.phone || null,
         party_size:  partySize,
         plus_one:    plusOne,
         dietary:     safeDietary,
@@ -83,7 +69,6 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to save RSVP' }, { status: 500 })
     }
   } else {
-    // Anonymous RSVP — create a new guest record
     const { error } = await supabase.from('guests').insert({
       wedding_id:  data.weddingId,
       name:        safeName,
@@ -104,13 +89,75 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Log analytics event
-  await supabase.from('analytics_events').insert({
+  // Fire analytics (non-blocking)
+  supabase.from('analytics_events').insert({
     wedding_id: data.weddingId,
-    guest_id: data.guestId ?? null,
+    guest_id:   data.guestId ?? null,
     event_type: 'rsvp_submitted',
-    metadata: { status: data.status },
-  })
+    metadata:   { status: data.status },
+  }).then(() => {})
+
+  // Email notification — fires if RESEND_API_KEY is configured
+  // Looks up the couple's email via user_profiles and notifies them
+  notifyCouple(data.weddingId, safeName, data.status).catch(() => {})
 
   return NextResponse.json({ success: true })
+}
+
+async function notifyCouple(
+  weddingId: string,
+  guestName: string,
+  status: 'attending' | 'declined'
+) {
+  const resendKey = process.env.RESEND_API_KEY
+  if (!resendKey) return // Email not configured — skip silently
+
+  const supabase = createAdminClient()
+
+  // Look up wedding + owner's email in one query
+  const { data } = await supabase
+    .from('weddings')
+    .select('couple_names, user_id, user_profiles!inner(email)')
+    .eq('id', weddingId)
+    .single() as { data: {
+      couple_names: { name1: string; name2: string }
+      user_id: string
+      user_profiles: { email: string }
+    } | null }
+
+  if (!data?.user_profiles?.email) return
+
+  const coupleEmail = data.user_profiles.email
+  const coupleName  = `${data.couple_names.name1} & ${data.couple_names.name2}`
+  const statusText  = status === 'attending' ? '✓ Attending' : '✗ Declined'
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${resendKey}`,
+    },
+    body: JSON.stringify({
+      from: process.env.RESEND_FROM_EMAIL ?? 'notifications@savetheday.app',
+      to: coupleEmail,
+      subject: `${guestName} just RSVP'd — ${statusText}`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #080C0A; color: #FAF7F2;">
+          <p style="color: #C9A84C; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;">Save The Day</p>
+          <h2 style="font-size: 24px; margin: 16px 0;">${coupleName}</h2>
+          <p style="color: #999; line-height: 1.6;">
+            <strong style="color: #FAF7F2;">${guestName}</strong> has responded to your invitation.
+          </p>
+          <div style="margin: 24px 0; padding: 16px; border: 1px solid rgba(201,168,76,0.2); border-radius: 4px; background: rgba(201,168,76,0.05);">
+            <p style="margin: 0; color: ${status === 'attending' ? '#4ade80' : '#f87171'}; font-weight: bold;">
+              ${statusText}
+            </p>
+          </div>
+          <p style="color: #555; font-size: 12px;">
+            View all RSVPs in your <a href="${process.env.NEXT_PUBLIC_APP_URL ?? 'https://savetheday.app'}/studio" style="color: #C9A84C;">Studio</a>.
+          </p>
+        </div>
+      `,
+    }),
+  })
 }

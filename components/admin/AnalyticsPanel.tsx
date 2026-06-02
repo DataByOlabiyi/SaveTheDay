@@ -5,8 +5,7 @@ import { motion } from 'framer-motion'
 import type { AnalyticsSummary } from '@/lib/db/types'
 
 interface AnalyticsPanelProps {
-  weddingId:   string
-  adminSecret: string
+  weddingId: string
 }
 
 const STAT_CARDS = [
@@ -33,18 +32,18 @@ const EVENT_LABELS: Record<string, string> = {
   page_viewed:      'Page Views',
 }
 
-export function AnalyticsPanel({ weddingId, adminSecret }: AnalyticsPanelProps) {
+export function AnalyticsPanel({ weddingId }: AnalyticsPanelProps) {
   const [summary, setSummary] = useState<AnalyticsSummary | null>(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     setLoading(true)
-    fetch(`/api/admin/analytics?weddingId=${weddingId}&secret=${encodeURIComponent(adminSecret)}`)
+    fetch(`/api/admin/analytics?weddingId=${weddingId}`)
       .then(r => r.json())
       .then(data => setSummary(data.summary))
       .catch(() => {})
       .finally(() => setLoading(false))
-  }, [weddingId, adminSecret])
+  }, [weddingId])
 
   if (loading) {
     return (

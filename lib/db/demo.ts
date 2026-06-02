@@ -1,16 +1,16 @@
 // ──────────────────────────────────────────────────────────────
-// Demo Wedding Data — used when Supabase isn't configured
-// This lets the UI render and look correct during development
-// without needing a real database connection.
+// Demo Wedding Data
+// Served at /e/demo-wedding — used as a live product demo
+// and as a fallback when Supabase is not configured
 // ──────────────────────────────────────────────────────────────
 
 import type { Wedding, Guest, GalleryAlbum, GalleryPhoto, StoryMilestone, EventScheduleItem } from './types'
 
 export const DEMO_WEDDING: Wedding = {
   id: 'demo-wedding-id',
-  slug: 'bride-and-groom',
-  couple_names: { name1: 'Mojirade', name2: 'Olabiyi' },
-  wedding_date: '2026-08-22T00:00:00.000Z', // 22 August 2026
+  slug: 'demo-wedding',
+  couple_names: { name1: 'Adaeze', name2: 'Emeka' },
+  wedding_date: '2050-06-21T14:00:00.000Z', // 21 June 2050 — summer solstice
   venue: 'Eko Hotel & Suites',
   venue_address: 'Plot 1415, Adetokunbo Ademola Street, Victoria Island',
   city: 'Lagos',
@@ -28,14 +28,14 @@ export const DEMO_WEDDING: Wedding = {
     // RSVP
     allow_plus_one:  true,
     collect_dietary: true,
-    rsvp_deadline:   new Date(Date.now() + 100 * 24 * 60 * 60 * 1000).toISOString(),
+    rsvp_deadline:   '2050-05-01',
     max_party_size:  6,
     // Timing
     start_time: '14:00',
     end_time:   '22:00',
     // Copy
     intro_text: 'The beginning of forever',
-    hashtag:    '#MojiAndOlabiyiForever',
+    hashtag:    '#AdaezeAndEmekaForever',
     // Gallery
     allow_downloads: true,
     // Dress code
@@ -49,6 +49,7 @@ export const DEMO_WEDDING: Wedding = {
       ],
     },
   },
+  status: 'published',
   is_active: true,
   created_at: new Date().toISOString(),
 }
@@ -83,8 +84,7 @@ export const DEMO_GUESTS: Guest[] = [
 ]
 
 // ──────────────────────────────────────────────────────────────
-// Demo Gallery Albums & Photos — shown when no real photos exist
-// Uses picsum.photos for realistic placeholder imagery
+// Demo Gallery
 // ──────────────────────────────────────────────────────────────
 
 export const DEMO_GALLERY_ALBUMS: GalleryAlbum[] = [
@@ -168,7 +168,7 @@ export const DEMO_GALLERY_PHOTOS: GalleryPhoto[] = [
 ]
 
 // ──────────────────────────────────────────────────────────────
-// Demo Story Milestones — shown when no real story exists
+// Demo Story Milestones
 // ──────────────────────────────────────────────────────────────
 
 export const DEMO_STORY_MILESTONES: StoryMilestone[] = [
@@ -195,16 +195,16 @@ export const DEMO_STORY_MILESTONES: StoryMilestone[] = [
 ]
 
 // ──────────────────────────────────────────────────────────────
-// Demo Event Schedule — shown when no real schedule exists
+// Demo Event Schedule
 // ──────────────────────────────────────────────────────────────
 
 export const DEMO_EVENT_SCHEDULE: EventScheduleItem[] = [
-  { id: 'demo-ev-1', wedding_id: 'demo-wedding-id', title: 'Guests Arrive',      time_label: '1:30 PM', description: 'Welcome drinks and light canapés',     emoji: '🥂', sort_order: 1 },
-  { id: 'demo-ev-2', wedding_id: 'demo-wedding-id', title: 'Ceremony',            time_label: '2:00 PM', description: 'Eko Hotel Grand Ballroom',              emoji: '💒', sort_order: 2 },
-  { id: 'demo-ev-3', wedding_id: 'demo-wedding-id', title: 'Cocktail Hour',       time_label: '3:30 PM', description: 'Garden terrace',                        emoji: '🍹', sort_order: 3 },
-  { id: 'demo-ev-4', wedding_id: 'demo-wedding-id', title: 'Reception Opens',     time_label: '5:00 PM', description: 'Grand Ballroom',                        emoji: '🎊', sort_order: 4 },
-  { id: 'demo-ev-5', wedding_id: 'demo-wedding-id', title: 'Dinner Service',      time_label: '6:00 PM', description: 'Seated dinner',                         emoji: '🍽️', sort_order: 5 },
-  { id: 'demo-ev-6', wedding_id: 'demo-wedding-id', title: 'First Dance & Party', time_label: '8:00 PM', description: 'Dancefloor opens',                      emoji: '💃', sort_order: 6 },
+  { id: 'demo-ev-1', wedding_id: 'demo-wedding-id', title: 'Guests Arrive',      time_label: '1:30 PM', description: 'Welcome drinks and light canapés',  emoji: '🥂', sort_order: 1 },
+  { id: 'demo-ev-2', wedding_id: 'demo-wedding-id', title: 'Ceremony',            time_label: '2:00 PM', description: 'Eko Hotel Grand Ballroom',           emoji: '💒', sort_order: 2 },
+  { id: 'demo-ev-3', wedding_id: 'demo-wedding-id', title: 'Cocktail Hour',       time_label: '3:30 PM', description: 'Garden terrace',                     emoji: '🍹', sort_order: 3 },
+  { id: 'demo-ev-4', wedding_id: 'demo-wedding-id', title: 'Reception Opens',     time_label: '5:00 PM', description: 'Grand Ballroom',                     emoji: '🎊', sort_order: 4 },
+  { id: 'demo-ev-5', wedding_id: 'demo-wedding-id', title: 'Dinner Service',      time_label: '6:00 PM', description: 'Seated dinner',                      emoji: '🍽️', sort_order: 5 },
+  { id: 'demo-ev-6', wedding_id: 'demo-wedding-id', title: 'First Dance & Party', time_label: '8:00 PM', description: 'Dancefloor opens',                   emoji: '💃', sort_order: 6 },
 ]
 
 export function isDemoMode(): boolean {

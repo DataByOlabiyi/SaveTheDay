@@ -1,12 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/db/client'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimit } from '@/lib/utils/rateLimit'
 import { sanitizeText, clampString, isSafeUrl } from '@/lib/utils/sanitize'
 
-// ──────────────────────────────────────────────────────────────
-// GET /api/gallery?weddingId=...&albumId=...
-// ──────────────────────────────────────────────────────────────
+async function assertOwnership(userId: string, weddingId: string): Promise<boolean> {
+  const db = createAdminClient()
+  const { data } = await db
+    .from('weddings')
+    .select('id')
+    .eq('id', weddingId)
+    .eq('user_id', userId)
+    .single()
+  return !!data
+}
+
+// ── GET /api/gallery?weddingId=...&albumId=... ────────────────────────────────
 export async function GET(req: NextRequest) {
   const weddingId = req.nextUrl.searchParams.get('weddingId')
   const albumId   = req.nextUrl.searchParams.get('albumId')
@@ -14,17 +24,19 @@ export async function GET(req: NextRequest) {
   if (!weddingId) return NextResponse.json({ error: 'weddingId required' }, { status: 400 })
 
   try {
-    const supabase = createAdminClient()
+    const db = createAdminClient()
+
+    const tableNotFound = (err: unknown) =>
+      (err as { code?: string } | null)?.code === 'PGRST205' ||
+      (err as { code?: string } | null)?.code === 'PGRST200'
 
     const [albumsRes, photosRes] = await Promise.all([
-      supabase
-        .from('gallery_albums')
+      db.from('gallery_albums')
         .select('*')
         .eq('wedding_id', weddingId)
         .order('sort_order', { ascending: true }),
       (() => {
-        let q = supabase
-          .from('gallery_photos')
+        let q = db.from('gallery_photos')
           .select('*')
           .eq('wedding_id', weddingId)
           .order('sort_order', { ascending: true })
@@ -32,12 +44,6 @@ export async function GET(req: NextRequest) {
         return q
       })(),
     ])
-
-    // PGRST205 = table not yet in schema cache (schema-v2.sql not yet applied)
-    // Silently return empty rather than crashing the client
-    const tableNotFound = (err: unknown) =>
-      (err as { code?: string } | null)?.code === 'PGRST205' ||
-      (err as { code?: string } | null)?.code === 'PGRST200'
 
     if (albumsRes.error && !tableNotFound(albumsRes.error)) throw albumsRes.error
     if (photosRes.error && !tableNotFound(photosRes.error)) throw photosRes.error
@@ -52,13 +58,10 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// ──────────────────────────────────────────────────────────────
-// POST /api/gallery  — create album or add photo (admin)
-// ──────────────────────────────────────────────────────────────
+// ── POST /api/gallery — create album or add photo ─────────────────────────────
 const albumSchema = z.object({
   type:        z.literal('album'),
   weddingId:   z.string().uuid(),
-  secret:      z.string(),
   id:          z.string().uuid().optional(),
   name:        z.string().min(1).max(100),
   description: z.string().max(500).optional(),
@@ -69,7 +72,6 @@ const albumSchema = z.object({
 const photoSchema = z.object({
   type:          z.literal('photo'),
   weddingId:     z.string().uuid(),
-  secret:        z.string(),
   id:            z.string().uuid().optional(),
   albumId:       z.string().uuid().optional(),
   url:           z.string().url(),
@@ -87,6 +89,10 @@ export async function POST(req: NextRequest) {
   const rl  = checkRateLimit({ key: `gallery-write:${ip}`, limit: 60, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   let body: unknown
   try { body = await req.json() } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
@@ -97,12 +103,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 422 })
   }
 
-  const { weddingId, secret } = parsed.data
-  if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+  const { weddingId } = parsed.data
 
-  const supabase = createAdminClient()
+  const isOwner = await assertOwnership(user.id, weddingId)
+  if (!isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const db = createAdminClient()
 
   try {
     if (parsed.data.type === 'album') {
@@ -116,11 +122,11 @@ export async function POST(req: NextRequest) {
       }
 
       if (id) {
-        const { data, error } = await supabase.from('gallery_albums').update(payload).eq('id', id).select().single()
+        const { data, error } = await db.from('gallery_albums').update(payload).eq('id', id).select().single()
         if (error) throw error
         return NextResponse.json({ album: data })
       } else {
-        const { data, error } = await supabase.from('gallery_albums').insert(payload).select().single()
+        const { data, error } = await db.from('gallery_albums').insert(payload).select().single()
         if (error) throw error
         return NextResponse.json({ album: data }, { status: 201 })
       }
@@ -142,11 +148,11 @@ export async function POST(req: NextRequest) {
     }
 
     if (id) {
-      const { data, error } = await supabase.from('gallery_photos').update(payload).eq('id', id).select().single()
+      const { data, error } = await db.from('gallery_photos').update(payload).eq('id', id).select().single()
       if (error) throw error
       return NextResponse.json({ photo: data })
     } else {
-      const { data, error } = await supabase.from('gallery_photos').insert(payload).select().single()
+      const { data, error } = await db.from('gallery_photos').insert(payload).select().single()
       if (error) throw error
       return NextResponse.json({ photo: data }, { status: 201 })
     }
@@ -156,26 +162,27 @@ export async function POST(req: NextRequest) {
   }
 }
 
-// ──────────────────────────────────────────────────────────────
-// DELETE /api/gallery?type=photo|album&id=...&weddingId=...&secret=...
-// ──────────────────────────────────────────────────────────────
+// ── DELETE /api/gallery?type=photo|album&id=...&weddingId=... ─────────────────
 export async function DELETE(req: NextRequest) {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
   const type      = req.nextUrl.searchParams.get('type')
   const id        = req.nextUrl.searchParams.get('id')
   const weddingId = req.nextUrl.searchParams.get('weddingId')
-  const secret    = req.nextUrl.searchParams.get('secret')
 
-  if (!type || !id || !weddingId || !secret) {
-    return NextResponse.json({ error: 'type, id, weddingId and secret required' }, { status: 400 })
+  if (!type || !id || !weddingId) {
+    return NextResponse.json({ error: 'type, id and weddingId required' }, { status: 400 })
   }
-  if (!process.env.ADMIN_SECRET || secret !== process.env.ADMIN_SECRET) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-  }
+
+  const isOwner = await assertOwnership(user.id, weddingId)
+  if (!isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const table = type === 'album' ? 'gallery_albums' : 'gallery_photos'
   try {
-    const supabase = createAdminClient()
-    const { error } = await supabase.from(table).delete().eq('id', id).eq('wedding_id', weddingId)
+    const db = createAdminClient()
+    const { error } = await db.from(table).delete().eq('id', id).eq('wedding_id', weddingId)
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (err) {

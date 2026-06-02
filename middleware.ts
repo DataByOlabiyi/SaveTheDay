@@ -1,31 +1,100 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { createServerClient, type CookieOptions } from '@supabase/ssr'
 
-/**
- * Edge middleware — runs at CDN level before the page renders.
- *
- * Responsibilities:
- * 1. Inject guest name into response headers for fast personalization
- * 2. Block admin routes without the correct secret
- * 3. Add security headers
- */
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
+  let response = NextResponse.next({ request })
 
-  // ── Security: block direct access to admin without secret ──
-  if (pathname.startsWith('/admin')) {
-    const secret = request.nextUrl.searchParams.get('secret')
-    const expectedSecret = process.env.ADMIN_SECRET
+  // ── Supabase session refresh ───────────────────────────────────
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() { return request.cookies.getAll() },
+        setAll(cookiesToSet: { name: string; value: string; options?: CookieOptions }[]) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
+          response = NextResponse.next({ request })
+          cookiesToSet.forEach(({ name, value, options }) => response.cookies.set(name, value, options))
+        },
+      },
+    }
+  )
 
-    if (!expectedSecret || secret !== expectedSecret) {
-      // Don't reveal the admin exists — return a plain 404 style response
-      return new NextResponse('Not found', { status: 404 })
+  const { data: { user } } = await supabase.auth.getUser()
+
+  // ── /studio/* — must be logged in, scoped to /studio/login ─────
+  if (pathname.startsWith('/studio') && !pathname.startsWith('/studio/login')) {
+    if (!user) return NextResponse.redirect(new URL('/studio/login', request.url))
+  }
+
+  // ── /studio/login — redirect logged-in users to /studio ───────
+  if (pathname.startsWith('/studio/login') && user) {
+    return NextResponse.redirect(new URL('/studio', request.url))
+  }
+
+  // ── /admin/* — must be admin/super_admin, scoped to /admin/login
+  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
+    if (!user) return NextResponse.redirect(new URL('/admin/login', request.url))
+
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (serviceKey) {
+      const { createClient } = await import('@supabase/supabase-js')
+      const adminDb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      const { data: profile } = await adminDb
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
+
+      const role = profile?.role ?? 'user'
+      if (role !== 'admin' && role !== 'super_admin') {
+        return NextResponse.redirect(new URL('/admin/login', request.url))
+      }
+    } else {
+      return NextResponse.redirect(new URL('/admin/login', request.url))
     }
   }
 
-  // ── Continue with security headers ──
-  const response = NextResponse.next()
+  // ── /admin/login — redirect logged-in admins to /admin ────────
+  if (pathname.startsWith('/admin/login') && user) {
+    const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    if (serviceKey) {
+      const { createClient } = await import('@supabase/supabase-js')
+      const adminDb = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
+        auth: { autoRefreshToken: false, persistSession: false },
+      })
+      const { data: profile } = await adminDb
+        .from('user_profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single()
 
-  // HSTS (only in production)
+      const role = profile?.role ?? 'user'
+      if (role === 'admin' || role === 'super_admin') {
+        return NextResponse.redirect(new URL('/admin', request.url))
+      }
+    }
+    // Logged in but not admin — let the page render (shows form with no redirect)
+  }
+
+  // ── /create, /account — must be logged in, use global /login ──
+  if (pathname.startsWith('/create') || pathname.startsWith('/account')) {
+    if (!user) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('next', pathname)
+      return NextResponse.redirect(loginUrl)
+    }
+  }
+
+  // ── Redirect logged-in users away from global auth pages ──────
+  if ((pathname === '/login' || pathname === '/signup') && user) {
+    return NextResponse.redirect(new URL('/studio', request.url))
+  }
+
+  // ── Security headers ──────────────────────────────────────────
   if (process.env.NODE_ENV === 'production') {
     response.headers.set(
       'Strict-Transport-Security',
@@ -37,9 +106,7 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Only run middleware on these paths — not on static assets or API
   matcher: [
-    '/admin/:path*',
-    '/:weddingSlug/:guestSlug*',
+    '/((?!_next/static|_next/image|favicon.ico|icons|manifest.json|sw.js|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 }
