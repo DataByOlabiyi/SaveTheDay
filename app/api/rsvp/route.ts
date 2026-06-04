@@ -5,15 +5,18 @@ import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText } from '@/lib/utils/sanitize'
 
 const rsvpRequestSchema = z.object({
-  weddingId:  z.string().uuid(),
-  guestId:    z.string().uuid().optional(),
-  name:       z.string().min(2).max(100),
-  email:      z.string().email().optional().or(z.literal('')),
-  phone:      z.string().min(7).max(20).optional().or(z.literal('')),
-  status:     z.enum(['attending', 'declined']),
-  party_size: z.number().min(1).max(20).default(1),
-  dietary:    z.string().max(200).optional().or(z.literal('')),
-  note:       z.string().max(500).optional().or(z.literal('')),
+  weddingId:        z.string().uuid(),
+  guestId:          z.string().uuid().optional(),
+  name:             z.string().min(2).max(100),
+  email:            z.string().email().optional().or(z.literal('')),
+  phone:            z.string().min(7).max(20).optional().or(z.literal('')),
+  status:           z.enum(['attending', 'declined']),
+  party_size:       z.number().min(1).max(20).default(1),
+  plus_one_name:    z.string().max(100).optional().or(z.literal('')),
+  dietary:          z.string().max(200).optional().or(z.literal('')),
+  meal_choice:      z.string().max(100).optional().or(z.literal('')),
+  attending_events: z.array(z.string().max(100)).max(10).optional(),
+  note:             z.string().max(500).optional().or(z.literal('')),
 })
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -44,22 +47,28 @@ export async function POST(request: NextRequest): Promise<Response> {
   const partySize = data.party_size
   const plusOne   = partySize > 1
 
-  const safeName    = sanitizeText(data.name)
-  const safeDietary = data.dietary ? sanitizeText(data.dietary) : null
-  const safeNote    = data.note    ? sanitizeText(data.note)    : null
+  const safeName      = sanitizeText(data.name)
+  const safeDietary   = data.dietary     ? sanitizeText(data.dietary)     : null
+  const safeNote      = data.note        ? sanitizeText(data.note)        : null
+  const safePlusOne   = data.plus_one_name ? sanitizeText(data.plus_one_name) : null
+  const safeMeal      = data.meal_choice  ? sanitizeText(data.meal_choice)  : null
+  const safeEvents    = data.attending_events?.map(e => sanitizeText(e)) ?? null
 
   if (data.guestId) {
     const { error } = await supabase
       .from('guests')
       .update({
-        rsvp_status: data.status,
-        rsvp_at:     new Date().toISOString(),
-        email:       data.email || null,
-        phone:       data.phone || null,
-        party_size:  partySize,
-        plus_one:    plusOne,
-        dietary:     safeDietary,
-        rsvp_note:   safeNote,
+        rsvp_status:      data.status,
+        rsvp_at:          new Date().toISOString(),
+        email:            data.email || null,
+        phone:            data.phone || null,
+        party_size:       partySize,
+        plus_one:         plusOne,
+        plus_one_name:    safePlusOne,
+        dietary:          safeDietary,
+        meal_choice:      safeMeal,
+        attending_events: safeEvents,
+        rsvp_note:        safeNote,
       })
       .eq('id', data.guestId)
       .eq('wedding_id', data.weddingId)
@@ -70,17 +79,20 @@ export async function POST(request: NextRequest): Promise<Response> {
     }
   } else {
     const { error } = await supabase.from('guests').insert({
-      wedding_id:  data.weddingId,
-      name:        safeName,
-      slug:        `anon-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      email:       data.email || null,
-      phone:       data.phone || null,
-      party_size:  partySize,
-      plus_one:    plusOne,
-      dietary:     safeDietary,
-      rsvp_status: data.status,
-      rsvp_at:     new Date().toISOString(),
-      rsvp_note:   safeNote,
+      wedding_id:       data.weddingId,
+      name:             safeName,
+      slug:             `anon-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      email:            data.email || null,
+      phone:            data.phone || null,
+      party_size:       partySize,
+      plus_one:         plusOne,
+      plus_one_name:    safePlusOne,
+      dietary:          safeDietary,
+      meal_choice:      safeMeal,
+      attending_events: safeEvents,
+      rsvp_status:      data.status,
+      rsvp_at:          new Date().toISOString(),
+      rsvp_note:        safeNote,
     })
 
     if (error) {

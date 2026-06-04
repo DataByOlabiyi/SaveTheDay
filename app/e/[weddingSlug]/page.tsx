@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation'
 import type { Metadata } from 'next'
 import { TheUnveilingPage } from '@/components/scenes/TheUnveilingPage'
+import { ErrorBoundary } from '@/components/atoms/ErrorBoundary'
 import {
   getWeddingBySlug, getWeddingBySlugForOwner, getGuestBySlug, getEventSchedule,
   getStoryMilestones, getGalleryAlbums, getGalleryPhotos,
@@ -87,13 +88,15 @@ export default async function WeddingPage({ params, searchParams }: PageProps) {
   const albums = allAlbums.filter(a => (photoCountByAlbum[a.id] ?? 0) > 0)
 
   return (
-    <TheUnveilingPage
-      wedding={wedding}
-      guest={guest}
-      schedule={schedule}
-      milestones={milestones}
-      albums={albums}
-      photos={photos}
-    />
+    <ErrorBoundary>
+      <TheUnveilingPage
+        wedding={wedding}
+        guest={guest}
+        schedule={schedule}
+        milestones={milestones}
+        albums={albums}
+        photos={photos}
+      />
+    </ErrorBoundary>
   )
 }

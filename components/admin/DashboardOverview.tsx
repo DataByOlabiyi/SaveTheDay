@@ -30,6 +30,8 @@ interface DashboardOverviewProps {
   onImportGuests:   () => void
   onDeleteWedding:  () => void
   appUrl:           string
+  themeAccent:      string
+  themeRaw:         string
 }
 
 const CARD_STYLE = {
@@ -47,6 +49,8 @@ export function DashboardOverview({
   onImportGuests,
   onDeleteWedding,
   appUrl,
+  themeAccent,
+  themeRaw,
 }: DashboardOverviewProps) {
   const { couple_names, wedding_date, city } = wedding
 
@@ -81,13 +85,13 @@ export function DashboardOverview({
         transition={{ duration: 0.5, ease: [0.22, 1, 0.36, 1] }}
         className="relative overflow-hidden rounded-2xl p-7 md:p-10"
         style={{
-          background: 'linear-gradient(135deg, rgba(201,168,76,0.09) 0%, rgba(201,168,76,0.03) 50%, rgba(255,255,255,0.01) 100%)',
-          border: '1px solid rgba(201,168,76,0.14)',
+          background: `linear-gradient(135deg, rgba(${themeRaw},0.09) 0%, rgba(${themeRaw},0.03) 50%, rgba(255,255,255,0.01) 100%)`,
+          border: `1px solid rgba(${themeRaw},0.18)`,
         }}
       >
         <div
           className="pointer-events-none absolute top-0 right-0 w-72 h-72"
-          style={{ background: 'radial-gradient(ellipse at top right, rgba(201,168,76,0.10) 0%, transparent 65%)' }}
+          style={{ background: `radial-gradient(ellipse at top right, rgba(${themeRaw},0.12) 0%, transparent 65%)` }}
         />
 
         <div className="relative flex flex-col sm:flex-row sm:items-center justify-between gap-6">
@@ -151,7 +155,7 @@ export function DashboardOverview({
               <p className="font-body text-sm text-ivory/80">Setup progress</p>
               <p className="font-body text-xs text-ivory/30 mt-0.5">Complete these steps before publishing</p>
             </div>
-            <span className="font-display text-gold text-2xl" style={{ fontWeight: 300 }}>
+            <span className="font-display text-2xl" style={{ fontWeight: 300, color: themeAccent }}>
               {setupPercent}%
             </span>
           </div>
@@ -160,7 +164,8 @@ export function DashboardOverview({
               initial={{ width: 0 }}
               animate={{ width: `${setupPercent}%` }}
               transition={{ duration: 1.2, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute inset-y-0 left-0 bg-gold"
+              className="absolute inset-y-0 left-0"
+              style={{ background: themeAccent }}
             />
           </div>
           <div className="px-6 py-5 grid sm:grid-cols-2 gap-3">

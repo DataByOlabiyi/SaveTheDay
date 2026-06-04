@@ -23,7 +23,7 @@ export function OnboardingWizard({ userEmail }: Props) {
     name2: '',
     wedding_date: '',
     venue: '',
-    city: 'Lagos',
+    city: '',
   })
 
   function handleChange(field: string, value: string) {
@@ -240,7 +240,7 @@ function WeddingDetailsStep({
               type="text"
               value={form.businessName}
               onChange={e => onChange('businessName', e.target.value)}
-              placeholder="e.g. Lagos Wedding Co."
+              placeholder="e.g. Bloom Events Co."
               className="w-full bg-white/5 border border-white/10 focus:border-gold/50 text-ivory font-body text-sm px-4 py-3 rounded-sm outline-none transition-colors placeholder:text-ivory/20"
             />
           </div>
@@ -270,7 +270,7 @@ function WeddingDetailsStep({
           </div>
           {form.name1 && form.name2 && (
             <p className="font-body text-ivory/20 text-xs mt-2 tracking-wide">
-              Event URL: /e/{slugPreview(form.name1, form.name2)}
+              Invitation URL: /e/{slugPreview(form.name1, form.name2)}
             </p>
           )}
         </div>
@@ -298,7 +298,7 @@ function WeddingDetailsStep({
             value={form.venue}
             onChange={e => onChange('venue', e.target.value)}
             required
-            placeholder="e.g. Eko Hotel & Suites"
+            placeholder="e.g. The Grand Ballroom"
             className="w-full bg-white/5 border border-white/10 focus:border-gold/50 text-ivory font-body text-sm px-4 py-3 rounded-sm outline-none transition-colors placeholder:text-ivory/20"
           />
         </div>
@@ -311,7 +311,7 @@ function WeddingDetailsStep({
             type="text"
             value={form.city}
             onChange={e => onChange('city', e.target.value)}
-            placeholder="Lagos"
+            placeholder="e.g. London, New York, Lagos"
             className="w-full bg-white/5 border border-white/10 focus:border-gold/50 text-ivory font-body text-sm px-4 py-3 rounded-sm outline-none transition-colors placeholder:text-ivory/20"
           />
         </div>

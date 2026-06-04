@@ -124,7 +124,7 @@ export function AccountSettingsForm({
             type="text"
             value={businessName}
             onChange={e => setBusinessName(e.target.value)}
-            placeholder="e.g. Lagos Wedding Co."
+            placeholder="e.g. Bloom Events Co."
             maxLength={100}
             className="w-full bg-white/5 border border-white/10 focus:border-gold/50 text-ivory font-body text-sm px-4 py-3 rounded-sm outline-none transition-colors placeholder:text-ivory/20"
           />

@@ -1,19 +1,35 @@
 'use client'
 
-import { useRef } from 'react'
-import { motion, useInView } from 'framer-motion'
+import { useRef, useState } from 'react'
+import { motion, useInView, AnimatePresence } from 'framer-motion'
 import { GoldDivider } from '@/components/atoms/GoldText'
+import type { BankDetail } from '@/lib/db/types'
 
 interface GiftRegistryProps {
   registryUrl?:  string
   registryNote?: string
+  bankDetails?:  BankDetail[]
   coupleName1:   string
   coupleName2:   string
 }
 
-export function GiftRegistry({ registryUrl, registryNote, coupleName1, coupleName2 }: GiftRegistryProps) {
-  const ref    = useRef<HTMLDivElement>(null)
-  const inView = useInView(ref, { once: true, margin: '-60px' })
+export function GiftRegistry({ registryUrl, registryNote, bankDetails, coupleName1, coupleName2 }: GiftRegistryProps) {
+  const ref              = useRef<HTMLDivElement>(null)
+  const inView           = useInView(ref, { once: true, margin: '-60px' })
+  const [copied, setCopied] = useState<string | null>(null)
+
+  const copyText = async (text: string, key: string) => {
+    try { await navigator.clipboard.writeText(text) } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand('copy')
+      document.body.removeChild(ta)
+    }
+    setCopied(key)
+    setTimeout(() => setCopied(null), 2200)
+  }
 
   return (
     <section
@@ -74,6 +90,62 @@ export function GiftRegistry({ registryUrl, registryNote, coupleName1, coupleNam
             </svg>
             View Registry
           </motion.a>
+        )}
+
+        {/* ── Bank details ── */}
+        {bankDetails && bankDetails.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={inView ? { opacity: 1, y: 0 } : {}}
+            transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            className="w-full mt-8 text-left space-y-3"
+          >
+            <p className="font-body text-xs tracking-[0.25em] uppercase text-emerald-DEFAULT/50 text-center mb-4">
+              Bank Transfer
+            </p>
+            {bankDetails.map((bank, i) => (
+              <div
+                key={i}
+                className="rounded-lg p-4"
+                style={{ background: 'rgba(12,168,110,0.03)', border: '1px solid rgba(12,168,110,0.12)' }}
+              >
+                {bank.label && (
+                  <p className="font-body text-xs tracking-wider uppercase text-ivory/25 mb-2">{bank.label}</p>
+                )}
+                <p className="font-body text-sm text-ivory/60 mb-1">{bank.bank_name}</p>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="font-display text-ivory/90" style={{ fontSize: 'clamp(1rem, 3vw, 1.25rem)', fontWeight: 300, letterSpacing: '0.06em' }}>
+                      {bank.account_number}
+                    </p>
+                    <p className="font-body text-xs text-ivory/40 mt-0.5">{bank.account_name}</p>
+                  </div>
+                  <button
+                    onClick={() => copyText(bank.account_number, `${i}-num`)}
+                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-body text-xs transition-all"
+                    style={{
+                      background: copied === `${i}-num` ? 'rgba(12,168,110,0.15)' : 'rgba(12,168,110,0.06)',
+                      border: `1px solid ${copied === `${i}-num` ? 'rgba(12,168,110,0.35)' : 'rgba(12,168,110,0.15)'}`,
+                      color: copied === `${i}-num` ? '#0CA86E' : 'rgba(250,247,242,0.4)',
+                    }}
+                    aria-label={`Copy account number for ${bank.bank_name}`}
+                  >
+                    <AnimatePresence mode="wait">
+                      {copied === `${i}-num` ? (
+                        <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                          ✓ Copied
+                        </motion.span>
+                      ) : (
+                        <motion.span key="copy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                          Copy
+                        </motion.span>
+                      )}
+                    </AnimatePresence>
+                  </button>
+                </div>
+              </div>
+            ))}
+          </motion.div>
         )}
       </motion.div>
     </section>

@@ -1,9 +1,11 @@
 'use client'
 
-import { Suspense, useState } from 'react'
+import { Suspense, useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+
+const RESEND_COOLDOWN = 30
 
 function LoginContent() {
   const searchParams = useSearchParams()
@@ -14,6 +16,13 @@ function LoginContent() {
   const [sent, setSent] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(hasError ? 'Sign-in link expired. Please try again.' : '')
+  const [resendCooldown, setResendCooldown] = useState(0)
+
+  useEffect(() => {
+    if (resendCooldown <= 0) return
+    const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000)
+    return () => clearTimeout(timer)
+  }, [resendCooldown])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -34,7 +43,18 @@ function LoginContent() {
       setError(authError.message)
     } else {
       setSent(true)
+      setResendCooldown(RESEND_COOLDOWN)
     }
+  }
+
+  async function handleResend() {
+    if (resendCooldown > 0 || loading) return
+    setLoading(true)
+    const supabase = createSupabaseBrowserClient()
+    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
+    await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } })
+    setLoading(false)
+    setResendCooldown(RESEND_COOLDOWN)
   }
 
   async function handleGoogle() {
@@ -68,12 +88,23 @@ function LoginContent() {
               <span className="text-ivory/70">{email}</span>.<br />
               Click it to continue.
             </p>
-            <button
-              onClick={() => setSent(false)}
-              className="font-body text-ivory/30 text-xs tracking-wide hover:text-ivory/60 transition-colors"
-            >
-              Use a different email
-            </button>
+            <div className="flex flex-col items-center gap-3">
+              <button
+                onClick={handleResend}
+                disabled={resendCooldown > 0 || loading}
+                className="font-body text-gold/70 hover:text-gold text-xs tracking-wide transition-colors disabled:text-ivory/20 disabled:cursor-not-allowed"
+              >
+                {resendCooldown > 0
+                  ? `Resend in ${resendCooldown}s`
+                  : loading ? 'Sending…' : 'Resend link'}
+              </button>
+              <button
+                onClick={() => setSent(false)}
+                className="font-body text-ivory/30 text-xs tracking-wide hover:text-ivory/60 transition-colors"
+              >
+                Use a different email
+              </button>
+            </div>
           </div>
         ) : (
           <>

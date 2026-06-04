@@ -55,9 +55,26 @@ export interface DressCodeColor {
 }
 
 export interface DressCode {
-  title:       string
-  description?: string
-  colors?:     DressCodeColor[]
+  title:          string
+  description?:   string
+  colors?:        DressCodeColor[]
+  vendor_name?:   string
+  vendor_contact?: string
+}
+
+export interface Accommodation {
+  name:          string
+  address:       string
+  price_range?:  string
+  phone?:        string
+  booking_url?:  string
+}
+
+export interface BankDetail {
+  bank_name:      string
+  account_number: string
+  account_name:   string
+  label?:         string
 }
 
 export interface MusicTrack {
@@ -104,6 +121,8 @@ export interface WeddingConfig {
   // ── Venue ──
   google_maps_url?: string
   dress_code?:      DressCode
+  accommodations?:  Accommodation[]
+  show_accommodations?: boolean
 
   // ── Gallery controls ──
   allow_downloads:      boolean
@@ -113,6 +132,12 @@ export interface WeddingConfig {
   // ── Gift registry ──
   gift_registry_url?:  string
   gift_registry_note?: string
+  bank_details?:       BankDetail[]
+
+  // ── RSVP extras ──
+  collect_meal_choice?: boolean
+  meal_options?:        string[]
+  rsvp_events?:         string[]
 
   // ── Privacy ──
   is_private?:        boolean
@@ -120,6 +145,9 @@ export interface WeddingConfig {
 
   // ── Custom colors ──
   colors?: { primary?: string; accent?: string; background?: string }
+
+  // ── Invitation theme ──
+  invitation_theme?: string
 }
 
 export interface Guest {
@@ -130,12 +158,17 @@ export interface Guest {
   phone?: string
   email?: string
   plus_one: boolean
+  plus_one_name?: string
   party_size: number
   dietary?: string
+  meal_choice?: string
+  attending_events?: string[]
   opened_at?: string
   rsvp_status: RSVPStatus
   rsvp_at?: string
   rsvp_note?: string
+  reminder_sent_at?: string
+  thankyou_sent_at?: string
   created_at: string
 }
 
@@ -233,7 +266,10 @@ export interface RSVPFormData {
   phone?: string
   status: RSVPStatus
   party_size: number
+  plus_one_name?: string
   dietary?: string
+  meal_choice?: string
+  attending_events?: string[]
   note?: string
 }
 

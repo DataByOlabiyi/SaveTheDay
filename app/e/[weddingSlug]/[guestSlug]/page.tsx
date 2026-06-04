@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { TheUnveilingPage } from '@/components/scenes/TheUnveilingPage'
+import { ErrorBoundary } from '@/components/atoms/ErrorBoundary'
 import {
   getWeddingBySlug, getGuestBySlug, getEventSchedule,
   getStoryMilestones, getGalleryAlbums, getGalleryPhotos,
@@ -57,13 +58,15 @@ export default async function PersonalizedWeddingPage({ params }: PageProps) {
   ])
 
   return (
-    <TheUnveilingPage
-      wedding={wedding}
-      guest={guest}
-      schedule={schedule}
-      milestones={milestones}
-      albums={albums}
-      photos={photos}
-    />
+    <ErrorBoundary>
+      <TheUnveilingPage
+        wedding={wedding}
+        guest={guest}
+        schedule={schedule}
+        milestones={milestones}
+        albums={albums}
+        photos={photos}
+      />
+    </ErrorBoundary>
   )
 }
