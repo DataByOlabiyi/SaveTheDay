@@ -14,13 +14,16 @@ import { cn } from '@/lib/utils'
 // Zod Schema
 // ──────────────────────────────────────────────────────────────
 const rsvpSchema = z.object({
-  name:       z.string().min(2, 'Please enter your full name').max(100),
-  email:      z.string().email('Please enter a valid email').optional().or(z.literal('')),
-  phone:      z.string().min(7, 'Please enter a valid phone number').optional().or(z.literal('')),
-  status:     z.enum(['attending', 'declined']),
-  party_size: z.number().min(1).max(20).default(1),
-  dietary:    z.string().max(200).optional().or(z.literal('')),
-  note:       z.string().max(500).optional().or(z.literal('')),
+  name:             z.string().min(2, 'Please enter your full name').max(100),
+  email:            z.string().email('Please enter a valid email').optional().or(z.literal('')),
+  phone:            z.string().min(7, 'Please enter a valid phone number').optional().or(z.literal('')),
+  status:           z.enum(['attending', 'declined']),
+  party_size:       z.number().min(1).max(20).default(1),
+  plus_one_name:    z.string().max(100).optional().or(z.literal('')),
+  dietary:          z.string().max(200).optional().or(z.literal('')),
+  meal_choice:      z.string().max(100).optional().or(z.literal('')),
+  attending_events: z.array(z.string()).optional(),
+  note:             z.string().max(500).optional().or(z.literal('')),
 })
 
 type RSVPData = z.infer<typeof rsvpSchema>
@@ -35,6 +38,8 @@ interface RSVPFormProps {
   allowPlusOne?:    boolean
   maxPartySize?:    number
   collectDietary?:  boolean
+  mealOptions?:     string[]
+  rsvpEvents?:      string[]
   onSuccess?:       (status: 'attending' | 'declined') => void
   /** Pre-existing RSVP status from the database — skips the form for returning guests */
   existingStatus?:  'attending' | 'declined' | 'pending'
@@ -49,6 +54,8 @@ export function RSVPForm({
   allowPlusOne    = true,
   maxPartySize    = 6,
   collectDietary  = true,
+  mealOptions,
+  rsvpEvents,
   onSuccess,
   existingStatus,
 }: RSVPFormProps) {
@@ -82,6 +89,7 @@ export function RSVPForm({
     formState: { errors },
   } = useForm<RSVPData>({
     resolver: zodResolver(rsvpSchema),
+    mode: 'onBlur',
     defaultValues: {
       name:       guestName ?? '',
       status:     'attending',
@@ -89,8 +97,9 @@ export function RSVPForm({
     },
   })
 
-  const currentStatus = watch('status')
-  const partySize     = watch('party_size')
+  const currentStatus    = watch('status')
+  const partySize        = watch('party_size')
+  const attendingEvents  = watch('attending_events') ?? []
 
   const onSubmit = async (data: RSVPData) => {
     setFormState('submitting')
@@ -207,36 +216,20 @@ export function RSVPForm({
           )}
         </div>
 
-        {/* ── WhatsApp / Phone ── */}
+        {/* ── Phone ── */}
         <div>
           <label htmlFor="rsvp-phone" className="rsvp-label">
-            WhatsApp Number <span className="text-ivory/30">(optional)</span>
+            Phone Number <span className="text-ivory/30">(optional)</span>
           </label>
-          <div className="flex">
-            {/* Country prefix button */}
-            <span
-              className="flex items-center px-3 font-body text-sm text-ivory/50 shrink-0"
-              style={{
-                background:   'rgba(12,168,110,0.04)',
-                border:       '1px solid rgba(12,168,110,0.2)',
-                borderRight:  'none',
-                letterSpacing: '0.04em',
-              }}
-              aria-hidden="true"
-            >
-              🇳🇬 +234
-            </span>
-            <input
-              id="rsvp-phone"
-              type="tel"
-              autoComplete="tel"
-              inputMode="tel"
-              className="rsvp-input flex-1 min-w-0"
-              style={{ borderTopLeftRadius: 0, borderBottomLeftRadius: 0 }}
-              placeholder="080 0000 0000"
-              {...register('phone')}
-            />
-          </div>
+          <input
+            id="rsvp-phone"
+            type="tel"
+            autoComplete="tel"
+            inputMode="tel"
+            className="rsvp-input"
+            placeholder="+1 555 000 0000"
+            {...register('phone')}
+          />
         </div>
 
         {/* ── Party size stepper (attending only) ── */}
@@ -310,6 +303,107 @@ export function RSVPForm({
                   </button>
                 </div>
               </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Plus-one name ── */}
+        <AnimatePresence>
+          {allowPlusOne && currentStatus === 'attending' && partySize > 1 && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, delay: 0.03 }}
+            >
+              <label htmlFor="rsvp-plus-one-name" className="rsvp-label">
+                Plus-one name <span className="text-ivory/30">(optional)</span>
+              </label>
+              <input
+                id="rsvp-plus-one-name"
+                type="text"
+                className="rsvp-input"
+                placeholder="Guest's full name"
+                {...register('plus_one_name')}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Meal choice ── */}
+        <AnimatePresence>
+          {mealOptions && mealOptions.length > 0 && currentStatus === 'attending' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, delay: 0.04 }}
+            >
+              <label htmlFor="rsvp-meal" className="rsvp-label">
+                Meal preference
+              </label>
+              <select
+                id="rsvp-meal"
+                className="rsvp-input"
+                {...register('meal_choice')}
+              >
+                <option value="">Select a meal option</option>
+                {mealOptions.map(opt => (
+                  <option key={opt} value={opt}>{opt}</option>
+                ))}
+              </select>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── Which events are you attending ── */}
+        <AnimatePresence>
+          {rsvpEvents && rsvpEvents.length > 0 && currentStatus === 'attending' && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={{ duration: 0.3, delay: 0.04 }}
+            >
+              <fieldset>
+                <legend className="rsvp-label mb-3">Which events will you attend?</legend>
+                <div className="space-y-2">
+                  {rsvpEvents.map(event => {
+                    const checked = attendingEvents.includes(event)
+                    return (
+                      <label
+                        key={event}
+                        className="flex items-center gap-3 cursor-pointer group"
+                      >
+                        <div
+                          onClick={() => {
+                            const current = attendingEvents
+                            const next = checked
+                              ? current.filter(e => e !== event)
+                              : [...current, event]
+                            setValue('attending_events', next)
+                          }}
+                          className={cn(
+                            'w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border transition-all duration-150',
+                            checked
+                              ? 'bg-emerald-DEFAULT border-emerald-DEFAULT'
+                              : 'border-white/20 bg-transparent group-hover:border-emerald-DEFAULT/50'
+                          )}
+                        >
+                          {checked && (
+                            <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
+                              <path d="M1 4l3 3 5-5" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          )}
+                        </div>
+                        <span className="font-body text-sm text-ivory/70 group-hover:text-ivory/90 transition-colors">
+                          {event}
+                        </span>
+                      </label>
+                    )
+                  })}
+                </div>
+              </fieldset>
             </motion.div>
           )}
         </AnimatePresence>

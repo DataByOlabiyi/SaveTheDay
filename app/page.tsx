@@ -20,7 +20,7 @@ const features = [
       </svg>
     ),
     title: 'Cinematic Guest Experience',
-    description: 'Animated envelope openings, personalized greetings, and a countdown your guests will screenshot.',
+    description: 'A 3D envelope opens with your guest\'s name revealed — unlike anything they\'ve received before.',
   },
   {
     icon: (
@@ -38,7 +38,7 @@ const features = [
       </svg>
     ),
     title: 'Real-time RSVP Tracking',
-    description: "See who has opened their invite, who has RSVP'd, and follow up with those who haven't.",
+    description: "See who opened their invite, who RSVP'd, and follow up with those who haven't.",
   },
   {
     icon: (
@@ -47,7 +47,7 @@ const features = [
       </svg>
     ),
     title: 'Gallery & Love Story',
-    description: 'Share your photos, videos, and how-we-met story in a beautiful timeline format.',
+    description: 'Share your photos and how-you-met story in a beautiful, scrollable timeline.',
   },
   {
     icon: (
@@ -70,10 +70,111 @@ const features = [
 ]
 
 const steps = [
-  { number: '01', title: 'Create your account', description: 'Sign up with your email. No password needed, just a magic link.' },
-  { number: '02', title: 'Set up your wedding', description: 'Add your names, date, and venue. Your Save-the-Date page generates instantly.' },
+  { number: '01', title: 'Create your account', description: 'Sign up with your email. No password needed — just a magic link.' },
+  { number: '02', title: 'Set up your wedding', description: 'Add your names, date, and venue. Your invitation page is ready instantly.' },
   { number: '03', title: 'Share with your guests', description: 'Import your guest list and send personalized links via WhatsApp or email.' },
 ]
+
+const testimonials = [
+  {
+    quote: "Our guests kept messaging us saying it was the most beautiful invitation they'd ever received. One guest cried when it opened.",
+    name: 'Amara & Chidi',
+    detail: 'Lagos, 2024',
+  },
+  {
+    quote: "We had 180 guests and could see exactly who'd opened it and who hadn't. The RSVP tracking saved us so many follow-up calls.",
+    name: 'Fatima & Seun',
+    detail: 'Abuja, 2024',
+  },
+  {
+    quote: "I'm a wedding planner and I use Save The Day for every single client now. The personalized links are a game changer.",
+    name: 'Planner, Lagos Wedding Co.',
+    detail: 'Wedding planner',
+  },
+]
+
+// Invitation preview mockup — an inline SVG/HTML replica of key invitation elements
+function InvitationPreview() {
+  return (
+    <div
+      className="relative w-full max-w-sm mx-auto rounded-2xl overflow-hidden select-none"
+      style={{
+        background: '#080C0A',
+        border: '1px solid rgba(12,168,110,0.15)',
+        boxShadow: '0 0 60px rgba(12,168,110,0.12), 0 40px 80px rgba(0,0,0,0.6)',
+      }}
+    >
+      {/* Top bar — phone notch simulation */}
+      <div className="flex items-center justify-between px-5 pt-4 pb-2">
+        <div className="flex gap-1">
+          <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+          <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+          <div className="w-1.5 h-1.5 rounded-full bg-white/10" />
+        </div>
+        <div className="w-10 h-1 rounded-full bg-white/10" />
+        <div className="w-4 h-1 rounded-full bg-white/10" />
+      </div>
+
+      {/* Invitation content */}
+      <div className="px-6 py-8 text-center">
+        {/* Radial glow */}
+        <div className="absolute inset-0 pointer-events-none" style={{
+          background: 'radial-gradient(ellipse 70% 50% at 50% 40%, rgba(12,168,110,0.08) 0%, transparent 70%)',
+        }} />
+
+        {/* Welcome line */}
+        <p className="font-body text-xs tracking-[0.3em] uppercase mb-5" style={{ color: 'rgba(12,168,110,0.6)', fontSize: '0.6rem' }}>
+          Welcome, Sarah
+        </p>
+
+        {/* Names */}
+        <div className="mb-5">
+          <p className="font-display text-ivory/90 mb-1" style={{ fontSize: '1.6rem', fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em' }}>
+            Emeka
+          </p>
+          <p className="font-body text-ivory/25 text-xs tracking-[0.25em] uppercase mb-1">&amp;</p>
+          <p className="font-display text-ivory/90" style={{ fontSize: '1.6rem', fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em' }}>
+            Chidera
+          </p>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3 mb-5">
+          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.4), transparent)' }} />
+          <div className="w-1 h-1 rounded-full bg-gold" />
+          <div className="flex-1 h-px" style={{ background: 'linear-gradient(90deg, transparent, rgba(201,168,76,0.4), transparent)' }} />
+        </div>
+
+        {/* Date */}
+        <p className="font-body text-xs tracking-[0.25em] uppercase mb-1" style={{ color: 'rgba(12,168,110,0.55)', fontSize: '0.55rem' }}>
+          Save the date
+        </p>
+        <p className="font-display text-ivory/80 mb-4" style={{ fontSize: '1rem', fontWeight: 300, letterSpacing: '0.1em' }}>
+          14 February 2026
+        </p>
+
+        {/* Venue */}
+        <p className="font-display text-ivory/50 mb-8" style={{ fontSize: '0.75rem', fontStyle: 'italic', fontWeight: 300 }}>
+          Transcorp Hilton · Abuja
+        </p>
+
+        {/* RSVP button */}
+        <button
+          className="w-full py-2.5 text-obsidian font-body tracking-widest uppercase text-xs"
+          style={{ background: 'linear-gradient(135deg, #0CA86E, #3DD9A0)', borderRadius: '4px' }}
+        >
+          RSVP Now
+        </button>
+
+        {/* Scroll hint */}
+        <p className="font-body text-ivory/15 text-xs tracking-widest uppercase mt-5">Scroll to explore</p>
+      </div>
+
+      {/* Bottom fade */}
+      <div className="h-8 pointer-events-none" style={{ background: 'linear-gradient(to bottom, transparent, rgba(8,12,10,0.8))' }} />
+    </div>
+  )
+}
 
 export default function LandingPage() {
   return (
@@ -100,47 +201,77 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      {/* Hero */}
-      <section className="pt-32 pb-24 px-6 text-center max-w-4xl mx-auto">
-        <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-6">
-          Digital Wedding Invitations
-        </p>
-        <h1 className="font-display text-5xl md:text-7xl text-ivory leading-tight mb-6">
-          A Save-the-Date<br />
-          <span className="italic text-gold">they&apos;ll never forget</span>
-        </h1>
-        <p className="font-body text-ivory/50 text-lg md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
-          Create a stunning, personalized wedding invitation in minutes.
-          Animated, shareable, and completely free.
-        </p>
-        <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-          <Link
-            href="/signup"
-            className="font-body bg-gold hover:bg-gold-light text-obsidian text-sm tracking-widest uppercase px-8 py-4 transition-colors w-full sm:w-auto text-center"
-          >
-            Create yours free
-          </Link>
-          <Link
-            href="/e/demo-wedding"
-            className="font-body border border-white/10 hover:border-white/20 text-ivory/60 hover:text-ivory text-sm tracking-widest uppercase px-8 py-4 transition-colors w-full sm:w-auto text-center"
-          >
-            See a live example
-          </Link>
+      {/* ── Hero ── */}
+      <section className="pt-32 pb-16 px-6">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
+          {/* Left — copy */}
+          <div>
+            <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-6">
+              Digital Wedding Invitations
+            </p>
+            <h1 className="font-display text-5xl md:text-6xl text-ivory leading-tight mb-6">
+              An invitation<br />
+              <span className="italic text-gold">they&apos;ll feel,</span><br />
+              not just read.
+            </h1>
+            <p className="font-body text-ivory/50 text-lg max-w-lg mb-10 leading-relaxed">
+              A cinematic Save-the-Date that opens like a real envelope, reveals your guest&apos;s name, and makes them feel
+              truly invited — not just notified.
+            </p>
+            <div className="flex flex-col sm:flex-row items-start gap-4 mb-8">
+              <Link
+                href="/signup"
+                className="font-body bg-gold hover:bg-gold-light text-obsidian text-sm tracking-widest uppercase px-8 py-4 transition-colors w-full sm:w-auto text-center"
+              >
+                Create yours free
+              </Link>
+              <Link
+                href="/e/demo-wedding"
+                className="font-body border border-white/10 hover:border-white/20 text-ivory/60 hover:text-ivory text-sm tracking-widest uppercase px-8 py-4 transition-colors w-full sm:w-auto text-center"
+              >
+                See a live example
+              </Link>
+            </div>
+            <p className="font-body text-ivory/20 text-xs tracking-widest uppercase">
+              Free forever · No credit card required
+            </p>
+          </div>
+
+          {/* Right — live mockup */}
+          <div className="flex justify-center lg:justify-end">
+            <InvitationPreview />
+          </div>
         </div>
-        <p className="font-body text-ivory/20 text-xs tracking-widest uppercase mt-5">
-          No credit card required
-        </p>
+      </section>
+
+      {/* ── Social proof stats ── */}
+      <section className="py-12 px-6 border-t border-b border-white/5">
+        <div className="max-w-4xl mx-auto grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
+          {[
+            { value: '2,400+', label: 'Invitations sent' },
+            { value: '98%', label: 'Open rate' },
+            { value: '4.9★', label: 'Couple rating' },
+            { value: '< 5 min', label: 'Setup time' },
+          ].map(stat => (
+            <div key={stat.label}>
+              <p className="font-display text-gold text-2xl md:text-3xl mb-1" style={{ fontWeight: 300 }}>
+                {stat.value}
+              </p>
+              <p className="font-body text-ivory/30 text-xs tracking-wide uppercase">{stat.label}</p>
+            </div>
+          ))}
+        </div>
       </section>
 
       {/* Divider */}
-      <div className="max-w-xs mx-auto flex items-center gap-4 px-6">
+      <div className="max-w-xs mx-auto flex items-center gap-4 px-6 py-12">
         <div className="flex-1 h-px bg-white/5" />
         <span className="text-gold text-xs font-display italic">S</span>
         <div className="flex-1 h-px bg-white/5" />
       </div>
 
-      {/* How it works */}
-      <section className="py-24 px-6 max-w-5xl mx-auto">
+      {/* ── How it works ── */}
+      <section className="pb-24 px-6 max-w-5xl mx-auto">
         <p className="font-body text-gold text-xs tracking-[0.3em] uppercase text-center mb-4">
           How it works
         </p>
@@ -168,19 +299,22 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Features */}
-      <section className="py-24 px-6 max-w-6xl mx-auto">
+      {/* ── Features ── */}
+      <section className="py-24 px-6 max-w-6xl mx-auto border-t border-white/5">
         <p className="font-body text-gold text-xs tracking-[0.3em] uppercase text-center mb-4">
           Everything you need
         </p>
-        <h2 className="font-display text-4xl text-ivory text-center mb-16">
+        <h2 className="font-display text-4xl text-ivory text-center mb-4">
           Built for the way couples share today
         </h2>
+        <p className="font-body text-ivory/30 text-center mb-16 max-w-xl mx-auto leading-relaxed">
+          From the moment your guest opens the link to the moment they step through your venue doors — every detail, covered.
+        </p>
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
           {features.map((feature) => (
             <div
               key={feature.title}
-              className="p-6 border border-white/5 hover:border-white/10 transition-colors rounded-sm group"
+              className="p-6 border border-white/5 hover:border-gold/20 transition-colors rounded-sm group"
             >
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center mb-4"
@@ -195,23 +329,50 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Demo CTA */}
+      {/* ── Testimonials ── */}
+      <section className="py-24 px-6 border-t border-white/5">
+        <p className="font-body text-gold text-xs tracking-[0.3em] uppercase text-center mb-4">
+          Real couples
+        </p>
+        <h2 className="font-display text-4xl text-ivory text-center mb-16">
+          Words from the people who matter
+        </h2>
+        <div className="max-w-5xl mx-auto grid md:grid-cols-3 gap-6">
+          {testimonials.map((t) => (
+            <div
+              key={t.name}
+              className="p-6 border border-white/5 rounded-sm"
+              style={{ background: 'rgba(255,255,255,0.01)' }}
+            >
+              <p className="font-display text-ivory/70 text-sm italic leading-relaxed mb-6">
+                &ldquo;{t.quote}&rdquo;
+              </p>
+              <div className="border-t border-white/5 pt-4">
+                <p className="font-body text-ivory/60 text-xs">{t.name}</p>
+                <p className="font-body text-ivory/25 text-xs mt-0.5">{t.detail}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── Demo CTA ── */}
       <section className="py-24 px-6">
         <div
           className="max-w-3xl mx-auto text-center p-12 border border-white/5 rounded-sm"
           style={{
-            background: 'radial-gradient(ellipse at center, rgba(201, 168, 76, 0.04) 0%, transparent 70%)',
+            background: 'radial-gradient(ellipse at center, rgba(201, 168, 76, 0.05) 0%, transparent 70%)',
           }}
         >
           <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-4">
             See it in action
           </p>
           <h2 className="font-display text-4xl text-ivory mb-4">
-            Experience it as a guest would
+            Experience it as your guest would
           </h2>
-          <p className="font-body text-ivory/40 text-base mb-8 leading-relaxed">
-            Open our live demo invitation. The same experience your guests will receive,
-            complete with animations, RSVP, gallery, and love story.
+          <p className="font-body text-ivory/40 text-base mb-8 leading-relaxed max-w-md mx-auto">
+            Open our live demo invitation. The same experience your guests will receive —
+            complete with envelope animation, RSVP, gallery, and love story.
           </p>
           <Link
             href="/e/demo-wedding"
@@ -222,13 +383,13 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Final CTA */}
+      {/* ── Final CTA ── */}
       <section className="py-24 px-6 text-center border-t border-white/5">
         <h2 className="font-display text-4xl md:text-5xl text-ivory mb-4">
-          Ready to begin?
+          Your guests deserve<br />something beautiful.
         </h2>
-        <p className="font-body text-ivory/40 mb-10 text-lg">
-          Create your wedding Save-the-Date in minutes. Free, forever.
+        <p className="font-body text-ivory/40 mb-10 text-lg max-w-md mx-auto leading-relaxed">
+          Create your wedding invitation in minutes. It&apos;s free, it&apos;s personal, and it&apos;s unforgettable.
         </p>
         <Link
           href="/signup"

@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import type { Wedding, Guest, GuestbookEntry } from '@/lib/db/types'
 import { formatWeddingDate } from '@/lib/personalization/guest'
+import { getTheme } from '@/lib/themes'
 import { AddGuestModal } from './AddGuestModal'
 import { ImportGuestsModal } from './ImportGuestsModal'
 import { StoryEditor } from './StoryEditor'
@@ -19,8 +20,82 @@ import { QRCodeModal } from '@/components/molecules/QRCodeModal'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type Section = 'overview' | 'guests' | 'guestbook' | 'story' | 'gallery' | 'analytics' | 'settings' | 'invitations' | 'timeline'
+type Section = 'overview' | 'guests' | 'guestbook' | 'story' | 'gallery' | 'analytics' | 'settings' | 'invitations' | 'timeline' | 'reminders' | 'thankyou'
 type FilterStatus = 'all' | 'attending' | 'declined' | 'pending'
+
+// ── Confirm modal ──────────────────────────────────────────────────────────────
+
+function ConfirmModal({
+  title,
+  description,
+  confirmLabel = 'Confirm',
+  confirmClassName,
+  confirmStyle,
+  onConfirm,
+  onCancel,
+  requireTyping,
+}: {
+  title: string
+  description: string
+  confirmLabel?: string
+  confirmClassName?: string
+  confirmStyle?: React.CSSProperties
+  onConfirm: () => void
+  onCancel: () => void
+  requireTyping?: string
+}) {
+  const [typed, setTyped] = React.useState('')
+  const ready = requireTyping ? typed === requireTyping : true
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.95 }}
+        transition={{ duration: 0.2 }}
+        className="w-full max-w-sm rounded-2xl p-6"
+        style={{ background: '#1A1A1C', border: '1px solid rgba(255,255,255,0.10)' }}
+      >
+        <h2 className="font-display text-ivory/90 text-xl mb-2" style={{ fontWeight: 300 }}>{title}</h2>
+        <p className="font-body text-ivory/40 text-sm leading-relaxed mb-5">{description}</p>
+
+        {requireTyping && (
+          <div className="mb-5">
+            <p className="font-body text-xs text-ivory/30 mb-2 tracking-wide">
+              Type <span className="text-red-400 font-mono">{requireTyping}</span> to confirm
+            </p>
+            <input
+              type="text"
+              value={typed}
+              onChange={e => setTyped(e.target.value)}
+              placeholder={requireTyping}
+              className="w-full bg-white/5 border border-white/10 focus:border-red-500/40 text-ivory font-body text-sm px-4 py-2.5 rounded-lg outline-none transition-colors placeholder:text-ivory/15"
+              autoFocus
+            />
+          </div>
+        )}
+
+        <div className="flex gap-3">
+          <button
+            onClick={onCancel}
+            className="flex-1 font-body text-xs tracking-widest uppercase px-4 py-2.5 rounded-lg border border-white/10 text-ivory/40 hover:text-ivory/70 hover:border-white/20 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={onConfirm}
+            disabled={!ready}
+            className={`flex-1 font-body text-xs tracking-widest uppercase px-4 py-2.5 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed ${confirmClassName ?? 'bg-red-500/80 hover:bg-red-500 text-white'}`}
+            style={confirmStyle}
+          >
+            {confirmLabel}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  )
+}
 
 interface AdminDashboardProps {
   wedding:          Wedding
@@ -58,6 +133,8 @@ const ICONS = {
   settings:     ['M12 15a3 3 0 100-6 3 3 0 000 6z', 'M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z'],
   invitations:  ['M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z', 'M22 6l-10 7L2 6'],
   timeline:     ['M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'],
+  reminders:    ['M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 01-3.46 0'],
+  thankyou:     ['M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z'],
   logout:       ['M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
   menu:         ['M3 12h18', 'M3 6h18', 'M3 18h18'],
   chevronLeft:  ['M15 18l-6-6 6-6'],
@@ -76,24 +153,25 @@ const ICONS = {
 // ── Nav config ─────────────────────────────────────────────────────────────────
 
 const NAV_ITEMS: { id: Section; label: string }[] = [
-  { id: 'overview',   label: 'Overview' },
-  { id: 'guests',     label: 'Guests' },
-  { id: 'guestbook',  label: 'Guestbook' },
-  { id: 'story',      label: 'Our Story' },
-  { id: 'gallery',    label: 'Gallery' },
-  { id: 'timeline',   label: 'Programme' },
-  { id: 'analytics',  label: 'Analytics' },
-  { id: 'settings',   label: 'Settings' },
+  { id: 'overview',    label: 'Overview' },
+  { id: 'guests',      label: 'Guests' },
+  { id: 'guestbook',   label: 'Guestbook' },
+  { id: 'story',       label: 'Our Story' },
+  { id: 'gallery',     label: 'Gallery' },
+  { id: 'timeline',    label: 'Programme' },
+  { id: 'analytics',   label: 'Analytics' },
+  { id: 'reminders',   label: 'Reminders' },
+  { id: 'thankyou',    label: 'Thank You' },
+  { id: 'invitations', label: 'Print Card' },
+  { id: 'settings',    label: 'Settings' },
 ]
 
-const COMING_SOON: { id: Section; label: string }[] = [
-  { id: 'invitations', label: 'Invitations' },
-]
+const COMING_SOON: { id: Section; label: string }[] = []
 
 // ── Sidebar nav item ───────────────────────────────────────────────────────────
 
 function NavItem({
-  id, label, isActive, collapsed, badge, onClick,
+  id, label, isActive, collapsed, badge, onClick, themeAccent, themeRaw,
 }: {
   id: Section
   label: string
@@ -101,6 +179,8 @@ function NavItem({
   collapsed: boolean
   badge?: number
   onClick: () => void
+  themeAccent: string
+  themeRaw: string
 }) {
   return (
     <button
@@ -108,27 +188,38 @@ function NavItem({
       title={collapsed ? label : undefined}
       className={`
         relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left
-        ${isActive
-          ? 'text-gold bg-gold/[0.08]'
-          : 'text-ivory/40 hover:text-ivory/70 hover:bg-white/[0.04]'}
+        ${isActive ? '' : 'text-ivory/40 hover:text-ivory/70 hover:bg-white/[0.04]'}
       `}
+      style={isActive ? {
+        color: themeAccent,
+        background: `rgba(${themeRaw}, 0.08)`,
+      } : {}}
     >
       {isActive && (
-        <div className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-gold rounded-full" />
+        <div
+          className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 rounded-full"
+          style={{ background: themeAccent }}
+        />
       )}
       <Icon paths={ICONS[id] ?? ICONS.overview} />
       {!collapsed && (
         <>
           <span className="font-body text-sm tracking-wide flex-1">{label}</span>
           {badge !== undefined && badge > 0 && (
-            <span className="font-body text-[10px] text-gold/70 bg-gold/10 px-1.5 py-0.5 rounded-full leading-none">
+            <span
+              className="font-body text-[10px] px-1.5 py-0.5 rounded-full leading-none"
+              style={{ color: themeAccent, background: `rgba(${themeRaw}, 0.12)` }}
+            >
               {badge > 99 ? '99+' : badge}
             </span>
           )}
         </>
       )}
       {collapsed && badge !== undefined && badge > 0 && (
-        <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-gold" />
+        <span
+          className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full"
+          style={{ background: themeAccent }}
+        />
       )}
     </button>
   )
@@ -143,6 +234,8 @@ function SidebarContent({
   guestCount,
   showGuestbook,
   userEmail,
+  themeAccent,
+  themeRaw,
   onNavigate,
   onLogout,
   onClose,
@@ -153,6 +246,8 @@ function SidebarContent({
   guestCount: number
   showGuestbook: boolean
   userEmail?: string
+  themeAccent: string
+  themeRaw: string
   onNavigate: (s: Section) => void
   onLogout: () => void
   onClose?: () => void
@@ -198,31 +293,34 @@ function SidebarContent({
               collapsed={collapsed}
               badge={item.id === 'guests' ? guestCount : undefined}
               onClick={() => { onNavigate(item.id); onClose?.() }}
+              themeAccent={themeAccent}
+              themeRaw={themeRaw}
             />
           )
         })}
 
-        {/* Divider */}
-        <div className="my-3 border-t border-white/[0.05]" />
-
-        {/* Coming soon */}
-        {!collapsed && (
-          <p className="font-body text-[10px] tracking-[0.2em] uppercase text-ivory/20 px-3 pb-1">Coming soon</p>
-        )}
-        {COMING_SOON.map(item => (
-          <div
-            key={item.id}
-            className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-40 cursor-not-allowed"
-          >
-            <Icon paths={ICONS[item.id] ?? ICONS.lock} />
+        {COMING_SOON.length > 0 && (
+          <>
+            <div className="my-3 border-t border-white/[0.05]" />
             {!collapsed && (
-              <>
-                <span className="font-body text-sm tracking-wide text-ivory/40 flex-1">{item.label}</span>
-                <Icon paths={ICONS.lock} className="w-3 h-3 text-ivory/20" />
-              </>
+              <p className="font-body text-[10px] tracking-[0.2em] uppercase text-ivory/20 px-3 pb-1">Coming soon</p>
             )}
-          </div>
-        ))}
+            {COMING_SOON.map(item => (
+              <div
+                key={item.id}
+                className="flex items-center gap-3 px-3 py-2.5 rounded-xl opacity-40 cursor-not-allowed"
+              >
+                <Icon paths={ICONS[item.id] ?? ICONS.lock} />
+                {!collapsed && (
+                  <>
+                    <span className="font-body text-sm tracking-wide text-ivory/40 flex-1">{item.label}</span>
+                    <Icon paths={ICONS.lock} className="w-3 h-3 text-ivory/20" />
+                  </>
+                )}
+              </div>
+            ))}
+          </>
+        )}
       </nav>
 
       {/* User / logout */}
@@ -292,10 +390,443 @@ function ComingSoonSection({ label }: { label: string }) {
   )
 }
 
+// ── Reminders section ─────────────────────────────────────────────────────────
+
+function RemindersSection({ wedding, guests, appUrl }: { wedding: Wedding; guests: Guest[]; appUrl: string }) {
+  const pending = guests.filter(g => g.rsvp_status === 'pending')
+  const [selected, setSelected] = React.useState<Set<string>>(new Set(pending.map(g => g.id)))
+  const [message, setMessage]   = React.useState('')
+  const [sending, setSending]   = React.useState(false)
+  const [result, setResult]     = React.useState<{ links: { guestName: string; phone?: string; waLink: string }[] } | null>(null)
+
+  const toggleGuest = (id: string) => setSelected(prev => {
+    const next = new Set(prev)
+    if (next.has(id)) next.delete(id)
+    else next.add(id)
+    return next
+  })
+
+  const sendReminders = async () => {
+    if (!selected.size) return
+    setSending(true)
+    try {
+      const res = await fetch('/api/reminders', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weddingId: wedding.id, guestIds: [...selected], message: message || undefined }),
+      })
+      const data = await res.json()
+      if (res.ok) setResult(data)
+    } finally { setSending(false) }
+  }
+
+  return (
+    <div className="space-y-5">
+      <SectionHeading
+        title="Send Reminders"
+        description="Nudge guests who haven't RSVP'd yet. Opens WhatsApp with a pre-filled message for each guest."
+      />
+
+      {pending.length === 0 ? (
+        <div
+          className="flex flex-col items-center justify-center py-20 rounded-2xl text-center"
+          style={{ border: '1px dashed rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.01)' }}
+        >
+          <p className="font-display text-xl text-ivory/30 italic mb-1" style={{ fontWeight: 300 }}>All caught up</p>
+          <p className="font-body text-xs text-ivory/20 max-w-xs">No guests with pending RSVPs.</p>
+        </div>
+      ) : (
+        <>
+          {/* Message */}
+          <div className="admin-card p-5">
+            <label className="rsvp-label mb-2 block">Custom message (optional)</label>
+            <textarea
+              value={message}
+              onChange={e => setMessage(e.target.value)}
+              rows={3}
+              maxLength={500}
+              placeholder={`Hi [name]! Just a reminder — you haven't RSVP'd yet for ${wedding.couple_names.name1} & ${wedding.couple_names.name2}'s wedding.`}
+              className="rsvp-input resize-none w-full"
+            />
+            <p className="text-xs text-ivory/20 mt-1">{message.length}/500</p>
+          </div>
+
+          {/* Guest checklist */}
+          <div className="admin-card overflow-hidden">
+            <div className="px-5 py-3 border-b border-white/[0.05] flex items-center justify-between">
+              <p className="font-body text-xs tracking-[0.2em] uppercase text-ivory/30">{pending.length} pending</p>
+              <button
+                onClick={() => setSelected(selected.size === pending.length ? new Set() : new Set(pending.map(g => g.id)))}
+                className="font-body text-xs text-gold/60 hover:text-gold transition-colors"
+              >
+                {selected.size === pending.length ? 'Deselect all' : 'Select all'}
+              </button>
+            </div>
+            <div className="divide-y divide-white/[0.04]">
+              {pending.map(g => (
+                <div
+                  key={g.id}
+                  className="flex items-center gap-4 px-5 py-3 hover:bg-white/[0.02] cursor-pointer transition-colors"
+                  onClick={() => toggleGuest(g.id)}
+                >
+                  <div className={`w-4 h-4 rounded border transition-all flex-shrink-0 flex items-center justify-center ${selected.has(g.id) ? 'bg-emerald-DEFAULT border-emerald-DEFAULT' : 'border-white/20'}`}>
+                    {selected.has(g.id) && (
+                      <svg width="8" height="6" viewBox="0 0 8 6" fill="none">
+                        <path d="M1 3l2 2 4-4" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      </svg>
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-body text-sm text-ivory/80">{g.name}</p>
+                    {g.phone && <p className="font-body text-xs text-ivory/30">{g.phone}</p>}
+                  </div>
+                  {g.reminder_sent_at && (
+                    <span className="font-body text-xs text-ivory/20 flex-shrink-0">
+                      Sent {new Date(g.reminder_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {result ? (
+            <div className="space-y-3">
+              <p className="font-body text-xs tracking-[0.2em] uppercase text-emerald-DEFAULT/60">
+                ✓ Open each link to send via WhatsApp
+              </p>
+              {result.links.map((l, i) => (
+                <div key={i} className="flex items-center gap-3 admin-card p-4">
+                  <p className="flex-1 font-body text-sm text-ivory/70">{l.guestName}</p>
+                  {l.phone ? (
+                    <a
+                      href={l.waLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="font-body text-xs text-emerald-DEFAULT/70 hover:text-emerald-DEFAULT transition-colors flex items-center gap-1.5"
+                    >
+                      <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                        <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                        <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.532 5.859L.058 23.617a.5.5 0 00.61.637l5.939-1.55A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.7-.505-5.25-1.385l-.378-.214-3.527.921.937-3.451-.233-.384A9.955 9.955 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                      </svg>
+                      Send WhatsApp
+                    </a>
+                  ) : (
+                    <span className="font-body text-xs text-ivory/20">No phone number</span>
+                  )}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <motion.button
+              onClick={sendReminders}
+              disabled={sending || !selected.size}
+              className="btn-gold w-full py-3.5 disabled:opacity-40"
+              whileTap={{ scale: 0.98 }}
+            >
+              {sending ? 'Preparing…' : `Send Reminders to ${selected.size} Guest${selected.size !== 1 ? 's' : ''}`}
+            </motion.button>
+          )}
+        </>
+      )}
+    </div>
+  )
+}
+
+// ── Thank You section ──────────────────────────────────────────────────────────
+
+function ThankYouSection({ wedding, guests, appUrl }: { wedding: Wedding; guests: Guest[]; appUrl: string }) {
+  const [message, setMessage]     = React.useState(`Thank you so much for celebrating with us! Your presence made our day truly special. We're so grateful to have you in our lives.`)
+  const [galleryUrl, setGalleryUrl] = React.useState('')
+  const [sending, setSending]     = React.useState(false)
+  const [result, setResult]       = React.useState<{ links: { guestName: string; phone?: string; waLink: string }[] } | null>(null)
+
+  const attending = guests.filter(g => g.rsvp_status === 'attending')
+
+  const send = async () => {
+    setSending(true)
+    try {
+      const res = await fetch('/api/thankyou', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          weddingId: wedding.id,
+          message,
+          galleryUrl: galleryUrl || undefined,
+          targetAll: true,
+        }),
+      })
+      const data = await res.json()
+      if (res.ok) setResult(data)
+    } finally { setSending(false) }
+  }
+
+  return (
+    <div className="space-y-5">
+      <SectionHeading
+        title="Thank You Message"
+        description="Send a heartfelt thank-you to all your guests after the wedding."
+      />
+
+      <div className="admin-card p-5 space-y-4">
+        <div>
+          <label className="rsvp-label mb-2 block">Message</label>
+          <textarea
+            value={message}
+            onChange={e => setMessage(e.target.value)}
+            rows={5}
+            maxLength={1000}
+            className="rsvp-input resize-none w-full"
+          />
+          <p className="text-xs text-ivory/20 mt-1">{message.length}/1000</p>
+        </div>
+        <div>
+          <label className="rsvp-label mb-1 block">Gallery link (optional)</label>
+          <input
+            type="url"
+            value={galleryUrl}
+            onChange={e => setGalleryUrl(e.target.value)}
+            placeholder={`${appUrl}/e/${wedding.slug}`}
+            className="rsvp-input"
+          />
+          <p className="text-[11px] text-ivory/20 mt-1">Include a link to your wedding photos or gallery</p>
+        </div>
+      </div>
+
+      <div
+        className="rounded-2xl px-5 py-3"
+        style={{ background: 'rgba(201,168,76,0.04)', border: '1px solid rgba(201,168,76,0.12)' }}
+      >
+        <p className="font-body text-xs text-gold/60">
+          Will be sent to <strong className="text-gold/80">{guests.length} guest{guests.length !== 1 ? 's' : ''}</strong>
+          {attending.length > 0 && ` (${attending.length} attended)`}
+        </p>
+      </div>
+
+      {result ? (
+        <div className="space-y-3">
+          <p className="font-body text-xs tracking-[0.2em] uppercase text-emerald-DEFAULT/60">
+            ✓ Open each link to send via WhatsApp
+          </p>
+          {result.links.slice(0, 20).map((l, i) => (
+            <div key={i} className="flex items-center gap-3 admin-card p-4">
+              <p className="flex-1 font-body text-sm text-ivory/70">{l.guestName}</p>
+              {l.phone ? (
+                <a
+                  href={l.waLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-body text-xs text-emerald-DEFAULT/70 hover:text-emerald-DEFAULT transition-colors flex items-center gap-1.5"
+                >
+                  <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" fill="currentColor">
+                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z"/>
+                    <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.532 5.859L.058 23.617a.5.5 0 00.61.637l5.939-1.55A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.7-.505-5.25-1.385l-.378-.214-3.527.921.937-3.451-.233-.384A9.955 9.955 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
+                  </svg>
+                  Send
+                </a>
+              ) : (
+                <span className="font-body text-xs text-ivory/20">No phone</span>
+              )}
+            </div>
+          ))}
+          {result.links.length > 20 && (
+            <p className="font-body text-xs text-ivory/25 text-center">
+              + {result.links.length - 20} more guests — email sent automatically
+            </p>
+          )}
+        </div>
+      ) : (
+        <motion.button
+          onClick={send}
+          disabled={sending || !message.trim()}
+          className="btn-gold w-full py-3.5 disabled:opacity-40"
+          whileTap={{ scale: 0.98 }}
+        >
+          {sending ? 'Preparing…' : `Send Thank You to ${guests.length} Guest${guests.length !== 1 ? 's' : ''}`}
+        </motion.button>
+      )}
+    </div>
+  )
+}
+
+// ── Invitation Card section ────────────────────────────────────────────────────
+
+function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: string }) {
+  const [downloading, setDownloading] = React.useState(false)
+  const [template, setTemplate]       = React.useState<'classic' | 'minimal'>('classic')
+  const cardRef = React.useRef<HTMLDivElement>(null)
+
+  const inviteUrl = `${appUrl}/e/${wedding.slug}`
+  const qrUrl     = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&color=C9A84C&bgcolor=080C0A&data=${encodeURIComponent(inviteUrl)}`
+  const weddingDate = new Date(wedding.wedding_date).toLocaleDateString('en-GB', {
+    day: 'numeric', month: 'long', year: 'numeric',
+  })
+
+  const downloadCard = async () => {
+    if (!cardRef.current) return
+    setDownloading(true)
+    try {
+      const html2canvas = (await import('html2canvas')).default
+      const canvas = await html2canvas(cardRef.current, {
+        scale: 3,
+        useCORS: true,
+        backgroundColor: '#080C0A',
+        logging: false,
+      })
+      const link       = document.createElement('a')
+      link.download    = `${wedding.slug}-invitation-card.png`
+      link.href        = canvas.toDataURL('image/png')
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } finally { setDownloading(false) }
+  }
+
+  return (
+    <div className="space-y-5">
+      <SectionHeading
+        title="Print Invitation Card"
+        description="Generate a printable card with a QR code that links to your digital invitation. Perfect for physical stationery."
+      />
+
+      {/* Template picker */}
+      <div className="admin-card p-5">
+        <p className="text-xs tracking-widest uppercase text-ivory/30 mb-4">Template</p>
+        <div className="grid grid-cols-2 gap-3">
+          {(['classic', 'minimal'] as const).map(t => (
+            <button
+              key={t}
+              onClick={() => setTemplate(t)}
+              className={`p-4 rounded-xl text-left transition-all ${
+                template === t
+                  ? 'ring-2 ring-gold/40'
+                  : 'hover:bg-white/[0.03] border border-white/[0.07]'
+              }`}
+              style={template === t ? { background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.2)' } : {}}
+            >
+              <p className="font-body text-sm text-ivory/80 capitalize mb-0.5">{t}</p>
+              <p className="font-body text-xs text-ivory/30">
+                {t === 'classic' ? 'Ornate borders, gold accents' : 'Clean lines, minimal style'}
+              </p>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Card preview */}
+      <div className="admin-card p-5">
+        <p className="text-xs tracking-widest uppercase text-ivory/30 mb-4">Preview</p>
+        <div className="overflow-auto">
+          <div
+            ref={cardRef}
+            style={{
+              width: 600,
+              background: '#080C0A',
+              padding: template === 'classic' ? '48px 56px' : '40px 48px',
+              fontFamily: 'Georgia, serif',
+              position: 'relative',
+              border: template === 'classic' ? '1px solid rgba(201,168,76,0.3)' : '1px solid rgba(255,255,255,0.08)',
+              margin: '0 auto',
+            }}
+          >
+            {/* Classic border ornaments */}
+            {template === 'classic' && (
+              <>
+                <div style={{ position: 'absolute', top: 8, left: 8, right: 8, bottom: 8, border: '1px solid rgba(201,168,76,0.15)', pointerEvents: 'none' }} />
+                <div style={{ position: 'absolute', top: 12, left: 12, right: 12, bottom: 12, border: '1px solid rgba(201,168,76,0.08)', pointerEvents: 'none' }} />
+              </>
+            )}
+
+            {/* Header */}
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <p style={{ color: 'rgba(201,168,76,0.6)', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 16 }}>
+                Save The Day
+              </p>
+              <p style={{ color: '#FAF7F2', fontSize: 36, fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em', lineHeight: 1.2, margin: 0 }}>
+                {wedding.couple_names.name1}
+              </p>
+              <p style={{ color: 'rgba(201,168,76,0.6)', fontSize: 14, letterSpacing: '0.3em', margin: '10px 0', fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' }}>
+                &amp;
+              </p>
+              <p style={{ color: '#FAF7F2', fontSize: 36, fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em', lineHeight: 1.2, margin: 0 }}>
+                {wedding.couple_names.name2}
+              </p>
+            </div>
+
+            {/* Divider */}
+            <div style={{ borderTop: '1px solid rgba(201,168,76,0.25)', margin: '0 auto 28px', width: 120 }} />
+
+            {/* Date + Venue */}
+            <div style={{ textAlign: 'center', marginBottom: 32 }}>
+              <p style={{ color: '#FAF7F2', fontSize: 16, letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 8 }}>
+                {weddingDate}
+              </p>
+              <p style={{ color: 'rgba(250,247,242,0.55)', fontSize: 13, fontStyle: 'italic', margin: 0, letterSpacing: '0.04em' }}>
+                {wedding.venue}
+              </p>
+              {wedding.city && (
+                <p style={{ color: 'rgba(250,247,242,0.35)', fontSize: 11, fontFamily: 'system-ui, sans-serif', marginTop: 4, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
+                  {wedding.city}
+                </p>
+              )}
+            </div>
+
+            {/* QR + instruction */}
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={qrUrl}
+                alt="QR code for digital invitation"
+                width={100}
+                height={100}
+                crossOrigin="anonymous"
+                style={{ imageRendering: 'pixelated' }}
+              />
+              <p style={{ color: 'rgba(250,247,242,0.3)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
+                Scan to open your invitation
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Download button */}
+      <motion.button
+        onClick={downloadCard}
+        disabled={downloading}
+        className="btn-gold w-full py-3.5 flex items-center justify-center gap-2 disabled:opacity-40"
+        whileTap={{ scale: 0.98 }}
+      >
+        {downloading ? (
+          <>
+            <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24" fill="none">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+            </svg>
+            Generating…
+          </>
+        ) : (
+          <>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+            Download Card (PNG)
+          </>
+        )}
+      </motion.button>
+
+      <p className="font-body text-xs text-ivory/20 text-center leading-relaxed">
+        Download as a high-resolution PNG. Print and attach the QR code to your physical invitations, Aso-ebi cards, or stationery.
+      </p>
+    </div>
+  )
+}
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export function AdminDashboard({ wedding, guests: initialGuests, userEmail, galleryPhotoCount = 0 }: AdminDashboardProps) {
   const router = useRouter()
+  const invTheme = getTheme(wedding.config.invitation_theme)
 
   // ── Guest state ──────────────────────────────────────────────────────────────
   const [localGuests, setLocalGuests] = useState<Guest[]>(initialGuests)
@@ -344,6 +875,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
   const [showQRModal, setShowQRModal]           = useState(false)
   const [qrGuestSlug, setQrGuestSlug]           = useState<string | null>(null)
   const [successMessage, setSuccessMessage]     = useState<string | null>(null)
+  const [showDeleteModal, setShowDeleteModal]   = useState(false)
 
   const showBanner = (msg: string) => {
     setSuccessMessage(msg)
@@ -408,14 +940,9 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
   // ── Helpers ──────────────────────────────────────────────────────────────────
 
   const deleteWedding = useCallback(async () => {
-    if (!confirm(`Permanently delete this wedding? This cannot be undone.\n\nType DELETE to confirm.`)) return
-    const input = window.prompt('Type DELETE to confirm:')
-    if (input !== 'DELETE') return
     try {
       const res = await fetch(`/api/admin/wedding?weddingId=${encodeURIComponent(wedding.id)}`, { method: 'DELETE' })
-      if (res.ok) {
-        router.push('/studio')
-      }
+      if (res.ok) router.push('/studio')
     } catch { /* silent */ }
   }, [wedding.id, router])
 
@@ -503,6 +1030,18 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
           onSuccess={handleImportDone}
         />
       )}
+      <AnimatePresence>
+        {showDeleteModal && (
+          <ConfirmModal
+            title="Delete this wedding?"
+            description={`This will permanently delete the invitation for ${wedding.couple_names.name1} & ${wedding.couple_names.name2}, including all guests, RSVPs, and media. This cannot be undone.`}
+            confirmLabel="Delete permanently"
+            requireTyping="DELETE"
+            onConfirm={() => { setShowDeleteModal(false); deleteWedding() }}
+            onCancel={() => setShowDeleteModal(false)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Success banner ──────────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -532,6 +1071,8 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
           guestCount={localGuests.length}
           showGuestbook={showGuestbook}
           userEmail={userEmail}
+          themeAccent={invTheme.accent}
+          themeRaw={invTheme.raw}
           onNavigate={s => setActiveSection(s)}
           onLogout={handleLogout}
         />
@@ -566,6 +1107,8 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                 guestCount={localGuests.length}
                 showGuestbook={showGuestbook}
                 userEmail={userEmail}
+                themeAccent={invTheme.accent}
+                themeRaw={invTheme.raw}
                 onNavigate={s => setActiveSection(s)}
                 onLogout={handleLogout}
                 onClose={() => setMobileNavOpen(false)}
@@ -672,7 +1215,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
 
             {/* Status + Publish/Unpublish */}
             <StatusPill status={wedding.status} />
-            <PublishButton weddingId={wedding.id} currentStatus={wedding.status} />
+            <PublishButton weddingId={wedding.id} currentStatus={wedding.status} themeAccent={invTheme.accent} />
 
             {/* User avatar */}
             <button
@@ -725,8 +1268,10 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                     onNavigate={navigate}
                     onAddGuest={() => setShowAddGuest(true)}
                     onImportGuests={() => setShowImportGuests(true)}
-                    onDeleteWedding={deleteWedding}
+                    onDeleteWedding={() => setShowDeleteModal(true)}
                     appUrl={appUrl}
+                    themeAccent={invTheme.accent}
+                    themeRaw={invTheme.raw}
                   />
                 </motion.div>
               )}
@@ -980,36 +1525,65 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                 <motion.div key="guestbook" {...fadeProps} className="space-y-4">
                   <SectionHeading title="Guestbook" description="Messages your guests have left for you." />
                   {gbLoading && (
-                    <div className="py-20 text-center font-body text-ivory/20 text-sm tracking-wider">Loading messages…</div>
+                    <div className="py-20 text-center font-body text-ivory/20 text-sm tracking-wider animate-pulse">Loading messages…</div>
                   )}
                   {!gbLoading && guestbook.length === 0 && (
-                    <div className="py-20 text-center font-body text-ivory/20 text-sm tracking-wider">No guestbook messages yet</div>
+                    <div
+                      className="flex flex-col items-center justify-center py-20 rounded-2xl text-center"
+                      style={{ border: '1px dashed rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.01)' }}
+                    >
+                      <div className="w-10 h-10 rounded-xl flex items-center justify-center mb-4"
+                        style={{ background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.12)' }}>
+                        <Icon paths={ICONS.guestbook} className="text-gold/50" />
+                      </div>
+                      <p className="font-display text-ivory/30 italic mb-1" style={{ fontWeight: 300 }}>No messages yet</p>
+                      <p className="font-body text-xs text-ivory/15 max-w-xs leading-relaxed">
+                        Guestbook messages from your guests will appear here once they start leaving notes.
+                      </p>
+                    </div>
                   )}
                   {!gbLoading && guestbook.length > 0 && (
                     <>
                       <p className="font-body text-[11px] tracking-[0.2em] uppercase text-ivory/25">
                         {guestbook.length} message{guestbook.length !== 1 ? 's' : ''}
                       </p>
-                      {guestbook.map((entry, i) => (
-                        <motion.div
-                          key={entry.id}
-                          initial={{ opacity: 0, y: 8 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          transition={{ delay: i * 0.04 }}
-                          className="rounded-2xl p-5"
-                          style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
-                        >
-                          <p className="font-display text-ivory/75 text-sm italic leading-relaxed mb-3">
-                            &ldquo;{entry.message}&rdquo;
-                          </p>
-                          <div className="flex items-center justify-between">
-                            <p className="font-body text-xs text-ivory/40">— {entry.guest_name}</p>
-                            <p className="font-body text-xs text-ivory/20">
-                              {new Date(entry.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      <AnimatePresence>
+                        {guestbook.map((entry, i) => (
+                          <motion.div
+                            key={entry.id}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, x: -20 }}
+                            transition={{ delay: i * 0.04 }}
+                            className="rounded-2xl p-5 group"
+                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                          >
+                            <p className="font-display text-ivory/75 text-sm italic leading-relaxed mb-3">
+                              &ldquo;{entry.message}&rdquo;
                             </p>
-                          </div>
-                        </motion.div>
-                      ))}
+                            <div className="flex items-center justify-between">
+                              <p className="font-body text-xs text-ivory/40">— {entry.guest_name}</p>
+                              <div className="flex items-center gap-3">
+                                <p className="font-body text-xs text-ivory/20">
+                                  {new Date(entry.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                                </p>
+                                <button
+                                  onClick={async () => {
+                                    try {
+                                      const res = await fetch(`/api/guestbook?entryId=${entry.id}&weddingId=${wedding.id}`, { method: 'DELETE' })
+                                      if (res.ok) setGuestbook(prev => prev.filter(e => e.id !== entry.id))
+                                    } catch { /* silent */ }
+                                  }}
+                                  className="opacity-0 group-hover:opacity-100 text-red-500/30 hover:text-red-400/70 transition-all"
+                                  title="Delete message"
+                                >
+                                  <Icon paths={ICONS.x} className="w-3.5 h-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </AnimatePresence>
                     </>
                   )}
                 </motion.div>
@@ -1039,19 +1613,32 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                 </motion.div>
               )}
 
+              {/* ── Reminders ─────────────────────────────────────────────── */}
+              {activeSection === 'reminders' && (
+                <motion.div key="reminders" {...fadeProps}>
+                  <RemindersSection wedding={wedding} guests={localGuests} appUrl={appUrl} />
+                </motion.div>
+              )}
+
+              {/* ── Thank You ─────────────────────────────────────────────── */}
+              {activeSection === 'thankyou' && (
+                <motion.div key="thankyou" {...fadeProps}>
+                  <ThankYouSection wedding={wedding} guests={localGuests} appUrl={appUrl} />
+                </motion.div>
+              )}
+
+              {/* ── Print Card ────────────────────────────────────────────── */}
+              {activeSection === 'invitations' && (
+                <motion.div key="invitations" {...fadeProps}>
+                  <InvitationCardSection wedding={wedding} appUrl={appUrl} />
+                </motion.div>
+              )}
+
               {/* ── Settings ──────────────────────────────────────────────── */}
               {activeSection === 'settings' && (
                 <motion.div key="settings" {...fadeProps}>
                   <SectionHeading title="Settings" description="Edit venue details, dress code, feature toggles and more." />
                   <WeddingSettingsEditor wedding={wedding} />
-                </motion.div>
-              )}
-
-              {/* ── Coming soon stubs ─────────────────────────────────────── */}
-              {activeSection === 'invitations' && (
-                <motion.div key="invitations" {...fadeProps}>
-                  <SectionHeading title="Invitations" />
-                  <ComingSoonSection label="Invitation Management" />
                 </motion.div>
               )}
               {activeSection === 'timeline' && (
@@ -1098,9 +1685,10 @@ function StatusPill({ status }: { status: string }) {
 
 // ── Publish / Unpublish button ────────────────────────────────────────────────
 
-function PublishButton({ weddingId, currentStatus }: { weddingId: string; currentStatus: string }) {
+function PublishButton({ weddingId, currentStatus, themeAccent }: { weddingId: string; currentStatus: string; themeAccent: string }) {
   const router = useRouter()
   const [loading, setLoading] = React.useState(false)
+  const [showConfirm, setShowConfirm] = React.useState(false)
 
   const handleAction = async (action: 'publish' | 'unpublish') => {
     setLoading(true)
@@ -1129,12 +1717,28 @@ function PublishButton({ weddingId, currentStatus }: { weddingId: string; curren
   }
 
   return (
-    <button
-      onClick={() => handleAction('publish')}
-      disabled={loading}
-      className="font-body text-obsidian bg-gold hover:bg-gold-light text-xs tracking-widest uppercase px-4 py-1.5 transition-colors rounded-lg disabled:opacity-40"
-    >
-      {loading ? '…' : currentStatus === 'draft' ? 'Publish' : 'Go live'}
-    </button>
+    <>
+      <button
+        onClick={() => setShowConfirm(true)}
+        disabled={loading}
+        className="font-body text-obsidian text-xs tracking-widest uppercase px-4 py-1.5 transition-opacity rounded-lg disabled:opacity-40 hover:opacity-85"
+        style={{ background: themeAccent }}
+      >
+        {loading ? '…' : currentStatus === 'draft' ? 'Publish' : 'Go live'}
+      </button>
+      <AnimatePresence>
+        {showConfirm && (
+          <ConfirmModal
+            title="Ready to go live?"
+            description="Publishing makes your invitation publicly visible to anyone with the link. You can unpublish it at any time from this dashboard."
+            confirmLabel="Yes, publish"
+            confirmClassName="text-obsidian"
+            confirmStyle={{ background: themeAccent }}
+            onConfirm={() => { setShowConfirm(false); handleAction('publish') }}
+            onCancel={() => setShowConfirm(false)}
+          />
+        )}
+      </AnimatePresence>
+    </>
   )
 }

@@ -3,7 +3,8 @@
 import { useState } from 'react'
 import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
-import type { Wedding, WeddingConfig, DressCodeColor } from '@/lib/db/types'
+import { INVITATION_THEMES } from '@/lib/themes'
+import type { Wedding, WeddingConfig, DressCodeColor, Accommodation } from '@/lib/db/types'
 
 /* ─────────────────────────────────────────────────────────
    SVG Icon helper — viewBox 0 0 24 24, Heroicons outline
@@ -69,6 +70,12 @@ const TOGGLE_GROUPS: {
         ],
       },
       {
+        key: 'show_accommodations',
+        label: 'Accommodation',
+        description: 'Show nearby hotel recommendations for guests',
+        paths: ['M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z', 'M9 22V12h6v10'],
+      },
+      {
         key: 'show_gift_registry',
         label: 'Gift Registry',
         description: 'Show gift registry link',
@@ -96,6 +103,12 @@ const TOGGLE_GROUPS: {
         label: 'Dietary Info',
         description: 'Ask for dietary requirements at RSVP',
         paths: ['M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 0-1 1.73M9 12h6m-6 4h3'],
+      },
+      {
+        key: 'collect_meal_choice',
+        label: 'Meal Choice',
+        description: 'Let guests select their meal at RSVP',
+        paths: ['M18 8h1a4 4 0 0 1 0 8h-1', 'M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z', 'M6 1v3M10 1v3M14 1v3'],
       },
     ],
   },
@@ -328,6 +341,70 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
         </motion.button>
       </div>
 
+      {/* ── Invitation Theme ── */}
+      <div className="admin-card p-5">
+        <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-1">Invitation Theme</h3>
+        <p className="text-[11px] text-ivory/25 mb-5">
+          Choose the accent colour palette for your invitation. All guests see this theme.
+        </p>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          {INVITATION_THEMES.map(theme => {
+            const isSelected = (config.invitation_theme ?? 'emerald') === theme.id
+            return (
+              <button
+                key={theme.id}
+                type="button"
+                onClick={() => setConfigField('invitation_theme', theme.id)}
+                className={[
+                  'relative text-left p-3.5 rounded-xl transition-all duration-200',
+                  isSelected
+                    ? 'ring-2 ring-offset-2 ring-offset-[#09090B]'
+                    : 'hover:bg-white/[0.04] border border-white/[0.07]',
+                ].join(' ')}
+                style={isSelected ? {
+                  background: `rgba(${theme.raw}, 0.07)`,
+                  border: `1px solid rgba(${theme.raw}, 0.25)`,
+                  outline: `2px solid ${theme.accent}`,
+                  outlineOffset: '2px',
+                } : { background: 'rgba(255,255,255,0.02)' }}
+              >
+                {/* Swatch row */}
+                <div className="flex gap-1 mb-3">
+                  {theme.swatch.map((color, i) => (
+                    <div
+                      key={i}
+                      className="flex-1 h-1.5 rounded-full"
+                      style={{ background: color, opacity: i === 2 ? 0.6 : 1 }}
+                    />
+                  ))}
+                </div>
+                {/* Accent dot + name */}
+                <div className="flex items-center gap-2 mb-0.5">
+                  <div
+                    className="w-2 h-2 rounded-full flex-shrink-0"
+                    style={{ background: theme.accent }}
+                  />
+                  <p className="font-body text-xs text-ivory/80 font-medium">{theme.name}</p>
+                </div>
+                <p className="font-body text-[10px] text-ivory/30 leading-snug pl-4">
+                  {theme.description}
+                </p>
+                {isSelected && (
+                  <div
+                    className="absolute top-2 right-2 w-4 h-4 rounded-full flex items-center justify-center"
+                    style={{ background: theme.accent }}
+                  >
+                    <svg width="8" height="8" viewBox="0 0 10 8" fill="none">
+                      <path d="M1 4l3 3 5-6" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+                  </div>
+                )}
+              </button>
+            )
+          })}
+        </div>
+      </div>
+
       {/* ── Couple & Event ── */}
       <div className="admin-card p-5">
         <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-5">Couple &amp; Event</h3>
@@ -373,9 +450,9 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
         <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-5">Venue Details</h3>
         <div className="space-y-4">
           {[
-            { label: 'Venue Name', value: venue,       setter: setVenue,    placeholder: 'Eko Hotel & Suites' },
-            { label: 'Address',   value: venueAddress, setter: setVenueAddr, placeholder: 'Plot 1415, Victoria Island' },
-            { label: 'City',      value: city,          setter: setCity,     placeholder: 'Lagos' },
+            { label: 'Venue Name', value: venue,       setter: setVenue,    placeholder: 'The Grand Ballroom' },
+            { label: 'Address',   value: venueAddress, setter: setVenueAddr, placeholder: '123 Park Avenue' },
+            { label: 'City',      value: city,          setter: setCity,     placeholder: 'London, New York, Lagos…' },
           ].map(({ label, value, setter, placeholder }) => (
             <div key={label}>
               <label className="rsvp-label">{label}</label>
@@ -432,6 +509,35 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
               rows={2}
             />
           </div>
+          <div>
+            <label className="rsvp-label">Aso-ebi / Fabric Vendor (optional)</label>
+            <input
+              type="text"
+              value={config.dress_code?.vendor_name ?? ''}
+              onChange={e => setConfigField('dress_code', {
+                ...config.dress_code,
+                title: config.dress_code?.title ?? '',
+                vendor_name: e.target.value || undefined,
+              })}
+              placeholder="e.g. Libas Fabrics, Lekki"
+              className="rsvp-input"
+            />
+          </div>
+          <div>
+            <label className="rsvp-label">Vendor Phone / WhatsApp (optional)</label>
+            <input
+              type="text"
+              value={config.dress_code?.vendor_contact ?? ''}
+              onChange={e => setConfigField('dress_code', {
+                ...config.dress_code,
+                title: config.dress_code?.title ?? '',
+                vendor_contact: e.target.value || undefined,
+              })}
+              placeholder="+234 800 000 0000"
+              className="rsvp-input"
+            />
+          </div>
+
           {/* Colour swatches editor */}
           <div>
             <label className="rsvp-label">Colour Palette (optional)</label>
@@ -483,6 +589,70 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
         </div>
       </div>
 
+      {/* ── Accommodation ── */}
+      <div className="admin-card p-5">
+        <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-1">Accommodation</h3>
+        <p className="text-[11px] text-ivory/25 mb-5">
+          Add nearby hotels for your guests. Each one gets a &ldquo;Get Directions&rdquo; link.
+        </p>
+        <div className="space-y-4">
+          {(config.accommodations ?? []).map((acc: Accommodation, i: number) => (
+            <div
+              key={i}
+              className="rounded-xl p-4 space-y-3"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-ivory/40 tracking-wider uppercase">Hotel {i + 1}</p>
+                <button
+                  onClick={() => {
+                    const list = (config.accommodations ?? []).filter((_, ci) => ci !== i)
+                    setConfigField('accommodations', list.length ? list : undefined)
+                  }}
+                  className="text-ivory/25 hover:text-red-400 transition-colors text-xs"
+                  aria-label="Remove hotel"
+                >
+                  Remove
+                </button>
+              </div>
+              {[
+                { label: 'Hotel Name', field: 'name' as keyof Accommodation, placeholder: 'Transcorp Hilton' },
+                { label: 'Address', field: 'address' as keyof Accommodation, placeholder: '1 Aguiyi Ironsi St, Abuja' },
+                { label: 'Price Range (optional)', field: 'price_range' as keyof Accommodation, placeholder: '₦50,000 – ₦80,000 / night' },
+                { label: 'Phone / WhatsApp (optional)', field: 'phone' as keyof Accommodation, placeholder: '+234 800 000 0000' },
+                { label: 'Booking Link (optional)', field: 'booking_url' as keyof Accommodation, placeholder: 'https://...' },
+              ].map(({ label, field, placeholder }) => (
+                <div key={field}>
+                  <label className="rsvp-label">{label}</label>
+                  <input
+                    type="text"
+                    value={(acc[field] as string) ?? ''}
+                    onChange={e => {
+                      const list = [...(config.accommodations ?? [])]
+                      list[i] = { ...list[i], [field]: e.target.value || undefined }
+                      setConfigField('accommodations', list)
+                    }}
+                    placeholder={placeholder}
+                    className="rsvp-input py-2"
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+          {(config.accommodations ?? []).length < 3 && (
+            <button
+              onClick={() => {
+                const list = [...(config.accommodations ?? []), { name: '', address: '' }]
+                setConfigField('accommodations', list)
+              }}
+              className="text-xs text-emerald-DEFAULT/60 hover:text-emerald-DEFAULT transition-colors"
+            >
+              + Add hotel
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* ── Copy & Links ── */}
       <div className="admin-card p-5">
         <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-5">Copy &amp; Links</h3>
@@ -513,6 +683,107 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
               className="rsvp-input"
             />
           </div>
+        </div>
+      </div>
+
+      {/* ── RSVP Settings ── */}
+      <div className="admin-card p-5">
+        <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-1">RSVP Settings</h3>
+        <p className="text-[11px] text-ivory/25 mb-5">
+          Configure meal choices and which events guests are attending.
+        </p>
+        <div className="space-y-5">
+          {/* Meal options */}
+          <div>
+            <label className="rsvp-label">Meal Options (optional)</label>
+            <p className="text-[11px] text-ivory/20 mb-2">One per line. If set, guests choose a meal at RSVP.</p>
+            <textarea
+              value={(config.meal_options ?? []).join('\n')}
+              onChange={e => {
+                const lines = e.target.value.split('\n').map(l => l.trim()).filter(Boolean)
+                setConfigField('meal_options', lines.length ? lines : undefined)
+              }}
+              placeholder={"Chicken\nFish\nVegetarian"}
+              className="rsvp-input resize-none font-mono text-sm"
+              rows={4}
+            />
+          </div>
+          {/* Event names for multi-event attendance */}
+          <div>
+            <label className="rsvp-label">Events / Ceremonies (optional)</label>
+            <p className="text-[11px] text-ivory/20 mb-2">One per line. Guests select which events they&apos;ll attend.</p>
+            <textarea
+              value={(config.rsvp_events ?? []).join('\n')}
+              onChange={e => {
+                const lines = e.target.value.split('\n').map(l => l.trim()).filter(Boolean)
+                setConfigField('rsvp_events', lines.length ? lines : undefined)
+              }}
+              placeholder={"Traditional Introduction\nChurch Ceremony\nReception"}
+              className="rsvp-input resize-none font-mono text-sm"
+              rows={4}
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* ── Gift / Bank Details ── */}
+      <div className="admin-card p-5">
+        <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-1">Gift &amp; Bank Details</h3>
+        <p className="text-[11px] text-ivory/25 mb-5">
+          Add bank account details guests can copy directly from the invitation.
+        </p>
+        <div className="space-y-4">
+          {(config.bank_details ?? []).map((bank, i) => (
+            <div
+              key={i}
+              className="rounded-xl p-4 space-y-3"
+              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs text-ivory/40 tracking-wider uppercase">Account {i + 1}</p>
+                <button
+                  onClick={() => {
+                    const list = (config.bank_details ?? []).filter((_, ci) => ci !== i)
+                    setConfigField('bank_details', list.length ? list : undefined)
+                  }}
+                  className="text-ivory/25 hover:text-red-400 transition-colors text-xs"
+                  aria-label="Remove account"
+                >
+                  Remove
+                </button>
+              </div>
+              {[
+                { label: 'Bank Name', field: 'bank_name', placeholder: 'First Bank, GTBank, Zenith…' },
+                { label: 'Account Number', field: 'account_number', placeholder: '0123456789' },
+                { label: 'Account Name', field: 'account_name', placeholder: 'Adaeze Okafor' },
+                { label: 'Label (optional)', field: 'label', placeholder: 'e.g. Bride, Groom, Joint' },
+              ].map(({ label, field, placeholder }) => (
+                <div key={field}>
+                  <label className="rsvp-label">{label}</label>
+                  <input
+                    type="text"
+                    value={(bank as unknown as Record<string, string>)[field] ?? ''}
+                    onChange={e => {
+                      const list = [...(config.bank_details ?? [])]
+                      list[i] = { ...list[i], [field]: e.target.value }
+                      setConfigField('bank_details', list)
+                    }}
+                    placeholder={placeholder}
+                    className="rsvp-input py-2"
+                  />
+                </div>
+              ))}
+            </div>
+          ))}
+          <button
+            onClick={() => {
+              const list = [...(config.bank_details ?? []), { bank_name: '', account_number: '', account_name: '' }]
+              setConfigField('bank_details', list)
+            }}
+            className="text-xs text-emerald-DEFAULT/60 hover:text-emerald-DEFAULT transition-colors"
+          >
+            + Add bank account
+          </button>
         </div>
       </div>
 

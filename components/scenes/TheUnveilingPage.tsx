@@ -24,6 +24,7 @@ import { QRCodeModal } from '@/components/molecules/QRCodeModal'
 import { ThemeToggle } from '@/components/atoms/ThemeToggle'
 import { Events } from '@/lib/analytics/events'
 import { formatWeddingDate } from '@/lib/personalization/guest'
+import { getThemeVars } from '@/lib/themes'
 import type { Wedding, Guest, EventScheduleItem, StoryMilestone, GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
 
 type AppPhase = 'intro' | 'revealed' | 'rsvp'
@@ -47,16 +48,19 @@ function buildSections(
   // Story: only show if config allows AND there are milestones with descriptions
   if (config.show_story !== false && milestonesCount > 0)
     sections.push({ id: 'section-story', label: 'Our Story' })
+  // Countdown sits early to build anticipation
+  if (config.show_countdown !== false) sections.push({ id: 'section-countdown', label: 'Countdown' })
   if (config.montage_images || config.montage_video)
     sections.push({ id: 'section-montage', label: 'Gallery' })
   // Gallery: only show if config allows AND there are albums with photos
   if (config.show_gallery !== false && albumsCount > 0)
     sections.push({ id: 'section-gallery', label: 'Photos' })
-  if (config.show_countdown !== false) sections.push({ id: 'section-countdown', label: 'Countdown' })
   sections.push({ id: 'section-rsvp', label: 'RSVP' })
-  if (config.show_schedule || config.show_venue_map || config.dress_code)
+  if (config.show_schedule || config.show_venue_map || config.dress_code ||
+      (config.show_accommodations && config.accommodations?.length))
     sections.push({ id: 'section-venue', label: 'Details' })
-  if (config.show_gift_registry) sections.push({ id: 'section-registry', label: 'Gifts' })
+  if (config.show_gift_registry || config.bank_details?.length)
+    sections.push({ id: 'section-registry', label: 'Gifts' })
   if (config.show_guestbook !== false) sections.push({ id: 'section-guestbook', label: 'Guestbook' })
   return sections
 }
@@ -166,8 +170,10 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
 
   const inviteUrl = typeof window !== 'undefined' ? window.location.href : ''
 
+  const themeVars = getThemeVars(config.invitation_theme)
+
   return (
-    <div className="min-h-screen bg-obsidian">
+    <div className="min-h-screen bg-obsidian" style={themeVars}>
       {/* Skip navigation for screen readers */}
       <a href="#section-hero" className="skip-nav">Skip to content</a>
 
@@ -381,6 +387,28 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
               />
             )}
 
+            {/* ── COUNTDOWN ── (placed early to build anticipation before photos/RSVP) */}
+            {config.show_countdown !== false && (
+              <motion.section
+                id="section-countdown"
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true, margin: '-100px' }}
+                transition={{ duration: 1 }}
+                className="py-20 px-6"
+                aria-label="Wedding countdown"
+              >
+                <div className="text-center mb-10">
+                  <p className="font-body tracking-[0.3em] uppercase mb-3"
+                    style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.5)' }}>
+                    Counting down
+                  </p>
+                  <GoldDivider />
+                </div>
+                <CountdownTimer weddingDate={wedding_date} className="justify-center" />
+              </motion.section>
+            )}
+
             {/* ── MONTAGE (legacy) — shown if montage images configured ── */}
             {(config.montage_images?.length || config.montage_video) && (
               <section id="section-montage" className="relative py-16 px-0">
@@ -414,28 +442,6 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                     : `/${wedding.slug}/gallery`
                 }
               />
-            )}
-
-            {/* ── COUNTDOWN ── */}
-            {config.show_countdown !== false && (
-              <motion.section
-                id="section-countdown"
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                viewport={{ once: true, margin: '-100px' }}
-                transition={{ duration: 1 }}
-                className="py-20 px-6"
-                aria-label="Wedding countdown"
-              >
-                <div className="text-center mb-10">
-                  <p className="font-body tracking-[0.3em] uppercase mb-3"
-                    style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.5)' }}>
-                    Counting down
-                  </p>
-                  <GoldDivider />
-                </div>
-                <CountdownTimer weddingDate={wedding_date} className="justify-center" />
-              </motion.section>
             )}
 
             {/* ── RSVP ── */}
@@ -474,15 +480,20 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                 )}
 
                 {!guest ? (
-                  <motion.p
+                  <motion.div
                     initial={{ opacity: 0, y: 12 }}
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.8, delay: 0.3 }}
-                    className="text-center font-body text-ivory/25 text-xs tracking-wide"
+                    className="text-center space-y-3"
                   >
-                    Open your personal invitation to RSVP
-                  </motion.p>
+                    <p className="font-body text-ivory/40 text-sm leading-relaxed">
+                      RSVP is available on your personal invitation link.
+                    </p>
+                    <p className="font-body text-ivory/20 text-xs tracking-wide">
+                      Contact {couple_names.name1} &amp; {couple_names.name2} to receive yours.
+                    </p>
+                  </motion.div>
                 ) : !showRSVP ? (
                   <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }} transition={{ duration: 0.8, delay: 0.3 }}
@@ -548,6 +559,8 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                       allowPlusOne={config.allow_plus_one}
                       maxPartySize={config.max_party_size}
                       collectDietary={config.collect_dietary}
+                      mealOptions={config.collect_meal_choice ? config.meal_options : undefined}
+                      rsvpEvents={config.rsvp_events}
                       onSuccess={handleRSVPSuccess}
                       existingStatus={guest?.rsvp_status}
                     />
@@ -581,8 +594,9 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
               )}
             </AnimatePresence>
 
-            {/* ── VENUE / SCHEDULE / DRESS CODE ── */}
-            {(config.show_schedule || config.show_venue_map || config.dress_code || venue) && (
+            {/* ── VENUE / SCHEDULE / DRESS CODE / ACCOMMODATION ── */}
+            {(config.show_schedule || config.show_venue_map || config.dress_code || venue ||
+              (config.show_accommodations && config.accommodations?.length)) && (
               <VenueSection
                 venue={venue}
                 venueAddress={venue_address}
@@ -593,10 +607,11 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
             )}
 
             {/* ── GIFT REGISTRY ── */}
-            {config.show_gift_registry && (
+            {(config.show_gift_registry || config.bank_details?.length) && (
               <GiftRegistry
                 registryUrl={config.gift_registry_url}
                 registryNote={config.gift_registry_note}
+                bankDetails={config.bank_details}
                 coupleName1={couple_names.name1}
                 coupleName2={couple_names.name2}
               />
