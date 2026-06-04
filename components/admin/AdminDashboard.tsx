@@ -1268,7 +1268,6 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                     onNavigate={navigate}
                     onAddGuest={() => setShowAddGuest(true)}
                     onImportGuests={() => setShowImportGuests(true)}
-                    onDeleteWedding={() => setShowDeleteModal(true)}
                     appUrl={appUrl}
                     themeAccent={invTheme.accent}
                     themeRaw={invTheme.raw}
@@ -1289,7 +1288,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                       { label: 'Awaiting',      value: stats.pending,   color: '#C9A84C', sub: undefined },
                       { label: 'Total Guests',  value: stats.total,     color: '#C9A84C', sub: undefined },
                     ].map(stat => (
-                      <div key={stat.label} className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                      <div key={stat.label} className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.10)' }}>
                         <p className="font-body text-[11px] tracking-wider uppercase text-ivory/30 mb-2">{stat.label}</p>
                         <p className="font-display" style={{ fontSize: '2rem', fontWeight: 300, color: stat.color, lineHeight: 1 }}>
                           {stat.value}
@@ -1300,7 +1299,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                   </div>
 
                   {/* Engagement */}
-                  <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.10)' }}>
                     <p className="font-body text-[11px] tracking-[0.2em] uppercase text-ivory/25 mb-4">Engagement</p>
                     <div className="grid sm:grid-cols-2 gap-6">
                       {[
@@ -1328,7 +1327,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                   </div>
 
                   {/* Guest table */}
-                  <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                  <div className="rounded-2xl overflow-hidden" style={{ background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.10)' }}>
                     {/* Toolbar */}
                     <div className="p-4 flex flex-col sm:flex-row gap-3 border-b border-white/[0.05]">
                       <div className="relative flex-1">
@@ -1504,7 +1503,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
 
                   {/* Dietary / notes */}
                   {localGuests.some(g => g.dietary || g.rsvp_note) && (
-                    <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}>
+                    <div className="rounded-2xl p-5" style={{ background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.10)' }}>
                       <p className="font-body text-[11px] tracking-[0.2em] uppercase text-ivory/25 mb-4">Dietary Requirements &amp; Notes</p>
                       <div className="space-y-3">
                         {localGuests.filter(g => g.dietary || g.rsvp_note).map(g => (
@@ -1556,7 +1555,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                             exit={{ opacity: 0, x: -20 }}
                             transition={{ delay: i * 0.04 }}
                             className="rounded-2xl p-5 group"
-                            style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)' }}
+                            style={{ background: 'rgba(255,255,255,0.055)', border: '1px solid rgba(255,255,255,0.10)' }}
                           >
                             <p className="font-display text-ivory/75 text-sm italic leading-relaxed mb-3">
                               &ldquo;{entry.message}&rdquo;
@@ -1636,9 +1635,34 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
 
               {/* ── Settings ──────────────────────────────────────────────── */}
               {activeSection === 'settings' && (
-                <motion.div key="settings" {...fadeProps}>
+                <motion.div key="settings" {...fadeProps} className="space-y-8">
                   <SectionHeading title="Settings" description="Edit venue details, dress code, feature toggles and more." />
                   <WeddingSettingsEditor wedding={wedding} />
+
+                  {/* ── Danger zone ── */}
+                  <div
+                    className="rounded-2xl p-5"
+                    style={{ border: '1px solid rgba(248,113,113,0.12)', background: 'rgba(248,113,113,0.03)' }}
+                  >
+                    <p className="font-body text-[11px] tracking-[0.25em] uppercase text-red-400/50 mb-3">Danger zone</p>
+                    <div className="flex items-center justify-between gap-4">
+                      <div>
+                        <p className="font-body text-sm text-ivory/50">Delete this wedding</p>
+                        <p className="font-body text-xs text-ivory/25 mt-0.5 leading-relaxed">
+                          Permanently removes all guests, RSVPs, photos, and analytics. Cannot be undone.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => setShowDeleteModal(true)}
+                        className="shrink-0 font-body text-xs tracking-widest uppercase px-4 py-2 rounded-xl border transition-colors"
+                        style={{ color: 'rgba(248,113,113,0.6)', borderColor: 'rgba(248,113,113,0.2)' }}
+                        onMouseEnter={e => { (e.currentTarget.style.color = '#f87171'); (e.currentTarget.style.borderColor = 'rgba(248,113,113,0.4)') }}
+                        onMouseLeave={e => { (e.currentTarget.style.color = 'rgba(248,113,113,0.6)'); (e.currentTarget.style.borderColor = 'rgba(248,113,113,0.2)') }}
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
                 </motion.div>
               )}
               {activeSection === 'timeline' && (
