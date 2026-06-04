@@ -28,15 +28,14 @@ interface DashboardOverviewProps {
   onNavigate:       (section: string) => void
   onAddGuest:       () => void
   onImportGuests:   () => void
-  onDeleteWedding:  () => void
   appUrl:           string
   themeAccent:      string
   themeRaw:         string
 }
 
 const CARD_STYLE = {
-  background: 'rgba(255,255,255,0.03)',
-  border: '1px solid rgba(255,255,255,0.07)',
+  background: 'rgba(255,255,255,0.055)',
+  border: '1px solid rgba(255,255,255,0.10)',
 }
 
 export function DashboardOverview({
@@ -47,7 +46,6 @@ export function DashboardOverview({
   onNavigate,
   onAddGuest,
   onImportGuests,
-  onDeleteWedding,
   appUrl,
   themeAccent,
   themeRaw,
@@ -148,7 +146,7 @@ export function DashboardOverview({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.08 }}
           className="rounded-2xl overflow-hidden"
-          style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.02)' }}
+          style={{ border: '1px solid rgba(255,255,255,0.10)', background: 'rgba(255,255,255,0.05)' }}
         >
           <div className="px-6 py-4 flex items-center justify-between border-b border-white/[0.05]">
             <div>
@@ -332,34 +330,6 @@ export function DashboardOverview({
               <p className="font-body text-xs text-ivory/25 mt-0.5 leading-relaxed">{action.description}</p>
             </motion.button>
           ))}
-        </div>
-      </motion.div>
-
-      {/* ── Danger zone ── */}
-      <motion.div
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4, delay: 0.32 }}
-        className="rounded-2xl p-5"
-        style={{ border: '1px solid rgba(248,113,113,0.12)', background: 'rgba(248,113,113,0.03)' }}
-      >
-        <p className="font-body text-[11px] tracking-[0.25em] uppercase text-red-400/50 mb-3">Danger zone</p>
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <p className="font-body text-sm text-ivory/50">Delete this wedding</p>
-            <p className="font-body text-xs text-ivory/25 mt-0.5 leading-relaxed">
-              Permanently removes all guests, RSVPs, photos, and analytics. Cannot be undone.
-            </p>
-          </div>
-          <button
-            onClick={onDeleteWedding}
-            className="shrink-0 font-body text-xs tracking-widest uppercase px-4 py-2 rounded-xl transition-colors"
-            style={{ color: 'rgba(248,113,113,0.6)', border: '1px solid rgba(248,113,113,0.2)' }}
-            onMouseEnter={e => { (e.currentTarget.style.color = '#f87171'); (e.currentTarget.style.borderColor = 'rgba(248,113,113,0.4)') }}
-            onMouseLeave={e => { (e.currentTarget.style.color = 'rgba(248,113,113,0.6)'); (e.currentTarget.style.borderColor = 'rgba(248,113,113,0.2)') }}
-          >
-            Delete
-          </button>
         </div>
       </motion.div>
 
