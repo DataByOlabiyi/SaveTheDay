@@ -653,14 +653,21 @@ function ThankYouSection({ wedding, guests, appUrl }: { wedding: Wedding; guests
 
 function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: string }) {
   const [downloading, setDownloading] = React.useState(false)
-  const [template, setTemplate]       = React.useState<'classic' | 'minimal'>('classic')
+  const [template, setTemplate]       = React.useState<'classic' | 'royal'>('classic')
   const cardRef = React.useRef<HTMLDivElement>(null)
 
-  const inviteUrl = `${appUrl}/e/${wedding.slug}`
-  const qrUrl     = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&color=C9A84C&bgcolor=080C0A&data=${encodeURIComponent(inviteUrl)}`
+  const inviteUrl   = `${appUrl}/e/${wedding.slug}`
+  const initials    = `${wedding.couple_names.name1[0] ?? ''}${wedding.couple_names.name2[0] ?? ''}`
   const weddingDate = new Date(wedding.wedding_date).toLocaleDateString('en-GB', {
     day: 'numeric', month: 'long', year: 'numeric',
   })
+
+  const isClassic = template === 'classic'
+
+  const qrColor   = isClassic ? '3D1F0A' : 'C9A84C'
+  const qrBg      = isClassic ? 'FAF7F0' : '0D1B3E'
+  const qrUrl     = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&color=${qrColor}&bgcolor=${qrBg}&data=${encodeURIComponent(inviteUrl)}`
+  const bgColor   = isClassic ? '#FAF7F0' : '#0D1B3E'
 
   const downloadCard = async () => {
     if (!cardRef.current) return
@@ -670,12 +677,12 @@ function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: 
       const canvas = await html2canvas(cardRef.current, {
         scale: 3,
         useCORS: true,
-        backgroundColor: '#080C0A',
+        backgroundColor: bgColor,
         logging: false,
       })
-      const link       = document.createElement('a')
-      link.download    = `${wedding.slug}-invitation-card.png`
-      link.href        = canvas.toDataURL('image/png')
+      const link    = document.createElement('a')
+      link.download = `${wedding.slug}-invitation-${template}.png`
+      link.href     = canvas.toDataURL('image/png')
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
@@ -693,21 +700,22 @@ function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: 
       <div className="admin-card p-5">
         <p className="text-xs tracking-widest uppercase text-ivory/30 mb-4">Template</p>
         <div className="grid grid-cols-2 gap-3">
-          {(['classic', 'minimal'] as const).map(t => (
+          {([
+            { id: 'classic', label: 'Classic', desc: 'Cream & warm tones, floral border' },
+            { id: 'royal',   label: 'Royal',   desc: 'Navy & gold, monogram crest' },
+          ] as const).map(t => (
             <button
-              key={t}
-              onClick={() => setTemplate(t)}
+              key={t.id}
+              onClick={() => setTemplate(t.id)}
               className={`p-4 rounded-xl text-left transition-all ${
-                template === t
+                template === t.id
                   ? 'ring-2 ring-gold/40'
                   : 'hover:bg-white/[0.03] border border-white/[0.07]'
               }`}
-              style={template === t ? { background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.2)' } : {}}
+              style={template === t.id ? { background: 'rgba(201,168,76,0.07)', border: '1px solid rgba(201,168,76,0.2)' } : {}}
             >
-              <p className="font-body text-sm text-ivory/80 capitalize mb-0.5">{t}</p>
-              <p className="font-body text-xs text-ivory/30">
-                {t === 'classic' ? 'Ornate borders, gold accents' : 'Clean lines, minimal style'}
-              </p>
+              <p className="font-body text-sm text-ivory/80 mb-0.5">{t.label}</p>
+              <p className="font-body text-xs text-ivory/30">{t.desc}</p>
             </button>
           ))}
         </div>
@@ -717,76 +725,202 @@ function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: 
       <div className="admin-card p-5">
         <p className="text-xs tracking-widest uppercase text-ivory/30 mb-4">Preview</p>
         <div className="overflow-auto">
-          <div
-            ref={cardRef}
-            style={{
-              width: 600,
-              background: '#080C0A',
-              padding: template === 'classic' ? '48px 56px' : '40px 48px',
-              fontFamily: 'Georgia, serif',
-              position: 'relative',
-              border: template === 'classic' ? '1px solid rgba(201,168,76,0.3)' : '1px solid rgba(255,255,255,0.08)',
-              margin: '0 auto',
-            }}
-          >
-            {/* Classic border ornaments */}
-            {template === 'classic' && (
-              <>
-                <div style={{ position: 'absolute', top: 8, left: 8, right: 8, bottom: 8, border: '1px solid rgba(201,168,76,0.15)', pointerEvents: 'none' }} />
-                <div style={{ position: 'absolute', top: 12, left: 12, right: 12, bottom: 12, border: '1px solid rgba(201,168,76,0.08)', pointerEvents: 'none' }} />
-              </>
-            )}
+          {isClassic ? (
+            /* ── CLASSIC ── cream/warm white, serif, SVG corner flourishes ── */
+            <div
+              ref={cardRef}
+              style={{
+                width: 560,
+                background: '#FAF7F0',
+                padding: '52px 60px',
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                position: 'relative',
+                margin: '0 auto',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* Outer border */}
+              <div style={{ position: 'absolute', inset: 14, border: '1.5px solid rgba(160,110,60,0.25)', pointerEvents: 'none' }} />
+              {/* Inner hairline */}
+              <div style={{ position: 'absolute', inset: 20, border: '0.5px solid rgba(160,110,60,0.12)', pointerEvents: 'none' }} />
 
-            {/* Header */}
-            <div style={{ textAlign: 'center', marginBottom: 32 }}>
-              <p style={{ color: 'rgba(201,168,76,0.6)', fontSize: 10, letterSpacing: '0.35em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 16 }}>
-                Save The Day
-              </p>
-              <p style={{ color: '#FAF7F2', fontSize: 36, fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em', lineHeight: 1.2, margin: 0 }}>
-                {wedding.couple_names.name1}
-              </p>
-              <p style={{ color: 'rgba(201,168,76,0.6)', fontSize: 14, letterSpacing: '0.3em', margin: '10px 0', fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' }}>
-                &amp;
-              </p>
-              <p style={{ color: '#FAF7F2', fontSize: 36, fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em', lineHeight: 1.2, margin: 0 }}>
-                {wedding.couple_names.name2}
-              </p>
-            </div>
+              {/* SVG corner flourishes */}
+              {[
+                { top: 6, left: 6 },
+                { top: 6, right: 6, transform: 'scaleX(-1)' },
+                { bottom: 6, left: 6, transform: 'scaleY(-1)' },
+                { bottom: 6, right: 6, transform: 'scale(-1,-1)' },
+              ].map((pos, i) => (
+                <svg key={i} width="38" height="38" viewBox="0 0 38 38" fill="none"
+                  style={{ position: 'absolute', ...pos, pointerEvents: 'none' }}>
+                  <path d="M2 36 C2 20 2 2 20 2" stroke="rgba(160,110,60,0.35)" strokeWidth="1" fill="none"/>
+                  <path d="M2 36 C8 30 14 24 20 18" stroke="rgba(160,110,60,0.2)" strokeWidth="0.75" fill="none"/>
+                  <circle cx="2" cy="36" r="1.5" fill="rgba(160,110,60,0.4)"/>
+                  <circle cx="20" cy="2" r="1.5" fill="rgba(160,110,60,0.4)"/>
+                  <path d="M6 30 Q10 22 18 6" stroke="rgba(160,110,60,0.15)" strokeWidth="0.5" fill="none"/>
+                </svg>
+              ))}
 
-            {/* Divider */}
-            <div style={{ borderTop: '1px solid rgba(201,168,76,0.25)', margin: '0 auto 28px', width: 120 }} />
-
-            {/* Date + Venue */}
-            <div style={{ textAlign: 'center', marginBottom: 32 }}>
-              <p style={{ color: '#FAF7F2', fontSize: 16, letterSpacing: '0.15em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 8 }}>
-                {weddingDate}
-              </p>
-              <p style={{ color: 'rgba(250,247,242,0.55)', fontSize: 13, fontStyle: 'italic', margin: 0, letterSpacing: '0.04em' }}>
-                {wedding.venue}
-              </p>
-              {wedding.city && (
-                <p style={{ color: 'rgba(250,247,242,0.35)', fontSize: 11, fontFamily: 'system-ui, sans-serif', marginTop: 4, letterSpacing: '0.1em', textTransform: 'uppercase' }}>
-                  {wedding.city}
+              {/* Top label */}
+              <div style={{ textAlign: 'center', marginBottom: 24 }}>
+                <p style={{ color: 'rgba(100,70,30,0.45)', fontSize: 9, letterSpacing: '0.4em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', margin: 0 }}>
+                  Together with their families
                 </p>
-              )}
-            </div>
+              </div>
 
-            {/* QR + instruction */}
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12 }}>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src={qrUrl}
-                alt="QR code for digital invitation"
-                width={100}
-                height={100}
-                crossOrigin="anonymous"
-                style={{ imageRendering: 'pixelated' }}
-              />
-              <p style={{ color: 'rgba(250,247,242,0.3)', fontSize: 9, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
-                Scan to open your invitation
-              </p>
+              {/* Names */}
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <p style={{ color: '#2C1A0A', fontSize: 38, fontWeight: 400, fontStyle: 'italic', letterSpacing: '0.02em', lineHeight: 1.15, margin: 0 }}>
+                  {wedding.couple_names.name1}
+                </p>
+                {/* Ampersand flourish */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, margin: '10px 0' }}>
+                  <div style={{ flex: 1, maxWidth: 80, height: 1, background: 'linear-gradient(to right, transparent, rgba(160,110,60,0.4))' }} />
+                  <p style={{ color: 'rgba(140,90,40,0.7)', fontSize: 26, fontStyle: 'italic', margin: 0, lineHeight: 1 }}>&amp;</p>
+                  <div style={{ flex: 1, maxWidth: 80, height: 1, background: 'linear-gradient(to left, transparent, rgba(160,110,60,0.4))' }} />
+                </div>
+                <p style={{ color: '#2C1A0A', fontSize: 38, fontWeight: 400, fontStyle: 'italic', letterSpacing: '0.02em', lineHeight: 1.15, margin: 0 }}>
+                  {wedding.couple_names.name2}
+                </p>
+              </div>
+
+              {/* Ornamental divider */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '20px auto 24px' }}>
+                <div style={{ height: 1, width: 60, background: 'rgba(160,110,60,0.3)' }} />
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M7 1 L8.5 5.5 L13 7 L8.5 8.5 L7 13 L5.5 8.5 L1 7 L5.5 5.5 Z" fill="rgba(160,110,60,0.5)"/>
+                </svg>
+                <div style={{ height: 1, width: 60, background: 'rgba(160,110,60,0.3)' }} />
+              </div>
+
+              {/* Date + Venue */}
+              <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                <p style={{ color: '#3D1F0A', fontSize: 13, letterSpacing: '0.2em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 6, fontWeight: 500 }}>
+                  {weddingDate}
+                </p>
+                <p style={{ color: 'rgba(44,26,10,0.6)', fontSize: 13, fontStyle: 'italic', margin: 0 }}>
+                  {wedding.venue}
+                </p>
+                {wedding.city && (
+                  <p style={{ color: 'rgba(44,26,10,0.4)', fontSize: 10, fontFamily: 'system-ui, sans-serif', marginTop: 3, letterSpacing: '0.15em', textTransform: 'uppercase' }}>
+                    {wedding.city}
+                  </p>
+                )}
+              </div>
+
+              {/* QR */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div style={{ padding: 8, border: '1px solid rgba(160,110,60,0.2)', background: '#FBF9F4' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrUrl} alt="QR code" width={88} height={88} crossOrigin="anonymous" style={{ display: 'block', imageRendering: 'pixelated' }} />
+                </div>
+                <p style={{ color: 'rgba(44,26,10,0.35)', fontSize: 8, letterSpacing: '0.25em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
+                  Scan to view digital invitation
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            /* ── ROYAL ── deep navy, gold, botanical leaves, monogram ── */
+            <div
+              ref={cardRef}
+              style={{
+                width: 560,
+                background: '#0D1B3E',
+                padding: '52px 60px',
+                fontFamily: 'Georgia, "Times New Roman", serif',
+                position: 'relative',
+                margin: '0 auto',
+                boxSizing: 'border-box',
+              }}
+            >
+              {/* Gold border */}
+              <div style={{ position: 'absolute', inset: 10, border: '1.5px solid rgba(201,168,76,0.55)', pointerEvents: 'none' }} />
+              <div style={{ position: 'absolute', inset: 16, border: '0.5px solid rgba(201,168,76,0.2)', pointerEvents: 'none' }} />
+
+              {/* Botanical SVG leaves — top-left */}
+              <svg width="80" height="80" viewBox="0 0 80 80" fill="none"
+                style={{ position: 'absolute', top: 18, left: 18, opacity: 0.35, pointerEvents: 'none' }}>
+                <path d="M10 70 C10 50 30 30 50 10" stroke="#C9A84C" strokeWidth="1.2" fill="none"/>
+                <path d="M10 70 Q20 40 50 10 Q30 35 10 70Z" fill="rgba(201,168,76,0.18)"/>
+                <path d="M18 62 C25 48 38 34 54 18" stroke="#C9A84C" strokeWidth="0.6" fill="none"/>
+                <ellipse cx="30" cy="48" rx="10" ry="5" fill="rgba(201,168,76,0.12)" transform="rotate(-45 30 48)"/>
+                <ellipse cx="42" cy="34" rx="8" ry="4" fill="rgba(201,168,76,0.1)" transform="rotate(-45 42 34)"/>
+              </svg>
+
+              {/* Botanical SVG leaves — bottom-right (mirrored) */}
+              <svg width="80" height="80" viewBox="0 0 80 80" fill="none"
+                style={{ position: 'absolute', bottom: 18, right: 18, opacity: 0.35, pointerEvents: 'none', transform: 'rotate(180deg)' }}>
+                <path d="M10 70 C10 50 30 30 50 10" stroke="#C9A84C" strokeWidth="1.2" fill="none"/>
+                <path d="M10 70 Q20 40 50 10 Q30 35 10 70Z" fill="rgba(201,168,76,0.18)"/>
+                <path d="M18 62 C25 48 38 34 54 18" stroke="#C9A84C" strokeWidth="0.6" fill="none"/>
+                <ellipse cx="30" cy="48" rx="10" ry="5" fill="rgba(201,168,76,0.12)" transform="rotate(-45 30 48)"/>
+                <ellipse cx="42" cy="34" rx="8" ry="4" fill="rgba(201,168,76,0.1)" transform="rotate(-45 42 34)"/>
+              </svg>
+
+              {/* Monogram crest */}
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <div style={{
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  width: 56, height: 56, borderRadius: '50%',
+                  border: '1.5px solid rgba(201,168,76,0.5)',
+                  background: 'rgba(201,168,76,0.06)',
+                  color: '#C9A84C', fontSize: 22, fontStyle: 'italic', letterSpacing: '-0.02em',
+                }}>
+                  {initials}
+                </div>
+              </div>
+
+              {/* Names */}
+              <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                <p style={{ color: '#F0E6C8', fontSize: 36, fontWeight: 400, fontStyle: 'italic', letterSpacing: '0.02em', lineHeight: 1.2, margin: 0 }}>
+                  {wedding.couple_names.name1}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, margin: '10px 0' }}>
+                  <div style={{ flex: 1, maxWidth: 80, height: 1, background: 'linear-gradient(to right, transparent, rgba(201,168,76,0.5))' }} />
+                  <p style={{ color: '#C9A84C', fontSize: 24, fontStyle: 'italic', margin: 0, lineHeight: 1 }}>&amp;</p>
+                  <div style={{ flex: 1, maxWidth: 80, height: 1, background: 'linear-gradient(to left, transparent, rgba(201,168,76,0.5))' }} />
+                </div>
+                <p style={{ color: '#F0E6C8', fontSize: 36, fontWeight: 400, fontStyle: 'italic', letterSpacing: '0.02em', lineHeight: 1.2, margin: 0 }}>
+                  {wedding.couple_names.name2}
+                </p>
+              </div>
+
+              {/* Gold ornamental divider */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, margin: '20px auto 24px' }}>
+                <div style={{ height: 1, width: 60, background: 'rgba(201,168,76,0.4)' }} />
+                <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
+                  <path d="M6 0.5 L7.2 4.2 L11 6 L7.2 7.8 L6 11.5 L4.8 7.8 L1 6 L4.8 4.2 Z" fill="#C9A84C" opacity="0.8"/>
+                </svg>
+                <div style={{ height: 1, width: 60, background: 'rgba(201,168,76,0.4)' }} />
+              </div>
+
+              {/* Date + Venue */}
+              <div style={{ textAlign: 'center', marginBottom: 28 }}>
+                <p style={{ color: '#C9A84C', fontSize: 12, letterSpacing: '0.3em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', marginBottom: 6 }}>
+                  {weddingDate}
+                </p>
+                <p style={{ color: 'rgba(240,230,200,0.65)', fontSize: 13, fontStyle: 'italic', margin: 0 }}>
+                  {wedding.venue}
+                </p>
+                {wedding.city && (
+                  <p style={{ color: 'rgba(201,168,76,0.4)', fontSize: 10, fontFamily: 'system-ui, sans-serif', marginTop: 3, letterSpacing: '0.2em', textTransform: 'uppercase' }}>
+                    {wedding.city}
+                  </p>
+                )}
+              </div>
+
+              {/* QR */}
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10 }}>
+                <div style={{ padding: 8, border: '1px solid rgba(201,168,76,0.3)', background: 'rgba(201,168,76,0.04)' }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={qrUrl} alt="QR code" width={88} height={88} crossOrigin="anonymous" style={{ display: 'block', imageRendering: 'pixelated' }} />
+                </div>
+                <p style={{ color: 'rgba(201,168,76,0.4)', fontSize: 8, letterSpacing: '0.3em', textTransform: 'uppercase', fontFamily: 'system-ui, sans-serif', textAlign: 'center' }}>
+                  Scan to view digital invitation
+                </p>
+              </div>
+            </div>
+          )}
         </div>
       </div>
 

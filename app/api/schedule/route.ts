@@ -43,9 +43,9 @@ const itemSchema = z.object({
   id:          z.string().uuid().optional(),
   title:       z.string().min(1).max(120),
   time_label:  z.string().min(1).max(40),
-  description: z.string().max(300).optional(),
-  location:    z.string().max(120).optional(),
-  emoji:       z.string().max(8).optional(),
+  description: z.string().max(300).nullish(),
+  location:    z.string().max(120).nullish(),
+  emoji:       z.string().max(8).nullish(),
   sort_order:  z.number().int().min(0),
 })
 
