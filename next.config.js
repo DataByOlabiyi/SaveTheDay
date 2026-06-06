@@ -18,16 +18,6 @@ const nextConfig = {
       },
       {
         protocol: 'https',
-        hostname: 'picsum.photos',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
-        hostname: 'fastly.picsum.photos',
-        pathname: '/**',
-      },
-      {
-        protocol: 'https',
         hostname: 'api.qrserver.com',
         pathname: '/**',
       },
@@ -60,17 +50,43 @@ const nextConfig = {
         destination: '/studio/:weddingSlug*',
         permanent: true,
       },
+
+      // /w/* → /e/* — /e/ is the canonical public namespace
+      {
+        source: '/w/:slug*',
+        destination: '/e/:slug*',
+        permanent: true,
+      },
     ]
   },
   async headers() {
+    const csp = [
+      "default-src 'self'",
+      // Next.js SSR/hydration requires unsafe-inline; unsafe-eval needed by GSAP
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co https://api.qrserver.com",
+      "media-src 'self' blob: https://res.cloudinary.com https://*.supabase.co",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+      "worker-src 'self' blob:",
+      "frame-src 'none'",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'",
+      "object-src 'none'",
+      "upgrade-insecure-requests",
+    ].join('; ')
+
     return [
       {
         source: '/(.*)',
         headers: [
-          { key: 'X-Content-Type-Options', value: 'nosniff' },
-          { key: 'X-Frame-Options',        value: 'DENY' },
-          { key: 'X-XSS-Protection',       value: '1; mode=block' },
-          { key: 'Referrer-Policy',         value: 'strict-origin-when-cross-origin' },
+          { key: 'Content-Security-Policy',   value: csp },
+          { key: 'X-Content-Type-Options',    value: 'nosniff' },
+          { key: 'X-Frame-Options',           value: 'DENY' },
+          { key: 'X-XSS-Protection',          value: '1; mode=block' },
+          { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
         ],
       },
       {

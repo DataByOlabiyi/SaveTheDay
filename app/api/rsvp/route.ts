@@ -107,11 +107,13 @@ export async function POST(request: NextRequest): Promise<Response> {
     guest_id:   data.guestId ?? null,
     event_type: 'rsvp_submitted',
     metadata:   { status: data.status },
-  }).then(() => {})
+  }).then(() => {}, err => console.error('Analytics insert failed:', err))
 
   // Email notification — fires if RESEND_API_KEY is configured
   // Looks up the couple's email via user_profiles and notifies them
-  notifyCouple(data.weddingId, safeName, data.status).catch(() => {})
+  notifyCouple(data.weddingId, safeName, data.status).catch(
+    err => console.error('RSVP notification failed:', err)
+  )
 
   return NextResponse.json({ success: true })
 }

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { MAX_GALLERY_PHOTOS } from '@/lib/constants'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -12,7 +12,7 @@ const BUCKET        = 'wedding-gallery'
 // multipart/form-data: file, weddingId, albumId (optional), caption (optional)
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `gallery-upload:${ip}`, limit: 20, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `gallery-upload:${ip}`, limit: 20, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
   const supabase = await createSupabaseServerClient()

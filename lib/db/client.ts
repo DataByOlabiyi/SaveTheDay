@@ -46,6 +46,31 @@ export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
       .single()
 
     if (error || !data) return null
+
+    // Redact password hash — it must never reach the client
+    const wedding = data as Wedding
+    if (wedding.config?.privacy_password_hash) {
+      const { privacy_password_hash: _, ...safeConfig } = wedding.config
+      return { ...wedding, config: safeConfig as Wedding['config'] }
+    }
+    return wedding
+  } catch {
+    return null
+  }
+}
+
+/** For internal use only — returns the full config including privacy_password_hash for verification. */
+export async function getWeddingForPasswordCheck(slug: string): Promise<Wedding | null> {
+  try {
+    const admin = createAdminClient()
+    const { data, error } = await admin
+      .from('weddings')
+      .select('*')
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .single()
+
+    if (error || !data) return null
     return data as Wedding
   } catch {
     return null
@@ -283,35 +308,6 @@ export async function markGuestOpened(guestId: string): Promise<void> {
     .is('opened_at', null)
 }
 
-export async function submitRSVP(
-  guestId: string,
-  status: 'attending' | 'declined',
-  data: {
-    email?: string
-    phone?: string
-    party_size?: number
-    dietary?: string
-    note?: string
-  }
-): Promise<{ success: boolean; error?: string }> {
-  const partySize = data.party_size ?? 1
-  const { error } = await supabase
-    .from('guests')
-    .update({
-      rsvp_status: status,
-      rsvp_at: new Date().toISOString(),
-      email: data.email,
-      phone: data.phone,
-      party_size: partySize,
-      plus_one: partySize > 1,
-      dietary: data.dietary,
-      rsvp_note: data.note,
-    })
-    .eq('id', guestId)
-
-  if (error) return { success: false, error: error.message }
-  return { success: true }
-}
 
 // ──────────────────────────────────────────────────────────────
 // Analytics
@@ -358,11 +354,12 @@ export async function getAnalyticsSummary(weddingId: string): Promise<AnalyticsS
       }
     }
 
-    // Fallback: if the RPC doesn't exist yet, use a compact aggregate query
+    // Fallback: if the RPC doesn't exist yet, aggregate in JS over a capped row set
     const { data: rows, error: fallbackError } = await admin
       .from('analytics_events')
       .select('event_type, guest_id')
       .eq('wedding_id', weddingId)
+      .limit(5000)
 
     if (fallbackError || !rows) return defaults
 

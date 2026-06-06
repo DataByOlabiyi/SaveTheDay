@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
-import { createAdminClient } from '@/lib/db/client'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { supabase, createAdminClient } from '@/lib/db/client'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText, clampString } from '@/lib/utils/sanitize'
 
 // ──────────────────────────────────────────────────────────────
@@ -15,7 +15,6 @@ export async function GET(request: NextRequest) {
   }
 
   try {
-    const supabase = createAdminClient()
     const { data, error } = await supabase
       .from('guestbook')
       .select('*')
@@ -42,10 +41,10 @@ const submitSchema = z.object({
   message:   z.string().min(1).max(500),
 })
 
-export async function POST(request: NextRequest) {
+export async function POST(request: NextRequest): Promise<Response> {
   // Rate-limit: max 5 guestbook posts per minute per IP
   const ip = request.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `guestbook:${ip}`, limit: 5, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `guestbook:${ip}`, limit: 5, windowMs: 60_000 })
   if (!rl.allowed) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }

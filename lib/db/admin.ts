@@ -70,9 +70,10 @@ export async function getAllUsers(
   const db     = createAdminClient()
   const offset = page * pageSize
 
+  // Use embedded count to get wedding_count in a single query
   let query = db
     .from('user_profiles')
-    .select('*', { count: 'exact' })
+    .select('*, weddings(count)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + pageSize - 1)
 
@@ -83,21 +84,9 @@ export async function getAllUsers(
   const { data, count, error } = await query
   if (error || !data) return { users: [], total: 0 }
 
-  // Attach wedding count per user
-  const ids = data.map(u => u.id)
-  const { data: weddingCounts } = await db
-    .from('weddings')
-    .select('user_id')
-    .in('user_id', ids)
-
-  const countMap: Record<string, number> = {}
-  for (const w of weddingCounts ?? []) {
-    countMap[w.user_id] = (countMap[w.user_id] ?? 0) + 1
-  }
-
-  const users: AdminUserRow[] = data.map(u => ({
-    ...(u as UserProfile),
-    wedding_count: countMap[u.id] ?? 0,
+  const users: AdminUserRow[] = (data as Array<UserProfile & { weddings: [{ count: number }] }>).map(u => ({
+    ...u,
+    wedding_count: u.weddings?.[0]?.count ?? 0,
   }))
 
   return { users, total: count ?? 0 }
@@ -118,9 +107,10 @@ export async function getAllWeddings(
   const db     = createAdminClient()
   const offset = page * pageSize
 
+  // Use embedded count for guests; fetch owner emails in parallel
   let query = db
     .from('weddings')
-    .select('*', { count: 'exact' })
+    .select('*, guests(count)', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + pageSize - 1)
 
@@ -131,27 +121,20 @@ export async function getAllWeddings(
   const { data, count, error } = await query
   if (error || !data) return { weddings: [], total: 0 }
 
-  const weddingIds = data.map(w => w.id)
-  const userIds    = [...new Set(data.map(w => w.user_id).filter(Boolean))]
-
-  const [guestCountRes, profilesRes] = await Promise.all([
-    db.from('guests').select('wedding_id').in('wedding_id', weddingIds),
-    db.from('user_profiles').select('id, email').in('id', userIds),
-  ])
-
-  const guestMap: Record<string, number> = {}
-  for (const g of guestCountRes.data ?? []) {
-    guestMap[g.wedding_id] = (guestMap[g.wedding_id] ?? 0) + 1
-  }
+  const userIds = [...new Set(data.map((w: { user_id?: string }) => w.user_id).filter(Boolean) as string[])]
+  const { data: profiles } = await db
+    .from('user_profiles')
+    .select('id, email')
+    .in('id', userIds)
 
   const emailMap: Record<string, string> = {}
-  for (const p of profilesRes.data ?? []) {
+  for (const p of profiles ?? []) {
     emailMap[p.id] = p.email
   }
 
-  const weddings: AdminWeddingRow[] = data.map(w => ({
-    ...(w as Wedding),
-    guest_count: guestMap[w.id] ?? 0,
+  const weddings: AdminWeddingRow[] = (data as Array<Wedding & { guests: [{ count: number }] }>).map(w => ({
+    ...w,
+    guest_count: w.guests?.[0]?.count ?? 0,
     owner_email: emailMap[w.user_id ?? ''] ?? '—',
   }))
 
