@@ -5,7 +5,8 @@ import { motion, AnimatePresence, Reorder, useDragControls } from 'framer-motion
 import type { StoryMilestone } from '@/lib/db/types'
 
 interface StoryEditorProps {
-  weddingId: string
+  weddingId:      string
+  onCountChange?: (count: number) => void
 }
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -328,7 +329,7 @@ function MilestoneRow({
 
 // ── Main editor ───────────────────────────────────────────────────────────────
 
-export function StoryEditor({ weddingId }: StoryEditorProps) {
+export function StoryEditor({ weddingId, onCountChange }: StoryEditorProps) {
   const [milestones, setMilestones] = useState<StoryMilestone[]>([])
   const [loading,    setLoading]    = useState(true)
   const [adding,     setAdding]     = useState(false)
@@ -342,6 +343,8 @@ export function StoryEditor({ weddingId }: StoryEditorProps) {
       .catch(() => {})
       .finally(() => setLoading(false))
   }, [weddingId])
+
+  useEffect(() => { onCountChange?.(milestones.length) }, [milestones.length, onCountChange])
 
   const persistOrder = useCallback((ordered: StoryMilestone[]) => {
     if (reorderTimer.current) clearTimeout(reorderTimer.current)

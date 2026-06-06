@@ -98,10 +98,11 @@ function ConfirmModal({
 }
 
 interface AdminDashboardProps {
-  wedding:          Wedding
-  guests:           Guest[]
-  userEmail?:       string
-  galleryPhotoCount?: number
+  wedding:               Wedding
+  guests:                Guest[]
+  userEmail?:            string
+  galleryPhotoCount?:    number
+  storyMilestoneCount?:  number
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -958,13 +959,16 @@ function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: 
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export function AdminDashboard({ wedding, guests: initialGuests, userEmail, galleryPhotoCount = 0 }: AdminDashboardProps) {
+export function AdminDashboard({ wedding, guests: initialGuests, userEmail, galleryPhotoCount = 0, storyMilestoneCount = 0 }: AdminDashboardProps) {
   const router = useRouter()
   const invTheme = getTheme(wedding.config.invitation_theme)
 
   // ── Guest state ──────────────────────────────────────────────────────────────
   const [localGuests, setLocalGuests] = useState<Guest[]>(initialGuests)
   useEffect(() => { setLocalGuests(initialGuests) }, [initialGuests])
+
+  // ── Story state (tracks count for setup progress) ────────────────────────────
+  const [localStoryCount, setLocalStoryCount] = useState(storyMilestoneCount)
 
   const refreshGuestList = useCallback(async () => {
     try {
@@ -1046,10 +1050,10 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
   // ── Setup checklist ──────────────────────────────────────────────────────────
   const setupChecklist = useMemo(() => [
     { id: 'basics', label: 'Wedding details',      done: !!(wedding.venue && wedding.wedding_date && wedding.couple_names.name1) },
-    { id: 'story',  label: 'Couple story',         done: !!(wedding.config.intro_text) },
+    { id: 'story',  label: 'Couple story',         done: localStoryCount > 0 || !!(wedding.config.intro_text) },
     { id: 'media',  label: 'Cover photo or video', done: !!(wedding.config.montage_images?.length || wedding.config.intro_video_url || galleryPhotoCount > 0) },
     { id: 'guests', label: 'Guest list',            done: localGuests.length > 0 },
-  ], [wedding, localGuests.length, galleryPhotoCount])
+  ], [wedding, localGuests.length, galleryPhotoCount, localStoryCount])
 
   const setupPercent = useMemo(() => {
     const done = setupChecklist.filter(c => c.done).length
@@ -1726,7 +1730,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
               {activeSection === 'story' && (
                 <motion.div key="story" {...fadeProps}>
                   <SectionHeading title="Our Story" description="Add the milestones that make up your love story. They appear on the invitation page." />
-                  <StoryEditor weddingId={wedding.id} />
+                  <StoryEditor weddingId={wedding.id} onCountChange={setLocalStoryCount} />
                 </motion.div>
               )}
 
