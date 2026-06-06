@@ -140,8 +140,9 @@ export interface WeddingConfig {
   rsvp_events?:         string[]
 
   // ── Privacy ──
-  is_private?:        boolean
-  privacy_password?:  string
+  is_private?:           boolean
+  // Stored as scrypt hash (<hash>.<salt>). Never returned to clients — redacted in getWeddingBySlug.
+  privacy_password_hash?: string
 
   // ── Custom colors ──
   colors?: { primary?: string; accent?: string; background?: string }

@@ -2,8 +2,9 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText } from '@/lib/utils/sanitize'
+import { hashPassword } from '@/lib/utils/password'
 
 const dressCodeSchema = z.object({
   title:          z.string().max(100),
@@ -47,6 +48,8 @@ const configSchema = z.object({
   allow_downloads:      z.boolean().optional(),
   watermark_downloads:  z.boolean().optional(),
   is_private:           z.boolean().optional(),
+  // Plaintext password from client — hashed before storage, never stored as-is
+  privacy_password:     z.string().min(4).max(100).optional().nullable(),
   google_maps_url:      z.string().url().max(500).optional().nullable(),
   intro_text:           z.string().max(200).optional().nullable(),
   hashtag:              z.string().max(100).optional().nullable(),
@@ -107,7 +110,7 @@ export async function DELETE(req: NextRequest) {
 
 export async function PATCH(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `wedding-patch:${ip}`, limit: 20, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `wedding-patch:${ip}`, limit: 20, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
   // Session auth
@@ -164,7 +167,39 @@ export async function PATCH(req: NextRequest) {
     if (venue)           updates.venue         = sanitizeText(venue)
     if (venue_address !== undefined) updates.venue_address = venue_address ? sanitizeText(venue_address) : null
     if (city)            updates.city          = sanitizeText(city)
-    if (config)          updates.config        = { ...(current.config ?? {}), ...config }
+    if (config) {
+      const base = (current.config ?? {}) as Record<string, unknown>
+      // Destructure privacy_password so it never reaches the stored config as plaintext
+      const { privacy_password, ...restConfig } = config as Record<string, unknown> & { privacy_password?: string | null }
+      const patch = restConfig
+
+      // Arrays and primitives are replaced wholesale; plain objects are merged one level deep
+      // so that updating e.g. dress_code.title preserves dress_code.colors.
+      const merged: Record<string, unknown> = { ...base }
+      for (const [k, v] of Object.entries(patch)) {
+        if (
+          v !== null &&
+          typeof v === 'object' &&
+          !Array.isArray(v) &&
+          typeof base[k] === 'object' &&
+          base[k] !== null &&
+          !Array.isArray(base[k])
+        ) {
+          merged[k] = { ...(base[k] as object), ...(v as object) }
+        } else {
+          merged[k] = v
+        }
+      }
+
+      // Hash the plaintext password before storing; null clears the password
+      if (privacy_password === null) {
+        delete merged.privacy_password_hash
+      } else if (privacy_password) {
+        merged.privacy_password_hash = await hashPassword(privacy_password)
+      }
+
+      updates.config = merged
+    }
 
     const { data: wedding, error: updateError } = await db
       .from('weddings')
