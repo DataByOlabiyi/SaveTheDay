@@ -49,14 +49,14 @@ const milestoneSchema = z.object({
   weddingId:   z.string().uuid(),
   id:          z.string().uuid().optional(),
   title:       z.string().min(1).max(100),
-  date_label:  z.string().max(50).optional(),
-  description: z.string().max(1000).optional(),
-  emoji:       z.string().max(8).optional(),
+  date_label:  z.string().max(50).nullish(),
+  description: z.string().max(1000).nullish(),
+  emoji:       z.string().max(8).nullish(),
   media_urls:  z.array(z.object({
     url:     z.string().url(),
     type:    z.enum(['photo', 'video']),
-    caption: z.string().max(200).optional(),
-  })).max(6).optional(),
+    caption: z.string().max(200).nullish(),
+  })).max(6).nullish(),
   sort_order:  z.number().int().min(0).optional(),
 })
 

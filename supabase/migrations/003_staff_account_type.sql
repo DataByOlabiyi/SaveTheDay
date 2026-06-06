@@ -19,6 +19,8 @@ END $$;
 
 -- Step 2: Add updated constraint including 'staff'
 ALTER TABLE user_profiles
+  DROP CONSTRAINT IF EXISTS user_profiles_account_type_check;
+ALTER TABLE user_profiles
   ADD CONSTRAINT user_profiles_account_type_check
   CHECK (account_type IN ('couple', 'planner', 'staff'));
 

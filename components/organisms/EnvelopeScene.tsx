@@ -160,107 +160,88 @@ interface EnvelopeBodyProps {
 
 function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps) {
   const isFloating = phase === 'envelope-float'
-  const isOpening = ['opening', 'opened'].includes(phase)
+  const isOpening  = ['opening', 'opened'].includes(phase)
 
   return (
     <motion.div
-      // Subtle floating loop
-      animate={isFloating ? {
-        y: [0, -10, 0],
-        rotate: [0, 0.5, 0, -0.5, 0],
-      } : {}}
-      transition={isFloating ? {
-        duration: 4,
-        repeat: Infinity,
-        ease: 'easeInOut',
-      } : {}}
+      animate={isFloating ? { y: [0, -10, 0], rotate: [0, 0.4, 0, -0.4, 0] } : {}}
+      transition={isFloating ? { duration: 4, repeat: Infinity, ease: 'easeInOut' } : {}}
       className="relative"
       style={{ width: 'min(320px, 85vw)' }}
     >
-      {/* Envelope body */}
-      <div
-        className="relative"
-        style={{
-          paddingBottom: '70%', // 10:7 ratio
-          perspective: '600px',
-        }}
-      >
+      <div className="relative" style={{ paddingBottom: '70%', perspective: '700px' }}>
         <div className="absolute inset-0">
-          {/* Back of envelope */}
+
+          {/* ── Envelope back body ── */}
           <div
-            className="absolute inset-0 rounded-sm"
+            className="absolute inset-0"
             style={{
-              background: 'linear-gradient(145deg, #0D2419 0%, #081610 60%, #040E09 100%)',
-              border: '1px solid rgba(12, 168, 110, 0.18)',
-              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(12, 168, 110, 0.08)',
+              background: 'linear-gradient(145deg, #0E2B1C 0%, #07130D 60%, #030A06 100%)',
+              border: '1px solid rgba(12,168,110,0.22)',
+              boxShadow: '0 24px 70px rgba(0,0,0,0.75), 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(12,168,110,0.1)',
             }}
           />
 
-          {/* Envelope flap (top) */}
+          {/* ── Cream liner — revealed as flap opens ── */}
           <motion.div
-            className="absolute inset-x-0 top-0 h-1/2 origin-top"
-            animate={isOpening ? {
-              rotateX: -110,
-            } : {}}
-            transition={{
-              duration: 0.8,
-              delay: 0.1,
-              ease: [0.455, 0.03, 0.515, 0.955],
-            }}
+            className="absolute inset-x-2 top-2"
+            style={{ bottom: '30%', background: 'linear-gradient(170deg, #FAF4E8 0%, #F0E8D0 100%)', zIndex: 1 }}
+            animate={isOpening ? { y: [0, -14], opacity: [0.9, 1] } : { opacity: 0 }}
+            transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+          >
+            {/* Liner inner border detail */}
+            <div style={{ position: 'absolute', inset: 6, border: '0.5px solid rgba(160,110,60,0.2)' }} />
+            {/* Tiny floral stamp in center */}
+            <svg style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.18 }} width="36" height="36" viewBox="0 0 36 36" fill="none">
+              <circle cx="18" cy="18" r="7" fill="rgba(140,90,40,0.6)"/>
+              {[0,60,120,180,240,300].map((deg, i) => (
+                <ellipse key={i} cx={18 + 11 * Math.cos(deg * Math.PI / 180)} cy={18 + 11 * Math.sin(deg * Math.PI / 180)}
+                  rx="4" ry="3" fill="rgba(140,90,40,0.5)"
+                  transform={`rotate(${deg} ${18 + 11 * Math.cos(deg * Math.PI / 180)} ${18 + 11 * Math.sin(deg * Math.PI / 180)})`} />
+              ))}
+            </svg>
+          </motion.div>
+
+          {/* ── Side panels (give envelope the classic fold look) ── */}
+          <div className="absolute inset-y-0 left-0 w-1/2"
+            style={{ background: 'linear-gradient(135deg, #0C2218 0%, #071510 100%)', clipPath: 'polygon(0 0, 0 100%, 100% 50%)', opacity: 0.75 }} />
+          <div className="absolute inset-y-0 right-0 w-1/2"
+            style={{ background: 'linear-gradient(225deg, #0C2218 0%, #071510 100%)', clipPath: 'polygon(100% 0, 100% 100%, 0 50%)', opacity: 0.75 }} />
+
+          {/* ── Bottom fold triangle ── */}
+          <div className="absolute inset-x-0 bottom-0 h-1/2"
+            style={{ background: 'linear-gradient(180deg, #081510 0%, #030A06 100%)', clipPath: 'polygon(0 100%, 50% 0, 100% 100%)' }} />
+
+          {/* ── Flap (top triangle, folds back on open) ── */}
+          <motion.div
+            className="absolute inset-x-0 top-0 h-1/2"
+            animate={isOpening ? { rotateX: -115 } : {}}
+            transition={{ duration: 0.85, delay: 0.1, ease: [0.455, 0.03, 0.515, 0.955] }}
             style={{
               transformStyle: 'preserve-3d',
-              background: 'linear-gradient(145deg, #0D2419 0%, #081610 100%)',
               transformOrigin: 'top center',
-              zIndex: 2,
+              zIndex: 3,
               clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-              borderTop: '1px solid rgba(12, 168, 110, 0.12)',
+              background: 'linear-gradient(160deg, #0F2D1E 0%, #071410 100%)',
+              borderTop: '1px solid rgba(12,168,110,0.15)',
             }}
-          />
+          >
+            {/* Flap inner (cream) — visible on back face as it flips */}
+            <div style={{
+              position: 'absolute', inset: 0,
+              clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
+              background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
+              backfaceVisibility: 'hidden',
+              transform: 'rotateX(180deg)',
+            }} />
+          </motion.div>
 
-          {/* Bottom triangles for envelope V shape */}
-          <div
-            className="absolute inset-x-0 bottom-0 h-1/2"
-            style={{
-              background: 'linear-gradient(180deg, #081610 0%, #040E09 100%)',
-              clipPath: 'polygon(0 100%, 50% 0, 100% 100%)',
-            }}
-          />
+          {/* ── Subtle inner inset glow ── */}
+          <div className="absolute inset-0 pointer-events-none"
+            style={{ boxShadow: 'inset 0 0 0 1px rgba(12,168,110,0.12), inset 0 0 30px rgba(0,0,0,0.3)' }} />
 
-          {/* Left triangle */}
-          <div
-            className="absolute inset-y-0 left-0 w-1/2"
-            style={{
-              background: 'linear-gradient(135deg, #0A1D13 0%, #081610 100%)',
-              clipPath: 'polygon(0 0, 0 100%, 100% 50%)',
-              opacity: 0.8,
-            }}
-          />
-
-          {/* Right triangle */}
-          <div
-            className="absolute inset-y-0 right-0 w-1/2"
-            style={{
-              background: 'linear-gradient(225deg, #0A1D13 0%, #081610 100%)',
-              clipPath: 'polygon(100% 0, 100% 100%, 0 50%)',
-              opacity: 0.8,
-            }}
-          />
-
-          {/* Emerald border accent */}
-          <div
-            className="absolute inset-0 rounded-sm pointer-events-none"
-            style={{
-              boxShadow: 'inset 0 0 0 1px rgba(12, 168, 110, 0.14)',
-            }}
-          />
-
-          {/* Wax Seal — the interactive element */}
-          <WaxSeal
-            ref={sealRef}
-            phase={phase}
-            onTap={onSealTap}
-            monogram={monogram}
-          />
+          {/* ── Wax Seal ── */}
+          <WaxSeal ref={sealRef} phase={phase} onTap={onSealTap} monogram={monogram} />
         </div>
       </div>
     </motion.div>
@@ -309,119 +290,110 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
           <>
             <motion.span
               className="absolute rounded-full pointer-events-none"
-              style={{ width: 96, height: 96, border: '1px solid rgba(12,168,110,0.5)' }}
+              style={{ width: 112, height: 112, border: '1px solid rgba(12,168,110,0.5)' }}
               animate={{ scale: [1, 1.45], opacity: [0.6, 0] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0 }}
             />
             <motion.span
               className="absolute rounded-full pointer-events-none"
-              style={{ width: 96, height: 96, border: '1px solid rgba(12,168,110,0.3)' }}
+              style={{ width: 112, height: 112, border: '1px solid rgba(12,168,110,0.3)' }}
               animate={{ scale: [1, 1.7], opacity: [0.4, 0] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0.6 }}
             />
           </>
         )}
 
-        <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-          {/* Seal base — deep forest green */}
-          <circle
-            cx="40"
-            cy="40"
-            r="36"
-            fill="#0B5240"
-            stroke="#0CA86E"
-            strokeWidth="1.5"
-          />
-
-          {/* Seal inner fill — subtle gradient feel */}
-          <circle
-            cx="40"
-            cy="40"
-            r="36"
-            fill="url(#sealGradient)"
-            opacity="0.6"
-          />
+        <svg width="92" height="92" viewBox="0 0 92 92" fill="none">
           <defs>
-            <radialGradient id="sealGradient" cx="40%" cy="35%" r="60%">
-              <stop offset="0%" stopColor="#1A7A5A" stopOpacity="0.5" />
-              <stop offset="100%" stopColor="#073628" stopOpacity="0" />
+            <radialGradient id="sealFill" cx="38%" cy="32%" r="62%">
+              <stop offset="0%" stopColor="#1E7A58" stopOpacity="0.9"/>
+              <stop offset="60%" stopColor="#0B5240" stopOpacity="1"/>
+              <stop offset="100%" stopColor="#052E22" stopOpacity="1"/>
+            </radialGradient>
+            <radialGradient id="sealSheen" cx="38%" cy="28%" r="55%">
+              <stop offset="0%" stopColor="#4DD9A0" stopOpacity="0.18"/>
+              <stop offset="100%" stopColor="#0CA86E" stopOpacity="0"/>
             </radialGradient>
           </defs>
 
-          {/* Seal decorative ring */}
-          <circle
-            cx="40"
-            cy="40"
-            r="30"
-            fill="none"
-            stroke="#0CA86E"
-            strokeWidth="0.5"
-            opacity="0.6"
-          />
+          {/* ── Outer sunburst / scallop ring ── */}
+          {Array.from({ length: 24 }).map((_, i) => {
+            const angle = (i * 15 * Math.PI) / 180
+            const x1 = 46 + 40 * Math.cos(angle)
+            const y1 = 46 + 40 * Math.sin(angle)
+            const x2 = 46 + 34 * Math.cos(angle)
+            const y2 = 46 + 34 * Math.sin(angle)
+            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#0CA86E" strokeWidth="0.8" opacity="0.45"/>
+          })}
 
-          {/* Crack paths — drawn on interaction */}
+          {/* ── Scalloped outer edge ── */}
+          {Array.from({ length: 24 }).map((_, i) => {
+            const angle = (i * 15 * Math.PI) / 180
+            return (
+              <circle key={i}
+                cx={46 + 38 * Math.cos(angle)} cy={46 + 38 * Math.sin(angle)}
+                r="2.5" fill="#083D2C" stroke="#0CA86E" strokeWidth="0.6" opacity="0.7"/>
+            )
+          })}
+
+          {/* ── Wax base ── */}
+          <circle cx="46" cy="46" r="32" fill="url(#sealFill)"/>
+          <circle cx="46" cy="46" r="32" fill="url(#sealSheen)"/>
+
+          {/* ── Outer ring ── */}
+          <circle cx="46" cy="46" r="32" fill="none" stroke="#0CA86E" strokeWidth="1.2" opacity="0.8"/>
+
+          {/* ── Rope-style inner ring (dashed) ── */}
+          <circle cx="46" cy="46" r="26" fill="none" stroke="#0CA86E" strokeWidth="0.6"
+            strokeDasharray="2.5 3" opacity="0.55"/>
+
+          {/* ── Inner decorative circle ── */}
+          <circle cx="46" cy="46" r="22" fill="none" stroke="#0CA86E" strokeWidth="0.4" opacity="0.3"/>
+
+          {/* ── Small diamond accents at compass points ── */}
+          {[0, 90, 180, 270].map((deg, i) => {
+            const rad = deg * Math.PI / 180
+            const cx2 = 46 + 26 * Math.cos(rad)
+            const cy2 = 46 + 26 * Math.sin(rad)
+            return (
+              <path key={i}
+                d={`M ${cx2} ${cy2 - 3} L ${cx2 + 2.5} ${cy2} L ${cx2} ${cy2 + 3} L ${cx2 - 2.5} ${cy2} Z`}
+                fill="#0CA86E" opacity="0.7"/>
+            )
+          })}
+
+          {/* ── Crack paths ── */}
           {isCracking && (
             <>
-              <motion.path
-                d="M40 15 L44 28 L36 32 L42 45"
-                stroke="#3DD9A0"
-                strokeWidth="1"
-                fill="none"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 0.3 }}
-              />
-              <motion.path
-                d="M40 15 L35 26 L43 30 L37 44"
-                stroke="#C0EDD9"
-                strokeWidth="0.5"
-                fill="none"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 0.7 }}
-                transition={{ duration: 0.3, delay: 0.05 }}
-              />
-              <motion.path
-                d="M28 38 L36 32 L44 28 L52 38"
-                stroke="#3DD9A0"
-                strokeWidth="1"
-                fill="none"
-                initial={{ pathLength: 0, opacity: 0 }}
-                animate={{ pathLength: 1, opacity: 1 }}
-                transition={{ duration: 0.25, delay: 0.1 }}
-              />
+              <motion.path d="M46 20 L49 31 L42 35 L47 48"
+                stroke="#3DD9A0" strokeWidth="1.2" fill="none"
+                initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 0.28 }}/>
+              <motion.path d="M46 20 L41 29 L50 33 L44 47"
+                stroke="#C0EDD9" strokeWidth="0.6" fill="none"
+                initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.7 }}
+                transition={{ duration: 0.28, delay: 0.05 }}/>
+              <motion.path d="M30 44 L40 36 L52 32 L60 44"
+                stroke="#3DD9A0" strokeWidth="1.2" fill="none"
+                initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }}
+                transition={{ duration: 0.22, delay: 0.1 }}/>
+              <motion.path d="M36 56 L42 46 L50 40 L58 52"
+                stroke="#C0EDD9" strokeWidth="0.5" fill="none"
+                initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.5 }}
+                transition={{ duration: 0.22, delay: 0.14 }}/>
             </>
           )}
 
-          {/* Couple monogram — first initials of each name */}
-          <text
-            x="40"
-            y="46"
-            textAnchor="middle"
-            fill="#3DD9A0"
+          {/* ── Monogram ── */}
+          <text x="46" y="52" textAnchor="middle" fill="#4DD9A0"
             fontFamily="Georgia, serif"
-            fontSize={monogram.length > 1 ? '16' : '22'}
-            fontWeight="300"
-            fontStyle="italic"
-            letterSpacing="3"
-          >
+            fontSize={monogram.length > 1 ? '17' : '24'}
+            fontWeight="300" fontStyle="italic" letterSpacing="3" opacity="0.95">
             {monogram}
           </text>
 
-          {/* Decorative dots around seal */}
-          {Array.from({ length: 12 }).map((_, i) => {
-            const angle = (i * 30 * Math.PI) / 180
-            const r = 33
-            return (
-              <circle
-                key={i}
-                cx={40 + r * Math.cos(angle)}
-                cy={40 + r * Math.sin(angle)}
-                r="1"
-                fill="#0CA86E"
-                opacity="0.6"
-              />
-            )
-          })}
+          {/* ── Surface sheen highlight ── */}
+          <ellipse cx="38" cy="34" rx="8" ry="5" fill="rgba(255,255,255,0.05)" transform="rotate(-30 38 34)"/>
         </svg>
       </motion.div>
     </button>

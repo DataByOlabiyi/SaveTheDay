@@ -24,11 +24,12 @@ export default async function WeddingStudioPage({ params }: PageProps) {
   const wedding = await getWeddingBySlugForOwner(params.weddingSlug, user.id)
   if (!wedding) notFound()
 
-  // Fetch guests and gallery photo count in parallel
+  // Fetch guests, gallery count, and story count in parallel
   const db = createAdminClient()
-  const [guests, { count: galleryPhotoCount }] = await Promise.all([
+  const [guests, { count: galleryPhotoCount }, { count: storyMilestoneCount }] = await Promise.all([
     getGuestsByWedding(wedding.id),
     db.from('gallery_photos').select('id', { count: 'exact', head: true }).eq('wedding_id', wedding.id),
+    db.from('story_milestones').select('id', { count: 'exact', head: true }).eq('wedding_id', wedding.id),
   ])
 
   return (
@@ -37,6 +38,7 @@ export default async function WeddingStudioPage({ params }: PageProps) {
       guests={guests}
       userEmail={user.email ?? undefined}
       galleryPhotoCount={galleryPhotoCount ?? 0}
+      storyMilestoneCount={storyMilestoneCount ?? 0}
     />
   )
 }

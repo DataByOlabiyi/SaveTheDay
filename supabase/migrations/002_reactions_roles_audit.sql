@@ -32,6 +32,7 @@ CREATE INDEX IF NOT EXISTS idx_audit_log_created_at ON admin_audit_log(created_a
 ALTER TABLE admin_audit_log ENABLE ROW LEVEL SECURITY;
 
 -- Only super_admins and admins can read audit logs (via service role in API routes)
+DROP POLICY IF EXISTS "Service role can manage audit log" ON admin_audit_log;
 CREATE POLICY "Service role can manage audit log"
   ON admin_audit_log FOR ALL
   WITH CHECK (true);
@@ -45,6 +46,7 @@ DROP POLICY IF EXISTS "Public can read guests by wedding" ON guests;
 -- Re-add a narrow policy: allow anon to look up a guest by their slug
 -- (needed for the personalized invitation page load via RLS-aware client).
 -- In practice our app uses service role for this, so this is a fallback only.
+DROP POLICY IF EXISTS "Public can read own guest record by slug" ON guests;
 CREATE POLICY "Public can read own guest record by slug"
   ON guests FOR SELECT
   USING (true);
