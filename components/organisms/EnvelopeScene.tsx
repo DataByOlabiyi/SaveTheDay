@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback, useEffect, forwardRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { ParticleField } from '@/components/atoms/ParticleField'
 import { FlameIcon } from '@/components/atoms/FlameIcon'
@@ -9,7 +9,6 @@ import { vibrate, HAPTIC } from '@/lib/animations/timelines'
 interface EnvelopeSceneProps {
   onSealCracked: () => void
   visible: boolean
-  /** Two-letter monogram shown on the wax seal, e.g. "MO" for Mojirade & Olabiyi */
   monogram?: string
 }
 
@@ -21,95 +20,107 @@ export function EnvelopeScene({ onSealCracked, visible, monogram = 'S' }: Envelo
   const [showParticleBurst, setShowParticleBurst] = useState(false)
   const sealRef = useRef<HTMLButtonElement>(null)
 
-  // Advance through phases automatically
   useEffect(() => {
     if (!visible) return
-
     const timers: ReturnType<typeof setTimeout>[] = []
-
-    // Flame appears (scene already entering)
     timers.push(setTimeout(() => setPhase('envelope-arrive'), 3000))
     timers.push(setTimeout(() => setPhase('envelope-float'), 4500))
-
     return () => timers.forEach(clearTimeout)
   }, [visible])
 
   const handleSealTap = useCallback(() => {
     if (phase !== 'envelope-float') return
-
-    // Get position for particle burst
     if (sealRef.current) {
       const rect = sealRef.current.getBoundingClientRect()
-      setBurstOrigin({
-        x: rect.left + rect.width / 2,
-        y: rect.top + rect.height / 2,
-      })
+      setBurstOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
     }
-
     setPhase('cracking')
     vibrate(HAPTIC.SEAL_CRACK)
-
-    // Stagger the opening animation
     const t1 = setTimeout(() => setShowParticleBurst(true), 200)
     const t2 = setTimeout(() => setPhase('opening'), 600)
-    const t3 = setTimeout(() => {
-      setPhase('opened')
-      onSealCracked()
-    }, 2800)
-
+    const t3 = setTimeout(() => { setPhase('opened'); onSealCracked() }, 2800)
     return () => [t1, t2, t3].forEach(clearTimeout)
   }, [phase, onSealCracked])
 
   const isEnvelopeVisible = ['envelope-arrive', 'envelope-float', 'cracking', 'opening', 'opened'].includes(phase)
 
   return (
-    <div className="relative w-full h-screen-safe flex flex-col items-center justify-center overflow-hidden">
+    <div
+      className="relative w-full h-screen-safe flex flex-col items-center justify-center overflow-hidden"
+      style={{
+        background: 'radial-gradient(ellipse at 50% 48%, rgba(8,32,20,0.95) 0%, rgba(2,7,4,1) 65%)',
+      }}
+    >
       {/* Ambient particle field */}
       <ParticleField className="absolute inset-0 w-full h-full" count={50} />
 
       {/* Particle burst on seal crack */}
       {showParticleBurst && burstOrigin && (
         <div className="fixed inset-0 pointer-events-none z-50">
-          <ParticleField
-            className="w-full h-full"
-            burst
-            burstOrigin={burstOrigin}
-            onBurstComplete={() => setShowParticleBurst(false)}
-          />
+          <ParticleField className="w-full h-full" burst burstOrigin={burstOrigin}
+            onBurstComplete={() => setShowParticleBurst(false)} />
         </div>
       )}
 
-      {/* Flame — visible during flame phase */}
+      {/* ── Flame phase ── */}
       <AnimatePresence>
         {phase === 'flame' && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.8 }}
+            initial={{ opacity: 0, scale: 0.85 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9, transition: { duration: 0.4 } }}
-            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-            className="flex flex-col items-center gap-6"
+            exit={{ opacity: 0, scale: 0.92, transition: { duration: 0.5 } }}
+            transition={{ duration: 0.9, ease: [0.22, 1, 0.36, 1] }}
+            className="flex flex-col items-center gap-7"
           >
-            <FlameIcon size={72} />
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 0.5 }}
-              transition={{ delay: 0.6, duration: 1 }}
-              className="font-body text-xs tracking-widest uppercase text-ivory/50"
+            {/* Warm bloom behind flame */}
+            <div className="relative flex items-center justify-center">
+              <motion.div
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  width: 180, height: 180,
+                  background: 'radial-gradient(circle, rgba(201,168,76,0.12) 0%, rgba(180,100,30,0.06) 45%, transparent 70%)',
+                }}
+                animate={{ scale: [1, 1.08, 1], opacity: [0.7, 1, 0.7] }}
+                transition={{ duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
+              />
+              <motion.div
+                className="absolute rounded-full pointer-events-none"
+                style={{
+                  width: 100, height: 100,
+                  background: 'radial-gradient(circle, rgba(232,204,122,0.1) 0%, transparent 70%)',
+                }}
+                animate={{ scale: [1, 1.15, 1], opacity: [0.5, 0.9, 0.5] }}
+                transition={{ duration: 1.8, repeat: Infinity, ease: 'easeInOut', delay: 0.3 }}
+              />
+              <FlameIcon size={86} />
+            </div>
+
+            {/* Tagline — italic serif, gold-tinted */}
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.7, duration: 1.2, ease: [0.22, 1, 0.36, 1] }}
+              className="flex flex-col items-center gap-2"
             >
-              Something awaits
-            </motion.p>
+              <p
+                className="font-display text-ivory/60"
+                style={{ fontSize: 'clamp(1rem, 3vw, 1.2rem)', fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em' }}
+              >
+                Something awaits
+              </p>
+              <div style={{ width: 40, height: 1, background: 'linear-gradient(to right, transparent, rgba(201,168,76,0.4), transparent)' }} />
+            </motion.div>
           </motion.div>
         )}
       </AnimatePresence>
 
-      {/* The Envelope */}
+      {/* ── Envelope phase ── */}
       <AnimatePresence>
         {isEnvelopeVisible && (
           <motion.div
             initial={{ y: '120vh', opacity: 0 }}
             animate={{
-              y: 0,
-              opacity: 1,
+              y: 0, opacity: 1,
               transition: {
                 y: { duration: 1.2, ease: [0.22, 1, 0.36, 1] },
                 opacity: { duration: 0.5 },
@@ -118,26 +129,31 @@ export function EnvelopeScene({ onSealCracked, visible, monogram = 'S' }: Envelo
             exit={{ opacity: 0, transition: { duration: 0.3 } }}
             className="relative flex flex-col items-center"
           >
-            <EnvelopeBody
-              phase={phase}
-              sealRef={sealRef}
-              onSealTap={handleSealTap}
-              monogram={monogram}
-            />
+            <EnvelopeBody phase={phase} sealRef={sealRef} onSealTap={handleSealTap} monogram={monogram} />
 
             {/* Tap prompt */}
             <AnimatePresence>
               {phase === 'envelope-float' && (
-                <motion.p
+                <motion.div
                   initial={{ opacity: 0, y: 10 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5, delay: 0.2 }}
-                  className="mt-6 font-body text-xs tracking-[0.3em] uppercase text-ivory/40"
+                  transition={{ duration: 0.6, delay: 0.3 }}
+                  className="mt-8 flex flex-col items-center gap-2"
                   aria-hidden="true"
                 >
-                  Tap to open
-                </motion.p>
+                  <p className="font-body text-xs tracking-[0.35em] uppercase text-ivory/35">
+                    Tap to open
+                  </p>
+                  {/* Animated chevron */}
+                  <motion.svg
+                    width="12" height="8" viewBox="0 0 12 8" fill="none"
+                    animate={{ y: [0, 3, 0], opacity: [0.4, 0.7, 0.4] }}
+                    transition={{ duration: 1.4, repeat: Infinity, ease: 'easeInOut' }}
+                  >
+                    <path d="M1 1L6 6L11 1" stroke="rgba(12,168,110,0.5)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                  </motion.svg>
+                </motion.div>
               )}
             </AnimatePresence>
           </motion.div>
@@ -147,9 +163,7 @@ export function EnvelopeScene({ onSealCracked, visible, monogram = 'S' }: Envelo
   )
 }
 
-// ──────────────────────────────────────────────────────────────
-// Envelope Body Component
-// ──────────────────────────────────────────────────────────────
+// ── Envelope Body ─────────────────────────────────────────────────────────────
 
 interface EnvelopeBodyProps {
   phase: Phase
@@ -167,18 +181,37 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
       animate={isFloating ? { y: [0, -10, 0], rotate: [0, 0.4, 0, -0.4, 0] } : {}}
       transition={isFloating ? { duration: 4, repeat: Infinity, ease: 'easeInOut' } : {}}
       className="relative"
-      style={{ width: 'min(320px, 85vw)' }}
+      style={{ width: 'min(300px, 82vw)' }}
     >
-      <div className="relative" style={{ paddingBottom: '70%', perspective: '700px' }}>
+      {/* Ambient glow beneath envelope */}
+      <motion.div
+        className="absolute pointer-events-none"
+        style={{
+          bottom: -24, left: '10%', right: '10%', height: 40,
+          background: 'radial-gradient(ellipse, rgba(12,168,110,0.18) 0%, transparent 70%)',
+          filter: 'blur(10px)',
+        }}
+        animate={isFloating ? { opacity: [0.6, 1, 0.6] } : { opacity: 0.5 }}
+        transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+      />
+
+      <div
+        className="relative"
+        style={{
+          paddingBottom: '70%',
+          perspective: '700px',
+          filter: 'drop-shadow(0 28px 40px rgba(0,0,0,0.85)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))',
+        }}
+      >
         <div className="absolute inset-0">
 
-          {/* ── Envelope back body ── */}
+          {/* ── Envelope base (back face) ── */}
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(145deg, #0E2B1C 0%, #07130D 60%, #030A06 100%)',
-              border: '1px solid rgba(12,168,110,0.22)',
-              boxShadow: '0 24px 70px rgba(0,0,0,0.75), 0 6px 20px rgba(0,0,0,0.5), inset 0 1px 0 rgba(12,168,110,0.1)',
+              background: 'linear-gradient(155deg, #122B1C 0%, #0A1D12 45%, #061008 100%)',
+              border: '1px solid rgba(12,168,110,0.28)',
+              boxShadow: 'inset 0 1px 0 rgba(12,168,110,0.12), inset 0 -1px 0 rgba(0,0,0,0.4)',
             }}
           />
 
@@ -189,28 +222,58 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             animate={isOpening ? { y: [0, -14], opacity: [0.9, 1] } : { opacity: 0 }}
             transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
           >
-            {/* Liner inner border detail */}
             <div style={{ position: 'absolute', inset: 6, border: '0.5px solid rgba(160,110,60,0.2)' }} />
-            {/* Tiny floral stamp in center */}
-            <svg style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.18 }} width="36" height="36" viewBox="0 0 36 36" fill="none">
+            <svg style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.16 }}
+              width="36" height="36" viewBox="0 0 36 36" fill="none">
               <circle cx="18" cy="18" r="7" fill="rgba(140,90,40,0.6)"/>
               {[0,60,120,180,240,300].map((deg, i) => (
-                <ellipse key={i} cx={18 + 11 * Math.cos(deg * Math.PI / 180)} cy={18 + 11 * Math.sin(deg * Math.PI / 180)}
+                <ellipse key={i}
+                  cx={18 + 11 * Math.cos(deg * Math.PI / 180)}
+                  cy={18 + 11 * Math.sin(deg * Math.PI / 180)}
                   rx="4" ry="3" fill="rgba(140,90,40,0.5)"
-                  transform={`rotate(${deg} ${18 + 11 * Math.cos(deg * Math.PI / 180)} ${18 + 11 * Math.sin(deg * Math.PI / 180)})`} />
+                  transform={`rotate(${deg} ${18 + 11 * Math.cos(deg * Math.PI / 180)} ${18 + 11 * Math.sin(deg * Math.PI / 180)})`}
+                />
               ))}
             </svg>
           </motion.div>
 
-          {/* ── Side panels (give envelope the classic fold look) ── */}
-          <div className="absolute inset-y-0 left-0 w-1/2"
-            style={{ background: 'linear-gradient(135deg, #0C2218 0%, #071510 100%)', clipPath: 'polygon(0 0, 0 100%, 100% 50%)', opacity: 0.75 }} />
-          <div className="absolute inset-y-0 right-0 w-1/2"
-            style={{ background: 'linear-gradient(225deg, #0C2218 0%, #071510 100%)', clipPath: 'polygon(100% 0, 100% 100%, 0 50%)', opacity: 0.75 }} />
+          {/* ── Left panel — lighter (light source from left) ── */}
+          <div
+            className="absolute inset-y-0 left-0 w-1/2"
+            style={{
+              background: 'linear-gradient(135deg, rgba(22,58,38,0.95) 0%, rgba(10,28,18,0.85) 100%)',
+              clipPath: 'polygon(0 0, 0 100%, 100% 50%)',
+            }}
+          />
 
-          {/* ── Bottom fold triangle ── */}
-          <div className="absolute inset-x-0 bottom-0 h-1/2"
-            style={{ background: 'linear-gradient(180deg, #081510 0%, #030A06 100%)', clipPath: 'polygon(0 100%, 50% 0, 100% 100%)' }} />
+          {/* ── Right panel — darker (shadow side) ── */}
+          <div
+            className="absolute inset-y-0 right-0 w-1/2"
+            style={{
+              background: 'linear-gradient(225deg, rgba(8,20,13,0.98) 0%, rgba(4,10,7,0.95) 100%)',
+              clipPath: 'polygon(100% 0, 100% 100%, 0 50%)',
+            }}
+          />
+
+          {/* ── Bottom triangle ── */}
+          <div
+            className="absolute inset-x-0 bottom-0 h-1/2"
+            style={{
+              background: 'linear-gradient(180deg, rgba(10,20,14,0.9) 0%, rgba(3,7,5,1) 100%)',
+              clipPath: 'polygon(0 100%, 50% 0, 100% 100%)',
+            }}
+          />
+
+          {/* ── Fold crease line — horizontal seam between flap and body ── */}
+          <div
+            className="absolute inset-x-0 pointer-events-none"
+            style={{
+              top: '50%',
+              height: 1,
+              background: 'linear-gradient(to right, transparent 0%, rgba(12,168,110,0.35) 15%, rgba(20,200,130,0.5) 50%, rgba(12,168,110,0.35) 85%, transparent 100%)',
+              zIndex: 4,
+            }}
+          />
 
           {/* ── Flap (top triangle, folds back on open) ── */}
           <motion.div
@@ -222,11 +285,11 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
               transformOrigin: 'top center',
               zIndex: 3,
               clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-              background: 'linear-gradient(160deg, #0F2D1E 0%, #071410 100%)',
-              borderTop: '1px solid rgba(12,168,110,0.15)',
+              background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
+              borderTop: '1px solid rgba(12,168,110,0.2)',
             }}
           >
-            {/* Flap inner (cream) — visible on back face as it flips */}
+            {/* Flap inner — cream, visible as it flips back */}
             <div style={{
               position: 'absolute', inset: 0,
               clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
@@ -236,9 +299,11 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             }} />
           </motion.div>
 
-          {/* ── Subtle inner inset glow ── */}
-          <div className="absolute inset-0 pointer-events-none"
-            style={{ boxShadow: 'inset 0 0 0 1px rgba(12,168,110,0.12), inset 0 0 30px rgba(0,0,0,0.3)' }} />
+          {/* ── Emerald inner border glow ── */}
+          <div
+            className="absolute inset-0 pointer-events-none"
+            style={{ boxShadow: 'inset 0 0 0 1px rgba(12,168,110,0.18), inset 0 0 24px rgba(0,0,0,0.25)' }}
+          />
 
           {/* ── Wax Seal ── */}
           <WaxSeal ref={sealRef} phase={phase} onTap={onSealTap} monogram={monogram} />
@@ -248,11 +313,7 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
   )
 }
 
-// ──────────────────────────────────────────────────────────────
-// Wax Seal Component
-// ──────────────────────────────────────────────────────────────
-
-import { forwardRef } from 'react'
+// ── Wax Seal ──────────────────────────────────────────────────────────────────
 
 const WaxSeal = forwardRef<HTMLButtonElement, {
   phase: Phase
@@ -260,15 +321,14 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
   monogram: string
 }>(function WaxSeal({ phase, onTap, monogram }, ref) {
   const isClickable = phase === 'envelope-float'
-  const isCracking = phase === 'cracking'
-  const isOpening = ['opening', 'opened'].includes(phase)
+  const isCracking  = phase === 'cracking'
+  const isOpening   = ['opening', 'opened'].includes(phase)
 
   return (
     <button
       ref={ref}
       className={`wax-seal absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10
-        ${isClickable ? 'cursor-pointer' : 'cursor-default pointer-events-none'}
-      `}
+        ${isClickable ? 'cursor-pointer' : 'cursor-default pointer-events-none'}`}
       onClick={isClickable ? onTap : undefined}
       disabled={!isClickable}
       aria-label="Tap to open the envelope"
@@ -277,25 +337,23 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
       <motion.div
         animate={isClickable ? {
           filter: [
-            'drop-shadow(0 0 8px rgba(12, 168, 110, 0.5))',
-            'drop-shadow(0 0 22px rgba(12, 168, 110, 0.9))',
-            'drop-shadow(0 0 8px rgba(12, 168, 110, 0.5))',
+            'drop-shadow(0 0 6px rgba(12,168,110,0.45))',
+            'drop-shadow(0 0 20px rgba(12,168,110,0.85))',
+            'drop-shadow(0 0 6px rgba(12,168,110,0.45))',
           ],
         } : {}}
-        transition={{ duration: 2, repeat: Infinity }}
+        transition={{ duration: 2.2, repeat: Infinity }}
         className={`relative inline-flex items-center justify-center ${isOpening ? 'opacity-0 transition-opacity duration-300' : ''}`}
       >
-        {/* Sonar ping rings — shown only when tappable */}
+        {/* Sonar ping rings */}
         {isClickable && (
           <>
-            <motion.span
-              className="absolute rounded-full pointer-events-none"
+            <motion.span className="absolute rounded-full pointer-events-none"
               style={{ width: 112, height: 112, border: '1px solid rgba(12,168,110,0.5)' }}
               animate={{ scale: [1, 1.45], opacity: [0.6, 0] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0 }}
             />
-            <motion.span
-              className="absolute rounded-full pointer-events-none"
+            <motion.span className="absolute rounded-full pointer-events-none"
               style={{ width: 112, height: 112, border: '1px solid rgba(12,168,110,0.3)' }}
               animate={{ scale: [1, 1.7], opacity: [0.4, 0] }}
               transition={{ duration: 1.8, repeat: Infinity, ease: 'easeOut', delay: 0.6 }}
@@ -306,85 +364,75 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
         <svg width="92" height="92" viewBox="0 0 92 92" fill="none">
           <defs>
             <radialGradient id="sealFill" cx="38%" cy="32%" r="62%">
-              <stop offset="0%" stopColor="#1E7A58" stopOpacity="0.9"/>
-              <stop offset="60%" stopColor="#0B5240" stopOpacity="1"/>
+              <stop offset="0%"   stopColor="#1E7A58" stopOpacity="0.9"/>
+              <stop offset="60%"  stopColor="#0B5240" stopOpacity="1"/>
               <stop offset="100%" stopColor="#052E22" stopOpacity="1"/>
             </radialGradient>
             <radialGradient id="sealSheen" cx="38%" cy="28%" r="55%">
-              <stop offset="0%" stopColor="#4DD9A0" stopOpacity="0.18"/>
-              <stop offset="100%" stopColor="#0CA86E" stopOpacity="0"/>
+              <stop offset="0%"   stopColor="#4DD9A0" stopOpacity="0.18"/>
+              <stop offset="100%" stopColor="#0CA86E"  stopOpacity="0"/>
             </radialGradient>
           </defs>
 
-          {/* ── Outer sunburst / scallop ring ── */}
+          {/* Outer sunburst lines */}
           {Array.from({ length: 24 }).map((_, i) => {
-            const angle = (i * 15 * Math.PI) / 180
-            const x1 = 46 + 40 * Math.cos(angle)
-            const y1 = 46 + 40 * Math.sin(angle)
-            const x2 = 46 + 34 * Math.cos(angle)
-            const y2 = 46 + 34 * Math.sin(angle)
-            return <line key={i} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#0CA86E" strokeWidth="0.8" opacity="0.45"/>
+            const a = (i * 15 * Math.PI) / 180
+            return <line key={i}
+              x1={46 + 40 * Math.cos(a)} y1={46 + 40 * Math.sin(a)}
+              x2={46 + 34 * Math.cos(a)} y2={46 + 34 * Math.sin(a)}
+              stroke="#0CA86E" strokeWidth="0.8" opacity="0.45"/>
           })}
 
-          {/* ── Scalloped outer edge ── */}
+          {/* Scalloped outer edge */}
           {Array.from({ length: 24 }).map((_, i) => {
-            const angle = (i * 15 * Math.PI) / 180
-            return (
-              <circle key={i}
-                cx={46 + 38 * Math.cos(angle)} cy={46 + 38 * Math.sin(angle)}
-                r="2.5" fill="#083D2C" stroke="#0CA86E" strokeWidth="0.6" opacity="0.7"/>
-            )
+            const a = (i * 15 * Math.PI) / 180
+            return <circle key={i}
+              cx={46 + 38 * Math.cos(a)} cy={46 + 38 * Math.sin(a)}
+              r="2.5" fill="#083D2C" stroke="#0CA86E" strokeWidth="0.6" opacity="0.7"/>
           })}
 
-          {/* ── Wax base ── */}
+          {/* Wax base */}
           <circle cx="46" cy="46" r="32" fill="url(#sealFill)"/>
           <circle cx="46" cy="46" r="32" fill="url(#sealSheen)"/>
 
-          {/* ── Outer ring ── */}
+          {/* Outer ring */}
           <circle cx="46" cy="46" r="32" fill="none" stroke="#0CA86E" strokeWidth="1.2" opacity="0.8"/>
 
-          {/* ── Rope-style inner ring (dashed) ── */}
+          {/* Rope-style dashed ring */}
           <circle cx="46" cy="46" r="26" fill="none" stroke="#0CA86E" strokeWidth="0.6"
             strokeDasharray="2.5 3" opacity="0.55"/>
 
-          {/* ── Inner decorative circle ── */}
+          {/* Inner circle */}
           <circle cx="46" cy="46" r="22" fill="none" stroke="#0CA86E" strokeWidth="0.4" opacity="0.3"/>
 
-          {/* ── Small diamond accents at compass points ── */}
+          {/* Compass-point diamonds */}
           {[0, 90, 180, 270].map((deg, i) => {
-            const rad = deg * Math.PI / 180
-            const cx2 = 46 + 26 * Math.cos(rad)
-            const cy2 = 46 + 26 * Math.sin(rad)
-            return (
-              <path key={i}
-                d={`M ${cx2} ${cy2 - 3} L ${cx2 + 2.5} ${cy2} L ${cx2} ${cy2 + 3} L ${cx2 - 2.5} ${cy2} Z`}
-                fill="#0CA86E" opacity="0.7"/>
-            )
+            const r = deg * Math.PI / 180
+            const cx2 = 46 + 26 * Math.cos(r), cy2 = 46 + 26 * Math.sin(r)
+            return <path key={i}
+              d={`M ${cx2} ${cy2 - 3} L ${cx2 + 2.5} ${cy2} L ${cx2} ${cy2 + 3} L ${cx2 - 2.5} ${cy2} Z`}
+              fill="#0CA86E" opacity="0.7"/>
           })}
 
-          {/* ── Crack paths ── */}
+          {/* Crack paths */}
           {isCracking && (
             <>
-              <motion.path d="M46 20 L49 31 L42 35 L47 48"
-                stroke="#3DD9A0" strokeWidth="1.2" fill="none"
+              <motion.path d="M46 20 L49 31 L42 35 L47 48" stroke="#3DD9A0" strokeWidth="1.2" fill="none"
                 initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: 0.28 }}/>
-              <motion.path d="M46 20 L41 29 L50 33 L44 47"
-                stroke="#C0EDD9" strokeWidth="0.6" fill="none"
+              <motion.path d="M46 20 L41 29 L50 33 L44 47" stroke="#C0EDD9" strokeWidth="0.6" fill="none"
                 initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.7 }}
                 transition={{ duration: 0.28, delay: 0.05 }}/>
-              <motion.path d="M30 44 L40 36 L52 32 L60 44"
-                stroke="#3DD9A0" strokeWidth="1.2" fill="none"
+              <motion.path d="M30 44 L40 36 L52 32 L60 44" stroke="#3DD9A0" strokeWidth="1.2" fill="none"
                 initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 1 }}
                 transition={{ duration: 0.22, delay: 0.1 }}/>
-              <motion.path d="M36 56 L42 46 L50 40 L58 52"
-                stroke="#C0EDD9" strokeWidth="0.5" fill="none"
+              <motion.path d="M36 56 L42 46 L50 40 L58 52" stroke="#C0EDD9" strokeWidth="0.5" fill="none"
                 initial={{ pathLength: 0, opacity: 0 }} animate={{ pathLength: 1, opacity: 0.5 }}
                 transition={{ duration: 0.22, delay: 0.14 }}/>
             </>
           )}
 
-          {/* ── Monogram ── */}
+          {/* Monogram */}
           <text x="46" y="52" textAnchor="middle" fill="#4DD9A0"
             fontFamily="Georgia, serif"
             fontSize={monogram.length > 1 ? '17' : '24'}
@@ -392,7 +440,7 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
             {monogram}
           </text>
 
-          {/* ── Surface sheen highlight ── */}
+          {/* Surface sheen */}
           <ellipse cx="38" cy="34" rx="8" ry="5" fill="rgba(255,255,255,0.05)" transform="rotate(-30 38 34)"/>
         </svg>
       </motion.div>
