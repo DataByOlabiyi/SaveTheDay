@@ -29,18 +29,18 @@ function LoginContent() {
     setLoading(true)
     setError('')
 
-    const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
-
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo },
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, redirectTo }),
     })
 
     setLoading(false)
 
-    if (authError) {
-      setError(authError.message)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error ?? 'Something went wrong. Please try again.')
     } else {
       setSent(true)
       setResendCooldown(RESEND_COOLDOWN)
@@ -50,11 +50,20 @@ function LoginContent() {
   async function handleResend() {
     if (resendCooldown > 0 || loading) return
     setLoading(true)
-    const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(next)}`
-    await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo } })
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, redirectTo }),
+    })
     setLoading(false)
-    setResendCooldown(RESEND_COOLDOWN)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error ?? 'Something went wrong. Please try again.')
+      setSent(false)
+    } else {
+      setResendCooldown(RESEND_COOLDOWN)
+    }
   }
 
   async function handleGoogle() {

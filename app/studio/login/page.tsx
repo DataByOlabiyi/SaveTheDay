@@ -20,15 +20,19 @@ function StudioLoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(NEXT)}`
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email,
-      options: { emailRedirectTo: redirectTo },
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, redirectTo }),
     })
     setLoading(false)
-    if (authError) setError(authError.message)
-    else setSent(true)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error ?? 'Something went wrong. Please try again.')
+    } else {
+      setSent(true)
+    }
   }
 
   async function handleGoogle() {
