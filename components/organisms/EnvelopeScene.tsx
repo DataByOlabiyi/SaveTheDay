@@ -23,13 +23,13 @@ export function EnvelopeScene({ onSealCracked, visible, monogram = 'S' }: Envelo
   useEffect(() => {
     if (!visible) return
     const timers: ReturnType<typeof setTimeout>[] = []
-    timers.push(setTimeout(() => setPhase('envelope-arrive'), 3000))
-    timers.push(setTimeout(() => setPhase('envelope-float'), 4500))
+    timers.push(setTimeout(() => setPhase('envelope-arrive'), 1800))
+    timers.push(setTimeout(() => setPhase('envelope-float'), 3200))
     return () => timers.forEach(clearTimeout)
   }, [visible])
 
   const handleSealTap = useCallback(() => {
-    if (phase !== 'envelope-float') return
+    if (phase !== 'envelope-float' && phase !== 'envelope-arrive') return
     if (sealRef.current) {
       const rect = sealRef.current.getBoundingClientRect()
       setBurstOrigin({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 })
@@ -320,7 +320,7 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
   onTap: () => void
   monogram: string
 }>(function WaxSeal({ phase, onTap, monogram }, ref) {
-  const isClickable = phase === 'envelope-float'
+  const isClickable = phase === 'envelope-float' || phase === 'envelope-arrive'
   const isCracking  = phase === 'cracking'
   const isOpening   = ['opening', 'opened'].includes(phase)
 

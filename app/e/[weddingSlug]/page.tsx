@@ -1,4 +1,4 @@
-import { notFound, redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { TheUnveilingPage } from '@/components/scenes/TheUnveilingPage'
 import { ErrorBoundary } from '@/components/atoms/ErrorBoundary'
@@ -51,18 +51,17 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
 }
 
 export default async function WeddingPage({ params, searchParams }: PageProps) {
-  const wedding = await getWeddingBySlug(params.weddingSlug)
+  let wedding = await getWeddingBySlug(params.weddingSlug)
 
   if (!wedding) {
-    // If the wedding isn't published, check if the logged-in user owns it
-    // and redirect them to the owner preview instead of showing 404
+    // Wedding isn't published — check if the logged-in user owns it (draft preview)
     const supabase = await createSupabaseServerClient()
     const { data: { user } } = await supabase.auth.getUser()
     if (user) {
       const owned = await getWeddingBySlugForOwner(params.weddingSlug, user.id)
-      if (owned) redirect(`/w/${params.weddingSlug}`)
+      if (owned) wedding = owned
     }
-    notFound()
+    if (!wedding) notFound()
   }
 
   const [guest, schedule, allMilestones, allAlbums, photos] = await Promise.all([

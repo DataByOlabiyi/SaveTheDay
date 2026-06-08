@@ -24,21 +24,18 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/create')}`
-
-    const { error: authError } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: redirectTo,
-        shouldCreateUser: true,
-      },
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, redirectTo, shouldCreateUser: true }),
     })
 
     setLoading(false)
 
-    if (authError) {
-      setError(authError.message)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error ?? 'Something went wrong. Please try again.')
     } else {
       setSent(true)
       setResendCooldown(RESEND_COOLDOWN)
@@ -48,11 +45,20 @@ export default function SignupPage() {
   async function handleResend() {
     if (resendCooldown > 0 || loading) return
     setLoading(true)
-    const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/create')}`
-    await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: redirectTo, shouldCreateUser: true } })
+    const res = await fetch('/api/auth/send-otp', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, redirectTo, shouldCreateUser: true }),
+    })
     setLoading(false)
-    setResendCooldown(RESEND_COOLDOWN)
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error ?? 'Something went wrong. Please try again.')
+      setSent(false)
+    } else {
+      setResendCooldown(RESEND_COOLDOWN)
+    }
   }
 
   async function handleGoogle() {
