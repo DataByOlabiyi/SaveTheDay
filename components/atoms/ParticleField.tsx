@@ -30,12 +30,8 @@ export function ParticleField({
   burstOrigin,
   onBurstComplete,
 }: ParticleFieldProps) {
-  // Respect OS reduced-motion preference — return nothing for ambient mode
-  if (!burst && typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-    return null
-  }
-
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  // All hooks must come before any conditional return (React rules of hooks)
+  const canvasRef    = useRef<HTMLCanvasElement>(null)
   const particlesRef = useRef<Particle[]>([])
   const animFrameRef = useRef<number>(0)
   const burstDoneRef = useRef(false)
@@ -212,6 +208,11 @@ export function ParticleField({
       io?.disconnect()
     }
   }, [count, burst, burstOrigin, onBurstComplete])
+
+  // Reduced-motion guard must come after all hooks (React rules of hooks)
+  if (!burst && typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return null
+  }
 
   return (
     <canvas

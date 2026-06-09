@@ -164,7 +164,7 @@ export function AddToCalendarButton({
       <AnimatePresence>
         {open && (
           <motion.ul
-            role="listbox"
+            role="menu"
             aria-label="Choose your calendar app"
             initial={{ opacity: 0, y: -6, scale: 0.97 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -179,7 +179,7 @@ export function AddToCalendarButton({
             }}
           >
             {visibleOptions.map(opt => (
-              <li key={opt.key} role="option">
+              <li key={opt.key} role="menuitem">
                 <button
                   onClick={opt.action}
                   className="w-full flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/5 focus:bg-white/5 focus:outline-none"
