@@ -68,9 +68,9 @@ const nextConfig = {
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co https://api.qrserver.com",
       "media-src 'self' blob: https://res.cloudinary.com https://*.supabase.co",
-      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com",
+      "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com https://api.paystack.co https://checkout.paystack.com",
       "worker-src 'self' blob:",
-      "frame-src 'none'",
+      "frame-src https://checkout.paystack.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
@@ -174,12 +174,18 @@ module.exports = withPWA({
         },
       },
       {
+        // Mutation routes — never cache, always hit the network
+        urlPattern: /\/api\/(rsvp|guestbook|analytics|guest\/mark-opened|gallery\/upload|gallery\/guest-upload|story|schedule|account|reminders|thankyou|weddings|admin\/guests).*/i,
+        handler: 'NetworkOnly',
+      },
+      {
+        // Read-only API routes — network-first with short cache
         urlPattern: /\/api\/.*/i,
         handler: 'NetworkFirst',
         options: {
           cacheName: 'api-routes',
           networkTimeoutSeconds: 10,
-          expiration: { maxEntries: 30, maxAgeSeconds: 60 * 60 },
+          expiration: { maxEntries: 30, maxAgeSeconds: 60 * 5 },
           cacheableResponse: { statuses: [0, 200] },
         },
       },

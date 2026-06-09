@@ -16,6 +16,7 @@ export const DEMO_WEDDING: Wedding = {
   city: 'Lagos',
   theme: 'unveiling',
   config: {
+    config_version: 1,
     // Visibility
     show_countdown:     true,
     show_guestbook:     true,
@@ -23,7 +24,7 @@ export const DEMO_WEDDING: Wedding = {
     show_gallery:       true,
     show_schedule:      true,
     show_venue_map:     false,
-    show_gift_registry: false,
+    show_gift_registry: true,
     show_post_uploads:  false,
     // RSVP
     allow_plus_one:  true,
@@ -38,6 +39,25 @@ export const DEMO_WEDDING: Wedding = {
     hashtag:    '#AdaezeAndEmekaForever',
     // Gallery
     allow_downloads: true,
+    // Gift registry
+    gift_registry_note: 'Your presence is our greatest gift. If you wish to bless us further, we\'ve shared our details below.',
+    bank_details: [
+      {
+        bank_name:      'Zenith Bank',
+        account_number: '2012345678',
+        account_name:   'Adaeze & Emeka Okafor',
+        label:          'Joint Account',
+        currency:       'NGN',
+      },
+      {
+        bank_name:      'GTBank',
+        account_number: '0087654321',
+        account_name:   'Emeka Okafor',
+        label:          'Honeymoon Fund',
+        currency:       'NGN',
+        note:           'For our honeymoon in Santorini 🌅',
+      },
+    ],
     // Dress code
     dress_code: {
       title: 'Smart Elegant',

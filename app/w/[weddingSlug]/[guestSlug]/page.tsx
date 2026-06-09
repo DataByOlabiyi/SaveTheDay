@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import type { Metadata } from 'next'
 import { TheUnveilingPage } from '@/components/scenes/TheUnveilingPage'
+import { PasswordGate } from '@/components/atoms/PasswordGate'
 import {
   getWeddingBySlug, getWeddingBySlugForOwner, getGuestBySlug, getEventSchedule,
   getStoryMilestones, getGalleryAlbums, getGalleryPhotos,
@@ -68,7 +69,7 @@ export default async function PersonalizedWeddingPage({ params }: PageProps) {
     wedding.config.show_gallery !== false  ? getGalleryPhotos(wedding.id) : Promise.resolve([]),
   ])
 
-  return (
+  const invitation = (
     <TheUnveilingPage
       wedding={wedding}
       guest={guest}
@@ -78,4 +79,14 @@ export default async function PersonalizedWeddingPage({ params }: PageProps) {
       photos={photos}
     />
   )
+
+  return wedding.config.is_private ? (
+    <PasswordGate
+      slug={wedding.slug}
+      coupleName1={wedding.couple_names.name1}
+      coupleName2={wedding.couple_names.name2}
+    >
+      {invitation}
+    </PasswordGate>
+  ) : invitation
 }
