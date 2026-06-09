@@ -100,8 +100,8 @@ function InvitationPreview() {
       className="relative w-full max-w-sm mx-auto rounded-2xl overflow-hidden select-none"
       style={{
         background: '#080C0A',
-        border: '1px solid rgba(12,168,110,0.15)',
-        boxShadow: '0 0 60px rgba(12,168,110,0.12), 0 40px 80px rgba(0,0,0,0.6)',
+        border: '1px solid rgba(201,168,76,0.15)',
+        boxShadow: '0 0 60px rgba(201,168,76,0.12), 0 40px 80px rgba(0,0,0,0.6)',
       }}
     >
       {/* Top bar — phone notch simulation */}
@@ -119,11 +119,11 @@ function InvitationPreview() {
       <div className="px-6 py-8 text-center">
         {/* Radial glow */}
         <div className="absolute inset-0 pointer-events-none" style={{
-          background: 'radial-gradient(ellipse 70% 50% at 50% 40%, rgba(12,168,110,0.08) 0%, transparent 70%)',
+          background: 'radial-gradient(ellipse 70% 50% at 50% 40%, rgba(201,168,76,0.08) 0%, transparent 70%)',
         }} />
 
         {/* Welcome line */}
-        <p className="font-body text-xs tracking-[0.3em] uppercase mb-5" style={{ color: 'rgba(12,168,110,0.6)', fontSize: '0.6rem' }}>
+        <p className="font-body text-xs tracking-[0.3em] uppercase mb-5" style={{ color: 'rgba(201,168,76,0.6)', fontSize: '0.6rem' }}>
           Welcome, Sarah
         </p>
 
@@ -146,11 +146,11 @@ function InvitationPreview() {
         </div>
 
         {/* Date */}
-        <p className="font-body text-xs tracking-[0.25em] uppercase mb-1" style={{ color: 'rgba(12,168,110,0.55)', fontSize: '0.55rem' }}>
+        <p className="font-body text-xs tracking-[0.25em] uppercase mb-1" style={{ color: 'rgba(201,168,76,0.55)', fontSize: '0.55rem' }}>
           Save the date
         </p>
         <p className="font-display text-ivory/80 mb-4" style={{ fontSize: '1rem', fontWeight: 300, letterSpacing: '0.1em' }}>
-          14 February 2026
+          21 June 2050
         </p>
 
         {/* Venue */}
@@ -161,7 +161,7 @@ function InvitationPreview() {
         {/* RSVP button */}
         <button
           className="w-full py-2.5 text-obsidian font-body tracking-widest uppercase text-xs"
-          style={{ background: 'linear-gradient(135deg, #0CA86E, #3DD9A0)', borderRadius: '4px' }}
+          style={{ background: 'linear-gradient(135deg, #A8852A, #C9A84C, #E8CC7A)', borderRadius: '4px' }}
         >
           RSVP Now
         </button>

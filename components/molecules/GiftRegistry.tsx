@@ -13,12 +13,27 @@ interface GiftRegistryProps {
   coupleName2:   string
 }
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  NGN: '₦', GBP: '£', USD: '$', EUR: '€', GHS: '₵', KES: 'KSh',
+}
+
+function formatCopyText(bank: BankDetail): string {
+  const lines = [
+    bank.bank_name,
+    bank.account_number,
+    bank.account_name,
+  ]
+  if (bank.currency) lines.push(bank.currency)
+  return lines.join(' · ')
+}
+
 export function GiftRegistry({ registryUrl, registryNote, bankDetails, coupleName1, coupleName2 }: GiftRegistryProps) {
   const ref              = useRef<HTMLDivElement>(null)
   const inView           = useInView(ref, { once: true, margin: '-60px' })
   const [copied, setCopied] = useState<string | null>(null)
 
-  const copyText = async (text: string, key: string) => {
+  const copyDetails = async (bank: BankDetail, key: string) => {
+    const text = formatCopyText(bank)
     try { await navigator.clipboard.writeText(text) } catch {
       const ta = document.createElement('textarea')
       ta.value = text
@@ -50,18 +65,18 @@ export function GiftRegistry({ registryUrl, registryNote, bankDetails, coupleNam
             animate={{ rotate: 360 }}
             transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
             className="absolute inset-0 rounded-full"
-            style={{ border: '1px dashed rgba(12,168,110,0.25)' }}
+            style={{ border: '1px dashed rgba(201,168,76,0.25)' }}
           />
           <div
             className="absolute inset-2 rounded-full flex items-center justify-center text-2xl"
-            style={{ background: 'rgba(12,168,110,0.06)', border: '1px solid rgba(12,168,110,0.15)' }}
+            style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.15)' }}
           >
             🎁
           </div>
         </div>
 
         <p className="font-body tracking-[0.3em] uppercase mb-3"
-          style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.5)' }}>
+          style={{ fontSize: '0.65rem', color: 'rgba(201,168,76,0.5)' }}>
           Gift Registry
         </p>
         <h2 id="registry-heading"
@@ -100,51 +115,89 @@ export function GiftRegistry({ registryUrl, registryNote, bankDetails, coupleNam
             transition={{ duration: 0.7, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
             className="w-full mt-8 text-left space-y-3"
           >
-            <p className="font-body text-xs tracking-[0.25em] uppercase text-emerald-DEFAULT/50 text-center mb-4">
+            <p className="font-body text-xs tracking-[0.25em] uppercase text-center mb-4"
+              style={{ color: 'rgba(201,168,76,0.5)' }}>
               Bank Transfer
             </p>
-            {bankDetails.map((bank, i) => (
-              <div
-                key={i}
-                className="rounded-lg p-4"
-                style={{ background: 'rgba(12,168,110,0.03)', border: '1px solid rgba(12,168,110,0.12)' }}
-              >
-                {bank.label && (
-                  <p className="font-body text-xs tracking-wider uppercase text-ivory/25 mb-2">{bank.label}</p>
-                )}
-                <p className="font-body text-sm text-ivory/60 mb-1">{bank.bank_name}</p>
-                <div className="flex items-center justify-between gap-3">
-                  <div>
-                    <p className="font-display text-ivory/90" style={{ fontSize: 'clamp(1rem, 3vw, 1.25rem)', fontWeight: 300, letterSpacing: '0.06em' }}>
-                      {bank.account_number}
-                    </p>
-                    <p className="font-body text-xs text-ivory/40 mt-0.5">{bank.account_name}</p>
+            {bankDetails.map((bank, i) => {
+              const copyKey = `bank-${i}`
+              const isCopied = copied === copyKey
+              const currencySymbol = bank.currency ? CURRENCY_SYMBOLS[bank.currency] : null
+
+              return (
+                <div
+                  key={i}
+                  className="rounded-lg p-4"
+                  style={{ background: 'rgba(201,168,76,0.03)', border: '1px solid rgba(201,168,76,0.12)' }}
+                >
+                  {/* Header row: label + currency badge */}
+                  <div className="flex items-center justify-between mb-2">
+                    {bank.label && (
+                      <p className="font-body text-xs tracking-wider uppercase"
+                        style={{ color: 'rgba(250,247,242,0.25)' }}>
+                        {bank.label}
+                      </p>
+                    )}
+                    {bank.currency && (
+                      <span
+                        className="font-body text-xs px-2 py-0.5 rounded-full ml-auto"
+                        style={{
+                          background: 'rgba(201,168,76,0.08)',
+                          border: '1px solid rgba(201,168,76,0.2)',
+                          color: 'rgba(201,168,76,0.7)',
+                          letterSpacing: '0.1em',
+                        }}
+                      >
+                        {currencySymbol} {bank.currency}
+                      </span>
+                    )}
                   </div>
-                  <button
-                    onClick={() => copyText(bank.account_number, `${i}-num`)}
-                    className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-body text-xs transition-all"
-                    style={{
-                      background: copied === `${i}-num` ? 'rgba(12,168,110,0.15)' : 'rgba(12,168,110,0.06)',
-                      border: `1px solid ${copied === `${i}-num` ? 'rgba(12,168,110,0.35)' : 'rgba(12,168,110,0.15)'}`,
-                      color: copied === `${i}-num` ? '#0CA86E' : 'rgba(250,247,242,0.4)',
-                    }}
-                    aria-label={`Copy account number for ${bank.bank_name}`}
-                  >
-                    <AnimatePresence mode="wait">
-                      {copied === `${i}-num` ? (
-                        <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                          ✓ Copied
-                        </motion.span>
-                      ) : (
-                        <motion.span key="copy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-                          Copy
-                        </motion.span>
-                      )}
-                    </AnimatePresence>
-                  </button>
+
+                  <p className="font-body text-sm text-ivory/60 mb-1">{bank.bank_name}</p>
+
+                  {/* Account number + copy button */}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <p className="font-display text-ivory/90"
+                        style={{ fontSize: 'clamp(1rem, 3vw, 1.25rem)', fontWeight: 300, letterSpacing: '0.06em' }}>
+                        {bank.account_number}
+                      </p>
+                      <p className="font-body text-xs text-ivory/40 mt-0.5">{bank.account_name}</p>
+                    </div>
+                    <button
+                      onClick={() => copyDetails(bank, copyKey)}
+                      className="flex-shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg font-body text-xs transition-all"
+                      style={{
+                        background: isCopied ? 'rgba(201,168,76,0.15)' : 'rgba(201,168,76,0.06)',
+                        border: `1px solid ${isCopied ? 'rgba(201,168,76,0.35)' : 'rgba(201,168,76,0.15)'}`,
+                        color: isCopied ? '#C9A84C' : 'rgba(250,247,242,0.4)',
+                      }}
+                      aria-label={`Copy details for ${bank.bank_name}`}
+                    >
+                      <AnimatePresence mode="wait">
+                        {isCopied ? (
+                          <motion.span key="ok" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            ✓ Copied
+                          </motion.span>
+                        ) : (
+                          <motion.span key="copy" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                            Copy
+                          </motion.span>
+                        )}
+                      </AnimatePresence>
+                    </button>
+                  </div>
+
+                  {/* Per-account note */}
+                  {bank.note && (
+                    <p className="font-body text-xs mt-3 leading-relaxed"
+                      style={{ color: 'rgba(201,168,76,0.45)', fontStyle: 'italic' }}>
+                      {bank.note}
+                    </p>
+                  )}
                 </div>
-              </div>
-            ))}
+              )
+            })}
           </motion.div>
         )}
       </motion.div>

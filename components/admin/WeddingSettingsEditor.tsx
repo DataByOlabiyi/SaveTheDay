@@ -773,6 +773,43 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
                   />
                 </div>
               ))}
+              {/* Currency */}
+              <div>
+                <label className="rsvp-label">Currency (optional)</label>
+                <select
+                  value={bank.currency ?? ''}
+                  onChange={e => {
+                    const list = [...(config.bank_details ?? [])]
+                    list[i] = { ...list[i], currency: (e.target.value as import('@/lib/db/types').BankCurrency) || undefined }
+                    setConfigField('bank_details', list)
+                  }}
+                  className="rsvp-input py-2"
+                >
+                  <option value="">Select currency…</option>
+                  <option value="NGN">₦ NGN — Nigerian Naira</option>
+                  <option value="GBP">£ GBP — British Pound</option>
+                  <option value="USD">$ USD — US Dollar</option>
+                  <option value="EUR">€ EUR — Euro</option>
+                  <option value="GHS">₵ GHS — Ghanaian Cedi</option>
+                  <option value="KES">KSh KES — Kenyan Shilling</option>
+                </select>
+              </div>
+              {/* Per-account note */}
+              <div>
+                <label className="rsvp-label">Note (optional)</label>
+                <input
+                  type="text"
+                  value={bank.note ?? ''}
+                  onChange={e => {
+                    const list = [...(config.bank_details ?? [])]
+                    list[i] = { ...list[i], note: e.target.value || undefined }
+                    setConfigField('bank_details', list)
+                  }}
+                  placeholder="e.g. For our honeymoon in Santorini 🌅"
+                  maxLength={80}
+                  className="rsvp-input py-2"
+                />
+              </div>
             </div>
           ))}
           <button

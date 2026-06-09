@@ -30,10 +30,12 @@ export function ParticleField({
   burstOrigin,
   onBurstComplete,
 }: ParticleFieldProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null)
+  // All hooks must come before any conditional return (React rules of hooks)
+  const canvasRef    = useRef<HTMLCanvasElement>(null)
   const particlesRef = useRef<Particle[]>([])
   const animFrameRef = useRef<number>(0)
   const burstDoneRef = useRef(false)
+  const pausedRef    = useRef(false)
 
   useEffect(() => {
     const canvas = canvasRef.current
@@ -51,6 +53,7 @@ export function ParticleField({
 
     const ro = new ResizeObserver(resize)
     ro.observe(canvas)
+    let io: IntersectionObserver | null = null
 
     const W = () => canvas.offsetWidth
     const H = () => canvas.offsetHeight
@@ -120,7 +123,13 @@ export function ParticleField({
 
       animFrameRef.current = requestAnimationFrame(animateBurst)
     } else {
-      // ── Ambient floating particles ──
+      // ── Ambient floating particles ── pause when off-screen ──
+      io = new IntersectionObserver(
+        ([entry]) => { pausedRef.current = !entry.isIntersecting },
+        { threshold: 0 }
+      )
+      io.observe(canvas)
+
       const spawnParticle = (): Particle => ({
         x: Math.random() * W(),
         y: H() + 10,
@@ -146,6 +155,11 @@ export function ParticleField({
       const animateAmbient = (now: number) => {
         const dt = now - lastTime
         lastTime = now
+
+        if (pausedRef.current) {
+          animFrameRef.current = requestAnimationFrame(animateAmbient)
+          return
+        }
 
         ctx.clearRect(0, 0, W(), H())
 
@@ -191,8 +205,14 @@ export function ParticleField({
     return () => {
       cancelAnimationFrame(animFrameRef.current)
       ro.disconnect()
+      io?.disconnect()
     }
   }, [count, burst, burstOrigin, onBurstComplete])
+
+  // Reduced-motion guard must come after all hooks (React rules of hooks)
+  if (!burst && typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    return null
+  }
 
   return (
     <canvas

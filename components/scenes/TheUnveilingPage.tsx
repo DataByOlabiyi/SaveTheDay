@@ -59,15 +59,19 @@ function buildSections(
   if (config.show_schedule || config.show_venue_map || config.dress_code ||
       (config.show_accommodations && config.accommodations?.length))
     sections.push({ id: 'section-venue', label: 'Details' })
-  if (config.show_gift_registry || config.bank_details?.length)
+  if (config.show_gift_registry)
     sections.push({ id: 'section-registry', label: 'Gifts' })
   if (config.show_guestbook !== false) sections.push({ id: 'section-guestbook', label: 'Guestbook' })
   return sections
 }
 
+const VISITED_KEY = 'stv_visited'
+
 export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, albums, photos }: TheUnveilingPageProps) {
-  const [phase, setPhase]                     = useState<AppPhase>('intro')
-  const [nameRevealDone, setNameRevealDone]   = useState(false)
+  // Skip intro for return visitors — checks localStorage on first render
+  const hasVisited = typeof window !== 'undefined' && !!localStorage.getItem(VISITED_KEY)
+  const [phase, setPhase]                     = useState<AppPhase>(hasVisited ? 'revealed' : 'intro')
+  const [nameRevealDone, setNameRevealDone]   = useState(hasVisited)
   const [showRSVP, setShowRSVP]               = useState(false)
   const [rsvpDone, setRsvpDone]               = useState(false)
   const [rsvpStatus, setRsvpStatus]           = useState<'attending' | 'declined' | null>(null)
@@ -114,6 +118,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
 
   const handleSealCracked = () => {
     Events.sealTapped(wedding.id, guest?.id)
+    try { localStorage.setItem(VISITED_KEY, '1') } catch { /* storage blocked */ }
     setPhase('revealed')
   }
 
@@ -228,6 +233,39 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                 />
               </div>
             )}
+
+            {/* ── Sticky RSVP shortcut pill — visible for logged-in guests before they RSVP ── */}
+            <AnimatePresence>
+              {guest && !rsvpDone && !showRSVP && (
+                <motion.div
+                  initial={{ opacity: 0, y: 16 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: 16 }}
+                  transition={{ duration: 0.5, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
+                  className="fixed bottom-6 right-4 z-40 safe-bottom"
+                  style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+                >
+                  <button
+                    onClick={handleScrollToRSVP}
+                    className="flex items-center gap-2 px-4 py-2.5 rounded-full font-body text-xs backdrop-blur-sm transition-all active:scale-95"
+                    style={{
+                      background: 'rgba(8,12,10,0.75)',
+                      border: '1px solid rgba(201,168,76,0.35)',
+                      color: 'rgba(201,168,76,0.85)',
+                      letterSpacing: '0.12em',
+                      textTransform: 'uppercase',
+                      boxShadow: '0 4px 24px rgba(0,0,0,0.4)',
+                    }}
+                    aria-label="Jump to RSVP"
+                  >
+                    RSVP
+                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+                      <path d="M12 5v14M5 12l7 7 7-7" />
+                    </svg>
+                  </button>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* QR Modal */}
             <AnimatePresence>
@@ -607,7 +645,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
             )}
 
             {/* ── GIFT REGISTRY ── */}
-            {(config.show_gift_registry || config.bank_details?.length) && (
+            {config.show_gift_registry && (
               <GiftRegistry
                 registryUrl={config.gift_registry_url}
                 registryNote={config.gift_registry_note}

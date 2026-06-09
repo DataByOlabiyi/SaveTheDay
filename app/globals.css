@@ -23,8 +23,19 @@
   --forest: #0B5240;
   --forest-deep: #073628;
   --cream: #EEF5F0;
+  /* Gold — primary luxury accent (ceremonial moments, dividers, labels) */
+  --gold: #C9A84C;
+  --gold-light: #E8CC7A;
+  --gold-dark: #A8852A;
+  --gold-raw: 201, 168, 76;
+
+  /* Emerald — functional accent (CTAs, active states, status indicators) */
+  --emerald-primary: #0CA86E;
+  --emerald-light: #3DD9A0;
+  --emerald-pale: #C0EDD9;
+
   /* Accent RGB channels — overridden per wedding theme via inline style */
-  --accent-raw: 12, 168, 110;
+  --accent-raw: 201, 168, 76;
 
   /* Semantic tokens — dark */
   --text-primary: var(--ivory);
@@ -32,11 +43,13 @@
   --text-muted: rgba(250, 247, 242, 0.35);
   --surface-1: var(--obsidian);
   --surface-2: var(--deep-charcoal);
-  --accent: var(--emerald-primary);
+  /* luxury accent = gold; action accent = emerald */
+  --accent: var(--gold);
+  --accent-action: var(--emerald-primary);
   --cta-bg: var(--emerald-primary);
   --cta-text: var(--obsidian);
-  --card-bg: rgba(12, 168, 110, 0.03);
-  --card-border: rgba(12, 168, 110, 0.1);
+  --card-bg: rgba(201, 168, 76, 0.03);
+  --card-border: rgba(201, 168, 76, 0.1);
   --input-bg: rgba(12, 168, 110, 0.03);
   --input-border: rgba(12, 168, 110, 0.2);
 
@@ -140,6 +153,35 @@
 }
 
 /* ──────────────────────────────────────────────────────────────
+   Accessibility — Reduced Motion
+   Stops all decorative animations for users who have requested it.
+   The canvas particle field is paused via JS (ParticleField reads
+   this at runtime). GSAP timelines also check window.matchMedia
+   before running the intro sequence.
+   ────────────────────────────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Keep canvas hidden — ParticleField returns null under reduced motion */
+  canvas {
+    display: none !important;
+  }
+
+  /* Framer Motion uses inline transform — override to prevent motion sickness */
+  [data-framer-motion] {
+    transform: none !important;
+    opacity: 1 !important;
+  }
+}
+
+/* ──────────────────────────────────────────────────────────────
    Base Reset & Defaults
    ────────────────────────────────────────────────────────────── */
 *, *::before, *::after {
@@ -184,11 +226,11 @@ body {
 .text-gold-gradient {
   background: linear-gradient(
     135deg,
-    var(--emerald-primary) 0%,
-    var(--emerald-light) 40%,
-    var(--emerald-pale) 55%,
-    var(--emerald-light) 70%,
-    var(--emerald-primary) 100%
+    var(--gold-dark) 0%,
+    var(--gold) 40%,
+    var(--gold-light) 55%,
+    var(--gold) 70%,
+    var(--gold-dark) 100%
   );
   background-size: 200% auto;
   -webkit-background-clip: text;
@@ -318,7 +360,7 @@ body {
    CTA Buttons
    ────────────────────────────────────────────────────────────── */
 .btn-gold {
-  background: linear-gradient(135deg, var(--emerald-primary) 0%, var(--emerald-light) 100%);
+  background: linear-gradient(135deg, var(--gold-dark) 0%, var(--gold) 60%, var(--gold-light) 100%);
   color: var(--obsidian);
   font-family: var(--font-body);
   font-weight: 500;
@@ -360,14 +402,14 @@ body {
 }
 
 .btn-gold:focus-visible {
-  outline: 2px solid var(--emerald-light);
+  outline: 2px solid var(--gold-light);
   outline-offset: 3px;
 }
 
 .btn-outline-gold {
   background: transparent;
-  color: var(--emerald-primary);
-  border: 1px solid rgba(var(--accent-raw), 0.5);
+  color: var(--gold);
+  border: 1px solid rgba(var(--gold-raw), 0.5);
   font-family: var(--font-body);
   font-weight: 400;
   font-size: 0.875rem;

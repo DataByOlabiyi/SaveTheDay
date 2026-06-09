@@ -70,11 +70,15 @@ export interface Accommodation {
   booking_url?:  string
 }
 
+export type BankCurrency = 'NGN' | 'GBP' | 'USD' | 'EUR' | 'GHS' | 'KES'
+
 export interface BankDetail {
   bank_name:      string
   account_number: string
   account_name:   string
   label?:         string
+  currency?:      BankCurrency
+  note?:          string
 }
 
 export interface MusicTrack {
@@ -84,6 +88,9 @@ export interface MusicTrack {
 }
 
 export interface WeddingConfig {
+  // ── Schema version — increment when adding required fields ──
+  config_version?: number
+
   // ── Visibility toggles ──
   show_countdown:       boolean
   show_guestbook:       boolean
@@ -93,6 +100,7 @@ export interface WeddingConfig {
   show_venue_map:       boolean
   show_gift_registry:   boolean
   show_post_uploads:    boolean
+  show_accommodations?: boolean
 
   // ── RSVP ──
   allow_plus_one:   boolean
@@ -122,7 +130,6 @@ export interface WeddingConfig {
   google_maps_url?: string
   dress_code?:      DressCode
   accommodations?:  Accommodation[]
-  show_accommodations?: boolean
 
   // ── Gallery controls ──
   allow_downloads:      boolean

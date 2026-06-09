@@ -44,6 +44,25 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const data     = parsed.data
   const supabase = createAdminClient()
+
+  // Validate the wedding exists, is published, and RSVP is still open
+  const { data: wedding, error: weddingError } = await supabase
+    .from('weddings')
+    .select('id, status, config')
+    .eq('id', data.weddingId)
+    .single()
+
+  if (weddingError || !wedding) {
+    return NextResponse.json({ error: 'Wedding not found' }, { status: 404 })
+  }
+  if (wedding.status !== 'published') {
+    return NextResponse.json({ error: 'This wedding is not accepting RSVPs' }, { status: 403 })
+  }
+  const deadline = (wedding.config as { rsvp_deadline?: string })?.rsvp_deadline
+  if (deadline && new Date(deadline) < new Date()) {
+    return NextResponse.json({ error: 'RSVP deadline has passed' }, { status: 410 })
+  }
+
   const partySize = data.party_size
   const plusOne   = partySize > 1
 

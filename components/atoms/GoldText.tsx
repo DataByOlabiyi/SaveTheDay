@@ -58,20 +58,20 @@ export function GoldDivider({ className, wide = false }: GoldDividerProps) {
           y1={lineY}
           x2={midX - gap}
           y2={lineY}
-          stroke="rgba(12,168,110,0.35)"
+          stroke="rgba(201,168,76,0.35)"
           strokeWidth="0.75"
         />
 
         {/* Diamond ornament */}
         <polygon
           points={`${midX},2 ${midX + gap - 2},${lineY} ${midX},12 ${midX - gap + 2},${lineY}`}
-          fill="rgba(12,168,110,0.12)"
-          stroke="rgba(12,168,110,0.65)"
+          fill="rgba(201,168,76,0.12)"
+          stroke="rgba(201,168,76,0.65)"
           strokeWidth="0.75"
         />
 
         {/* Tiny inner dot */}
-        <circle cx={midX} cy={lineY} r="1.2" fill="rgba(61,217,160,0.7)" />
+        <circle cx={midX} cy={lineY} r="1.2" fill="rgba(232,204,122,0.7)" />
 
         {/* Right hairline */}
         <line
@@ -79,7 +79,7 @@ export function GoldDivider({ className, wide = false }: GoldDividerProps) {
           y1={lineY}
           x2={totalW}
           y2={lineY}
-          stroke="rgba(12,168,110,0.35)"
+          stroke="rgba(201,168,76,0.35)"
           strokeWidth="0.75"
         />
       </svg>

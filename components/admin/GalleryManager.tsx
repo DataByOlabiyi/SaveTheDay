@@ -159,6 +159,7 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
     finally { setLoading(false) }
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load() }, [weddingId])
 
   const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 3000) }

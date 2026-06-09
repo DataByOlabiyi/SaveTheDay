@@ -20,13 +20,18 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholde
 // Public anon client (respects RLS) — for guest-facing reads
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
+// Module-level cache — one admin client per cold start, not per request
+let _adminClient: ReturnType<typeof createClient> | null = null
+
 // Server-side admin client — bypasses RLS, only used in API routes
 export function createAdminClient() {
+  if (_adminClient) return _adminClient
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required for admin operations')
-  return createClient(supabaseUrl, serviceKey, {
+  _adminClient = createClient(supabaseUrl, serviceKey, {
     auth: { autoRefreshToken: false, persistSession: false },
   })
+  return _adminClient
 }
 
 // ──────────────────────────────────────────────────────────────
@@ -34,9 +39,6 @@ export function createAdminClient() {
 // ──────────────────────────────────────────────────────────────
 
 export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
-  // The reserved demo slug always returns demo data without hitting Supabase
-  if (slug === 'demo-wedding') return DEMO_WEDDING
-
   try {
     const { data, error } = await supabase
       .from('weddings')
@@ -45,18 +47,20 @@ export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
       .eq('status', 'published')
       .single()
 
-    if (error || !data) return null
-
-    // Redact password hash — it must never reach the client
-    const wedding = data as Wedding
-    if (wedding.config?.privacy_password_hash) {
-      const { privacy_password_hash: _, ...safeConfig } = wedding.config
-      return { ...wedding, config: safeConfig as Wedding['config'] }
+    if (!error && data) {
+      // Redact password hash — it must never reach the client
+      const wedding = data as Wedding
+      if (wedding.config?.privacy_password_hash) {
+        const { privacy_password_hash: _, ...safeConfig } = wedding.config
+        return { ...wedding, config: safeConfig as Wedding['config'] }
+      }
+      return wedding
     }
-    return wedding
-  } catch {
-    return null
-  }
+  } catch { /* fall through to in-memory fallback */ }
+
+  // Fallback: serves in-memory demo until migration 009 seeds the real DB row
+  if (slug === 'demo-wedding') return DEMO_WEDDING
+  return null
 }
 
 /** For internal use only — returns the full config including privacy_password_hash for verification. */
@@ -149,6 +153,7 @@ export async function createWedding(
         city: input.city ?? 'Lagos',
         status: 'draft',
         config: {
+          config_version: 1,
           show_countdown: true,
           show_guestbook: false,
           allow_plus_one: true,
@@ -354,14 +359,29 @@ export async function getAnalyticsSummary(weddingId: string): Promise<AnalyticsS
       }
     }
 
-    // Fallback: if the RPC doesn't exist yet, aggregate in JS over a capped row set
-    const { data: rows, error: fallbackError } = await admin
-      .from('analytics_events')
-      .select('event_type, guest_id')
-      .eq('wedding_id', weddingId)
-      .limit(5000)
+    // Fallback: RPC not yet deployed — aggregate in JS with pagination
+    // Warn so this is visible in server logs when it fires unexpectedly
+    console.warn('[analytics] get_analytics_summary RPC unavailable — falling back to JS aggregation for wedding', weddingId)
 
-    if (fallbackError || !rows) return defaults
+    const PAGE = 1000
+    let page = 0
+    const allRows: { event_type: string; guest_id: string | null }[] = []
+
+    while (true) {
+      const { data: pageRows, error: pageError } = await admin
+        .from('analytics_events')
+        .select('event_type, guest_id')
+        .eq('wedding_id', weddingId)
+        .range(page * PAGE, (page + 1) * PAGE - 1)
+
+      if (pageError || !pageRows) break
+      allRows.push(...pageRows)
+      if (pageRows.length < PAGE) break
+      page++
+    }
+
+    const rows = allRows
+    if (rows.length === 0) return defaults
 
     const by_event: Record<string, number> = {}
     const uniqueGuests = new Set<string>()
