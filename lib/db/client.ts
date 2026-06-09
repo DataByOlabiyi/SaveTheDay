@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClient } from '@supabase/supabase-js'
 import type {
   Wedding, Guest, GuestbookEntry,
   StoryMilestone, GalleryAlbum, GalleryPhoto, EventScheduleItem,
@@ -21,7 +21,10 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? 'placeholde
 export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 // Module-level cache — one admin client per cold start, not per request
-let _adminClient: ReturnType<typeof createClient> | null = null
+// SupabaseClient (no type params) defaults to Database=any, avoiding the
+// `ReturnType<typeof createClient>` pitfall where generic params resolve to unknown→never.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let _adminClient: SupabaseClient<any> | null = null
 
 // Server-side admin client — bypasses RLS, only used in API routes
 export function createAdminClient() {
