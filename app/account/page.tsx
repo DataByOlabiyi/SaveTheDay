@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getUserProfile } from '@/lib/db/client'
 import { AccountSettingsForm } from './AccountSettingsForm'
+import { AccountDangerZone } from './AccountDangerZone'
 
 export const dynamic = 'force-dynamic'
 
@@ -65,6 +66,8 @@ export default async function AccountPage() {
             </button>
           </form>
         </div>
+
+        <AccountDangerZone />
       </div>
     </div>
   )

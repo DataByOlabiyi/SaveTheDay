@@ -24,6 +24,7 @@ import { QRCodeModal } from '@/components/molecules/QRCodeModal'
 import { ThemeToggle } from '@/components/atoms/ThemeToggle'
 import { Events } from '@/lib/analytics/events'
 import { formatWeddingDate } from '@/lib/personalization/guest'
+import { usePrefersReducedMotion } from '@/lib/utils/motion'
 import { getThemeVars } from '@/lib/themes'
 import type { Wedding, Guest, EventScheduleItem, StoryMilestone, GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
 
@@ -68,10 +69,22 @@ function buildSections(
 const VISITED_KEY = 'stv_visited'
 
 export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, albums, photos }: TheUnveilingPageProps) {
-  // Skip intro for return visitors — checks localStorage on first render
-  const hasVisited = typeof window !== 'undefined' && !!localStorage.getItem(VISITED_KEY)
-  const [phase, setPhase]                     = useState<AppPhase>(hasVisited ? 'revealed' : 'intro')
-  const [nameRevealDone, setNameRevealDone]   = useState(hasVisited)
+  const prefersReducedMotion = usePrefersReducedMotion()
+
+  // Always start from a safe SSR default — useEffect fast-forwards for return visitors
+  // and for users who prefer reduced motion (skip straight to the revealed state).
+  const [phase, setPhase]                     = useState<AppPhase>('intro')
+  const [nameRevealDone, setNameRevealDone]   = useState(false)
+
+  useEffect(() => {
+    try {
+      // Skip the cinematic intro for users who prefer reduced motion
+      if (prefersReducedMotion || localStorage.getItem(VISITED_KEY)) {
+        setPhase('revealed')
+        setNameRevealDone(true)
+      }
+    } catch {}
+  }, [prefersReducedMotion])
   const [showRSVP, setShowRSVP]               = useState(false)
   const [rsvpDone, setRsvpDone]               = useState(false)
   const [rsvpStatus, setRsvpStatus]           = useState<'attending' | 'declined' | null>(null)
@@ -146,18 +159,16 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
   }
 
   const handleShareInvitation = () => {
-    const url = typeof window !== 'undefined' ? window.location.href : ''
+    // Use the generic wedding URL so forwarded shares don't expose guest-specific links
+    const genericUrl = typeof window !== 'undefined'
+      ? `${window.location.origin}/e/${wedding.slug}`
+      : `/e/${wedding.slug}`
+    const shareText = `You're invited to ${couple_names.name1} & ${couple_names.name2}'s Wedding`
     if (navigator.share) {
-      navigator.share({
-        title: `${couple_names.name1} & ${couple_names.name2}'s Wedding`,
-        text:  guestName
-          ? `${guestName} was personally invited! Open their invitation:`
-          : `You're invited to ${couple_names.name1} & ${couple_names.name2}'s Wedding`,
-        url,
-      }).catch(() => {})
+      navigator.share({ title: shareText, url: genericUrl }).catch(() => {})
     } else {
       window.open(
-        `https://wa.me/?text=${encodeURIComponent(`${couple_names.name1} & ${couple_names.name2}'s wedding invitation: ${url}`)}`,
+        `https://wa.me/?text=${encodeURIComponent(`${shareText}: ${genericUrl}`)}`,
         '_blank'
       )
     }
@@ -198,6 +209,18 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
               onSealCracked={handleSealCracked}
               monogram={monogram}
             />
+            {/* Keyboard / accessibility bypass — also useful for screen readers */}
+            <motion.button
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 3 }}
+              onClick={handleSealCracked}
+              className="absolute bottom-8 left-1/2 -translate-x-1/2 font-body text-ivory/30 hover:text-ivory/60 focus:text-ivory/60 transition-colors outline-none focus-visible:ring-1 focus-visible:ring-gold-DEFAULT rounded px-3 py-1"
+              style={{ fontSize: '0.65rem', letterSpacing: '0.25em', textTransform: 'uppercase' }}
+              aria-label="Skip the envelope animation"
+            >
+              Skip
+            </motion.button>
           </motion.div>
         )}
       </AnimatePresence>
@@ -730,6 +753,18 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   </button>
                 </motion.div>
               )}
+
+              <p className="font-body text-ivory/10 text-xs mt-8 tracking-widest">
+                Made with{' '}
+                <a
+                  href="https://savetheday.app"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="hover:text-ivory/30 transition-colors underline underline-offset-2"
+                >
+                  Save The Day
+                </a>
+              </p>
             </footer>
           </motion.main>
         )}

@@ -17,6 +17,7 @@ const rsvpRequestSchema = z.object({
   meal_choice:      z.string().max(100).optional().or(z.literal('')),
   attending_events: z.array(z.string().max(100)).max(10).optional(),
   note:             z.string().max(500).optional().or(z.literal('')),
+  turnstileToken:   z.string().optional(),
 })
 
 export async function POST(request: NextRequest): Promise<Response> {
@@ -42,7 +43,21 @@ export async function POST(request: NextRequest): Promise<Response> {
     )
   }
 
-  const data     = parsed.data
+  const data = parsed.data
+
+  // Cloudflare Turnstile verification (enforced only when secret key is configured)
+  const turnstileSecret = process.env.TURNSTILE_SECRET_KEY
+  if (turnstileSecret) {
+    if (!data.turnstileToken) {
+      return NextResponse.json({ error: 'Bot verification required' }, { status: 403 })
+    }
+    const ip = request.headers.get('x-forwarded-for') ?? '0.0.0.0'
+    const verified = await verifyTurnstile(data.turnstileToken, ip, turnstileSecret)
+    if (!verified) {
+      return NextResponse.json({ error: 'Bot verification failed. Please try again.' }, { status: 403 })
+    }
+  }
+
   const supabase = createAdminClient()
 
   // Validate the wedding exists, is published, and RSVP is still open
@@ -135,6 +150,21 @@ export async function POST(request: NextRequest): Promise<Response> {
   )
 
   return NextResponse.json({ success: true })
+}
+
+async function verifyTurnstile(token: string, ip: string, secret: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret, response: token, remoteip: ip }),
+    })
+    const json = await res.json() as { success: boolean }
+    return json.success === true
+  } catch (err) {
+    console.error('[turnstile] verification error:', err)
+    return false
+  }
 }
 
 async function notifyCouple(

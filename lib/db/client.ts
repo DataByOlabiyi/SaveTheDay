@@ -293,7 +293,10 @@ export async function getGuestsByWedding(weddingId: string): Promise<Guest[]> {
   if (weddingId === DEMO_WEDDING.id) return DEMO_GUESTS
 
   try {
-    const { data, error } = await supabase
+    // Use admin client — guest records contain PII that must not be
+    // accessible via the public anon key (no public SELECT RLS policy on guests).
+    const admin = createAdminClient()
+    const { data, error } = await admin
       .from('guests')
       .select('*')
       .eq('wedding_id', weddingId)

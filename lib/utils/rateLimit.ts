@@ -1,5 +1,7 @@
-// Rate limiter with Upstash Redis when configured, in-memory fallback otherwise.
-// Set UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN in .env.local to enable Redis.
+// Rate limiter — Upstash Redis in production, in-memory in development.
+// UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are required in production.
+// In-memory is intentionally only for local dev: it does not work across
+// multiple serverless instances and provides zero protection in a deployed env.
 
 interface RateLimitOptions {
   key:      string
@@ -13,10 +15,10 @@ interface RateLimitResult {
   resetAt:   number
 }
 
-// ── In-memory fallback ────────────────────────────────────────
+// ── In-memory store (local dev only) ─────────────────────────
 
-interface Record { count: number; resetAt: number }
-const store = new Map<string, Record>()
+interface MemRecord { count: number; resetAt: number }
+const store = new Map<string, MemRecord>()
 
 function pruneExpired(now: number) {
   if (store.size < 500) return
@@ -43,20 +45,17 @@ function inMemoryLimit({ key, limit, windowMs }: RateLimitOptions): RateLimitRes
 // ── Upstash Redis limiter ─────────────────────────────────────
 
 let redisClient: import('@upstash/redis').Redis | null = null
-let slidingWindow: import('@upstash/ratelimit').Ratelimit | null = null
 
 function getRedisLimiter(limit: number, windowMs: number) {
   const url   = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
   if (!url || !token) return null
 
-  // Lazy-initialise once per serverless instance
   if (!redisClient) {
     const { Redis } = require('@upstash/redis')
     redisClient = new Redis({ url, token })
   }
 
-  // Ratelimit uses a fixed-window per (limit, window) pair — create on demand
   const { Ratelimit } = require('@upstash/ratelimit')
   return new Ratelimit({
     redis:     redisClient,
@@ -65,22 +64,37 @@ function getRedisLimiter(limit: number, windowMs: number) {
   })
 }
 
+const isProduction = process.env.NODE_ENV === 'production'
+
 // ── Public API ────────────────────────────────────────────────
 
 export async function checkRateLimitAsync(opts: RateLimitOptions): Promise<RateLimitResult> {
-  try {
-    const limiter = getRedisLimiter(opts.limit, opts.windowMs)
-    if (limiter) {
+  const limiter = getRedisLimiter(opts.limit, opts.windowMs)
+
+  if (limiter) {
+    try {
       const { success, remaining, reset } = await limiter.limit(opts.key)
       return { allowed: success, remaining, resetAt: reset }
+    } catch (err) {
+      // Redis is unavailable — fall back to in-memory limiting rather than
+      // blocking all traffic. A Redis outage should degrade gracefully, not
+      // take down RSVP submissions on an actual wedding day.
+      console.error('[rateLimit] Redis error — falling back to in-memory limiting:', err)
+      return inMemoryLimit(opts)
     }
-  } catch { /* Redis unavailable — fall through to in-memory */ }
+  }
+
+  // Redis not configured — warn loudly in production but allow through with
+  // in-memory limiting so the app remains functional.
+  if (isProduction) {
+    console.error('[rateLimit] UPSTASH_REDIS_REST_URL/TOKEN not set in production. Using in-memory fallback (not suitable for multi-instance deployments).')
+  }
+
   return inMemoryLimit(opts)
 }
 
-// Synchronous wrapper kept for backwards compatibility with existing API routes.
-// Uses in-memory only (Redis requires async). Upgrade callers to checkRateLimitAsync
-// for production Redis support.
+// Synchronous wrapper kept for backwards compatibility.
+// Uses in-memory only — do not call from production request paths.
 export function checkRateLimit(opts: RateLimitOptions): RateLimitResult {
   return inMemoryLimit(opts)
 }

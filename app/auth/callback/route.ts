@@ -1,16 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createSupabaseServerAdminClient } from '@/lib/supabase/server'
-
-// Only allow redirects to safe internal paths — prevents open redirect attacks
-function safeRedirectPath(next: string | null): string {
-  if (!next) return '/studio'
-  // Must be a relative path starting with / and not a protocol-relative URL (//)
-  if (next.startsWith('/') && !next.startsWith('//') && !next.includes('://')) {
-    return next
-  }
-  return '/studio'
-}
+import { safeRedirectPath } from '@/lib/utils/redirect'
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)

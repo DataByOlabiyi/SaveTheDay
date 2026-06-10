@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/db/client'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 
 const VALID_EVENT_TYPES = [
   'opened', 'seal_tapped', 'video_watched', 'rsvp_submitted', 'shared',
@@ -19,7 +19,7 @@ const schema = z.object({
 export async function POST(request: NextRequest) {
   // Gentle rate limit — max 120 analytics events per minute per IP
   const ip = request.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `analytics:${ip}`, limit: 120, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `analytics:${ip}`, limit: 120, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ ok: true }) // Silent — never break client
 
   let body: unknown

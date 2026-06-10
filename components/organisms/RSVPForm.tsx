@@ -9,6 +9,8 @@ import { toast } from 'sonner'
 import { Events } from '@/lib/analytics/events'
 import { vibrate, HAPTIC } from '@/lib/animations/timelines'
 import { cn } from '@/lib/utils'
+import { TurnstileWidget } from '@/components/atoms/TurnstileWidget'
+import { usePrefersReducedMotion } from '@/lib/utils/motion'
 
 // ──────────────────────────────────────────────────────────────
 // Zod Schema
@@ -59,6 +61,7 @@ export function RSVPForm({
   onSuccess,
   existingStatus,
 }: RSVPFormProps) {
+  const prefersReducedMotion = usePrefersReducedMotion()
   const alreadyResponded =
     existingStatus === 'attending' || existingStatus === 'declined'
 
@@ -66,6 +69,8 @@ export function RSVPForm({
   const [chosenStatus, setChosenStatus] = useState<'attending' | 'declined' | null>(
     alreadyResponded ? existingStatus : null
   )
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const turnstileRequired = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY
 
   // For anonymous guests: check localStorage to prevent blank form on return visits
   useEffect(() => {
@@ -108,7 +113,7 @@ export function RSVPForm({
       const response = await fetch('/api/rsvp', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ ...data, guestId, weddingId }),
+        body:    JSON.stringify({ ...data, guestId, weddingId, turnstileToken }),
       })
 
       if (!response.ok) {
@@ -146,9 +151,9 @@ export function RSVPForm({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 30 }}
+      initial={{ opacity: 0, y: prefersReducedMotion ? 0 : 30 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+      transition={{ duration: prefersReducedMotion ? 0 : 0.8, ease: [0.22, 1, 0.36, 1] }}
     >
       <form
         onSubmit={handleSubmit(onSubmit)}
@@ -257,7 +262,7 @@ export function RSVPForm({
                     disabled={partySize <= 1}
                     onClick={() => setValue('party_size', Math.max(1, partySize - 1))}
                     className={cn(
-                      'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150',
+                      'w-11 h-11 rounded-full flex items-center justify-center transition-all duration-150',
                       partySize <= 1
                         ? 'border border-white/10 text-ivory/20 cursor-not-allowed'
                         : 'border border-emerald-DEFAULT/50 text-emerald-DEFAULT hover:bg-emerald-DEFAULT/10'
@@ -290,7 +295,7 @@ export function RSVPForm({
                     disabled={partySize >= maxPartySize}
                     onClick={() => setValue('party_size', Math.min(maxPartySize, partySize + 1))}
                     className={cn(
-                      'w-8 h-8 rounded-full flex items-center justify-center transition-all duration-150',
+                      'w-11 h-11 rounded-full flex items-center justify-center transition-all duration-150',
                       partySize >= maxPartySize
                         ? 'border border-white/10 text-ivory/20 cursor-not-allowed'
                         : 'border border-emerald-DEFAULT/50 text-emerald-DEFAULT hover:bg-emerald-DEFAULT/10'
@@ -445,17 +450,24 @@ export function RSVPForm({
           />
         </div>
 
+        {/* ── Bot protection ── */}
+        <TurnstileWidget
+          onVerify={setTurnstileToken}
+          onExpire={() => setTurnstileToken(null)}
+          className="flex justify-center"
+        />
+
         {/* ── Submit ── */}
         <motion.button
           type="submit"
-          disabled={formState === 'submitting'}
+          disabled={formState === 'submitting' || (turnstileRequired && !turnstileToken)}
           className={cn(
             'btn-gold w-full py-4 relative overflow-hidden',
-            formState === 'submitting' && 'opacity-70 cursor-not-allowed'
+            (formState === 'submitting' || (turnstileRequired && !turnstileToken)) && 'opacity-70 cursor-not-allowed'
           )}
-          whileTap={{ scale: formState === 'submitting' ? 1 : 0.98 }}
-          animate={formState === 'submitting' ? { opacity: [0.7, 0.9, 0.7] } : {}}
-          transition={{ duration: 1, repeat: formState === 'submitting' ? Infinity : 0 }}
+          whileTap={{ scale: (prefersReducedMotion || formState === 'submitting') ? 1 : 0.98 }}
+          animate={(!prefersReducedMotion && formState === 'submitting') ? { opacity: [0.7, 0.9, 0.7] } : {}}
+          transition={{ duration: 1, repeat: (!prefersReducedMotion && formState === 'submitting') ? Infinity : 0 }}
         >
           {formState === 'submitting' ? (
             <span className="flex items-center justify-center gap-2">

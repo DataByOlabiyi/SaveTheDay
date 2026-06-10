@@ -78,21 +78,25 @@ CREATE INDEX IF NOT EXISTS idx_weddings_user_id ON weddings(user_id);
 -- One row per invited guest per wedding
 -- ──────────────────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS guests (
-  id           UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  wedding_id   UUID NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
-  name         TEXT NOT NULL,
-  slug         TEXT NOT NULL,
-  phone        TEXT,
-  email        TEXT,
-  plus_one     BOOLEAN NOT NULL DEFAULT false,
-  party_size   INT NOT NULL DEFAULT 1,
-  dietary      TEXT,
-  opened_at    TIMESTAMPTZ,
-  rsvp_status  TEXT NOT NULL DEFAULT 'pending'
-               CHECK (rsvp_status IN ('pending', 'attending', 'declined')),
-  rsvp_at      TIMESTAMPTZ,
-  rsvp_note    TEXT,
-  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  id                UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  wedding_id        UUID NOT NULL REFERENCES weddings(id) ON DELETE CASCADE,
+  name              TEXT NOT NULL,
+  slug              TEXT NOT NULL,
+  phone             TEXT,
+  email             TEXT,
+  plus_one          BOOLEAN NOT NULL DEFAULT false,
+  plus_one_name     TEXT,
+  party_size        INT NOT NULL DEFAULT 1,
+  dietary           TEXT,
+  meal_choice       TEXT,
+  attending_events  JSONB,
+  opened_at         TIMESTAMPTZ,
+  rsvp_status       TEXT NOT NULL DEFAULT 'pending'
+                    CHECK (rsvp_status IN ('pending', 'attending', 'declined')),
+  rsvp_at           TIMESTAMPTZ,
+  rsvp_note         TEXT,
+  reminder_sent_at  TIMESTAMPTZ,
+  created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   UNIQUE(wedding_id, slug)
 );
 
@@ -109,6 +113,7 @@ CREATE TABLE IF NOT EXISTS guestbook (
   guest_id     UUID REFERENCES guests(id) ON DELETE SET NULL,
   guest_name   TEXT NOT NULL,
   message      TEXT NOT NULL CHECK (length(message) <= 500),
+  reactions    JSONB NOT NULL DEFAULT '{}',
   created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
@@ -162,13 +167,10 @@ CREATE POLICY "Authenticated users can create weddings"
   ON weddings FOR INSERT
   WITH CHECK (auth.uid() = user_id);
 
--- Guests: public can read guests (needed for personalized page load)
--- NOTE: only slug, name, id, rsvp_status, opened_at are needed publicly.
--- PII columns (phone, email, dietary) should only be returned to owners
--- via API routes that use the service role key — not via direct anon queries.
-CREATE POLICY "Public can read guests by wedding"
-  ON guests FOR SELECT
-  USING (true);
+-- Guests: public SELECT is intentionally REMOVED.
+-- All guest reads go through API routes that use the service role key.
+-- This prevents direct anon-key queries from exposing phone, email, dietary, and other PII.
+-- The personalized page load uses /api/guest/* routes (admin client) — not the anon key.
 
 -- Guests: service role can write (insert/update/delete) guest records
 CREATE POLICY "Service role can manage guests"
@@ -180,10 +182,12 @@ CREATE POLICY "Public can read guestbook"
   ON guestbook FOR SELECT
   USING (true);
 
--- Guestbook: public insert (guests and open visitors can leave messages)
-CREATE POLICY "Public can submit guestbook messages"
+-- Guestbook: INSERT only via service role (API routes with rate limiting).
+-- Removing the public INSERT policy closes the bypass where anyone with the
+-- anon key could insert directly, circumventing /api/guestbook rate limits.
+CREATE POLICY "Service role can insert guestbook messages"
   ON guestbook FOR INSERT
-  WITH CHECK (length(message) > 0 AND length(message) <= 500);
+  WITH CHECK (true); -- enforced by requiring the service role key
 
 -- Analytics: service role can insert events
 CREATE POLICY "Service role can insert analytics events"

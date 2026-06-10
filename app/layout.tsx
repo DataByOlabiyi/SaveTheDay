@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/react'
 import { Toaster } from 'sonner'
+import { WebVitals } from '@/components/atoms/WebVitals'
 import './globals.css'
 
 // ──────────────────────────────────────────────────────────────
@@ -22,8 +23,8 @@ export const metadata: Metadata = {
   creator: 'Save The Day',
   applicationName: 'Save The Day',
   robots: {
-    index: false, // Guest invitations are private
-    follow: false,
+    index: true,
+    follow: true,
   },
   openGraph: {
     type: 'website',
@@ -119,6 +120,7 @@ export default function RootLayout({
           }}
         />
         <Analytics />
+        <WebVitals />
       </body>
     </html>
   )

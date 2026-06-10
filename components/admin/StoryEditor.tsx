@@ -6,6 +6,8 @@ import type { StoryMilestone } from '@/lib/db/types'
 
 interface StoryEditorProps {
   weddingId:      string
+  coupleName1?:   string
+  coupleName2?:   string
   onCountChange?: (count: number) => void
 }
 
@@ -329,12 +331,18 @@ function MilestoneRow({
 
 // ── Main editor ───────────────────────────────────────────────────────────────
 
-export function StoryEditor({ weddingId, onCountChange }: StoryEditorProps) {
+export function StoryEditor({ weddingId, coupleName1, coupleName2, onCountChange }: StoryEditorProps) {
   const [milestones, setMilestones] = useState<StoryMilestone[]>([])
   const [loading,    setLoading]    = useState(true)
   const [adding,     setAdding]     = useState(false)
   const [quickAdding, setQuickAdding] = useState<number | null>(null)
   const reorderTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // AI generation state
+  const [aiPanelOpen,  setAiPanelOpen]  = useState(false)
+  const [aiKeywords,   setAiKeywords]   = useState('')
+  const [aiGenerating, setAiGenerating] = useState(false)
+  const [aiError,      setAiError]      = useState<string | null>(null)
 
   useEffect(() => {
     fetch(`/api/story?weddingId=${weddingId}`)
@@ -359,6 +367,47 @@ export function StoryEditor({ weddingId, onCountChange }: StoryEditorProps) {
       } catch { /* silent */ }
     }, 600)
   }, [weddingId])
+
+  const handleAIGenerate = async () => {
+    setAiGenerating(true)
+    setAiError(null)
+    try {
+      const res = await fetch('/api/ai/story', {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ weddingId, keywords: aiKeywords.trim() || undefined }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error ?? 'Generation failed')
+
+      // Add each AI milestone to the database
+      for (const m of json.milestones) {
+        const saveRes = await fetch('/api/story', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({
+            weddingId,
+            title:       m.title,
+            emoji:       m.emoji,
+            date_label:  m.date_label,
+            description: m.description,
+            sort_order:  milestones.length + json.milestones.indexOf(m) + 1,
+            media_urls:  [],
+          }),
+        })
+        if (saveRes.ok) {
+          const saved = await saveRes.json()
+          setMilestones(prev => [...prev, saved.milestone])
+        }
+      }
+      setAiPanelOpen(false)
+      setAiKeywords('')
+    } catch (err) {
+      setAiError(err instanceof Error ? err.message : 'Something went wrong')
+    } finally {
+      setAiGenerating(false)
+    }
+  }
 
   const handleReorder = (newOrder: StoryMilestone[]) => {
     setMilestones(newOrder)
@@ -412,6 +461,93 @@ export function StoryEditor({ weddingId, onCountChange }: StoryEditorProps) {
 
   return (
     <div className="space-y-3">
+
+      {/* AI Generation panel */}
+      <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(201,168,76,0.12)' }}>
+        <button
+          onClick={() => { setAiPanelOpen(v => !v); setAiError(null) }}
+          className="w-full flex items-center justify-between px-4 py-3 transition-colors"
+          style={{ background: aiPanelOpen ? 'rgba(201,168,76,0.07)' : 'rgba(201,168,76,0.03)' }}
+          aria-expanded={aiPanelOpen}
+        >
+          <div className="flex items-center gap-2.5">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,0.7)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <path d="M12 2L15.09 8.26L22 9.27L17 14.14L18.18 21.02L12 17.77L5.82 21.02L7 14.14L2 9.27L8.91 8.26L12 2Z"/>
+            </svg>
+            <span className="font-body text-xs text-gold/70 tracking-wider uppercase">Generate with AI</span>
+          </div>
+          <svg
+            width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="rgba(201,168,76,0.4)" strokeWidth="2" strokeLinecap="round"
+            style={{ transform: aiPanelOpen ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}
+            aria-hidden="true"
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </button>
+
+        <AnimatePresence>
+          {aiPanelOpen && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.22 }}
+              className="overflow-hidden"
+            >
+              <div className="px-4 pb-4 pt-3 space-y-3" style={{ background: 'rgba(201,168,76,0.03)' }}>
+                {coupleName1 && coupleName2 && (
+                  <p className="font-body text-xs text-ivory/35">
+                    Generating story for <span className="text-ivory/60">{coupleName1} &amp; {coupleName2}</span>
+                  </p>
+                )}
+                <div>
+                  <p className="font-body text-[10px] tracking-[0.18em] uppercase text-ivory/25 mb-1.5">
+                    Optional context <span className="normal-case">(how you met, favorite memories…)</span>
+                  </p>
+                  <AdminTextarea
+                    value={aiKeywords}
+                    onChange={e => setAiKeywords(e.target.value)}
+                    placeholder="e.g. met at university, love for travel, proposed in Paris, enjoy hiking…"
+                    rows={3}
+                    maxLength={300}
+                  />
+                </div>
+                {aiError && (
+                  <p className="font-body text-xs text-red-400">{aiError}</p>
+                )}
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={handleAIGenerate}
+                    disabled={aiGenerating}
+                    className="flex items-center gap-2 font-body text-obsidian text-xs tracking-widest uppercase px-4 py-2 rounded-xl transition-colors disabled:opacity-40"
+                    style={{ background: '#C9A84C' }}
+                    onMouseEnter={e => { if (!aiGenerating) (e.target as HTMLButtonElement).style.background = '#E8CC7A' }}
+                    onMouseLeave={e => { (e.target as HTMLButtonElement).style.background = '#C9A84C' }}
+                  >
+                    {aiGenerating ? (
+                      <>
+                        <span className="w-3 h-3 rounded-full border border-obsidian/40 border-t-obsidian animate-spin" />
+                        Generating…
+                      </>
+                    ) : (
+                      'Generate 5 Chapters'
+                    )}
+                  </button>
+                  <button
+                    onClick={() => { setAiPanelOpen(false); setAiKeywords(''); setAiError(null) }}
+                    className="font-body text-xs text-ivory/30 hover:text-ivory/55 transition-colors tracking-wider uppercase"
+                  >
+                    Cancel
+                  </button>
+                </div>
+                <p className="font-body text-[10px] text-ivory/20 leading-relaxed">
+                  AI will generate 5 story chapters. You can edit or delete any of them after.
+                </p>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
 
       {/* Status line */}
       {milestones.length > 0 && (

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/db/client'
+import { adminDeleteUser } from '@/lib/db/admin'
 
 const schema = z.object({
   account_type:  z.enum(['couple', 'planner']),
@@ -53,4 +54,15 @@ export async function GET(request: NextRequest) {
 
   if (error || !data) return NextResponse.json({ account_type: 'couple', business_name: null })
   return NextResponse.json(data)
+}
+
+export async function DELETE() {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const result = await adminDeleteUser(user.id)
+  if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 })
+
+  return NextResponse.json({ success: true })
 }

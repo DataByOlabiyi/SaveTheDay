@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText, clampString, isSingleEmoji, isSafeUrl } from '@/lib/utils/sanitize'
 
 // Verify the authenticated user owns the given wedding
@@ -24,6 +24,20 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = createAdminClient()
+
+    // Enforce privacy gate before returning story data
+    const { data: wedding } = await db
+      .from('weddings')
+      .select('config')
+      .eq('id', weddingId)
+      .single()
+
+    if (wedding?.config?.is_private) {
+      const supabase = await createSupabaseServerClient()
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+
     const { data, error } = await db
       .from('story_milestones')
       .select('*')
@@ -62,7 +76,7 @@ const milestoneSchema = z.object({
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `story-write:${ip}`, limit: 30, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `story-write:${ip}`, limit: 30, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
   const supabase = await createSupabaseServerClient()
@@ -125,7 +139,7 @@ export async function POST(req: NextRequest) {
 // ── PATCH /api/story — bulk reorder milestones ────────────────────────────────
 export async function PATCH(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `story-reorder:${ip}`, limit: 60, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `story-reorder:${ip}`, limit: 60, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
   const supabase = await createSupabaseServerClient()

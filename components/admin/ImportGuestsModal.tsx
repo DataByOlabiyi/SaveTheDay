@@ -111,39 +111,6 @@ function parseCSV(text: string): ParsedRow[] {
     .filter(Boolean)
 }
 
-async function parseExcel(file: File): Promise<ParsedRow[]> {
-  // Dynamically import xlsx so it's excluded from the main bundle
-  const XLSX = (await import('xlsx')).default
-  const buffer = await file.arrayBuffer()
-  const wb = XLSX.read(buffer, { type: 'array' })
-  const ws = wb.Sheets[wb.SheetNames[0]]
-  const rows = XLSX.utils.sheet_to_json<Record<string, unknown>>(ws, { defval: '' })
-
-  return rows
-    .map((row): ParsedRow => {
-      const keys = Object.keys(row)
-      const nameKey  = keys.find(k => NAME_ALIASES.includes(k.toLowerCase().trim()))
-      const emailKey = keys.find(k => EMAIL_ALIASES.includes(k.toLowerCase().trim()))
-      const phoneKey = keys.find(k => PHONE_ALIASES.includes(k.toLowerCase().trim()))
-
-      const name  = String(nameKey  ? row[nameKey]  : (Object.values(row)[0] ?? '')).trim()
-      const email = String(emailKey ? row[emailKey] : '').trim()
-      const phone = String(phoneKey ? row[phoneKey] : '').trim()
-
-      if (!name) {
-        if (!email && !phone) return null as unknown as ParsedRow
-        return { name: '', email: email || undefined, phone: phone || undefined, valid: false, error: 'Missing name' }
-      }
-
-      return {
-        name,
-        email: email || undefined,
-        phone: phone || undefined,
-        valid: true,
-      }
-    })
-    .filter(Boolean)
-}
 
 // ──────────────────────────────────────────────────────────────
 // Component
@@ -172,17 +139,13 @@ export function ImportGuestsModal({
     const ext = file.name.split('.').pop()?.toLowerCase()
 
     try {
-      let parsed: ParsedRow[] = []
-
-      if (ext === 'csv') {
-        const text = await file.text()
-        parsed = parseCSV(text)
-      } else if (ext === 'xlsx' || ext === 'xls') {
-        parsed = await parseExcel(file)
-      } else {
-        setParseError('Please upload a .csv, .xlsx, or .xls file')
+      if (ext !== 'csv') {
+        setParseError('Please upload a .csv file. To convert an Excel file: File → Save As → CSV.')
         return
       }
+
+      const text = await file.text()
+      const parsed = parseCSV(text)
 
       if (parsed.length === 0) {
         setParseError('The file appears to be empty or could not be parsed')
@@ -270,7 +233,7 @@ export function ImportGuestsModal({
                 Import Guests
               </h2>
               <p className="text-xs text-ivory/25 mt-1 tracking-wider">
-                {step === 'upload' && 'Upload a CSV or Excel file'}
+                {step === 'upload' && 'Upload a CSV file'}
                 {step === 'preview' && `${fileName} — ${rows.length} row${rows.length !== 1 ? 's' : ''} found`}
                 {step === 'importing' && 'Importing…'}
                 {step === 'done' && 'Import complete'}
@@ -310,7 +273,7 @@ export function ImportGuestsModal({
                   <input
                     ref={fileInputRef}
                     type="file"
-                    accept=".csv,.xlsx,.xls"
+                    accept=".csv"
                     className="hidden"
                     onChange={e => { const f = e.target.files?.[0]; if (f) processFile(f) }}
                   />
@@ -324,7 +287,7 @@ export function ImportGuestsModal({
                   <p className="text-sm text-ivory/40 tracking-wider">
                     {dragging ? 'Drop to upload' : 'Drop file here or click to browse'}
                   </p>
-                  <p className="text-xs text-ivory/20 mt-1.5">.csv · .xlsx · .xls</p>
+                  <p className="text-xs text-ivory/20 mt-1.5">.csv only</p>
                 </div>
 
                 {/* Parse error */}

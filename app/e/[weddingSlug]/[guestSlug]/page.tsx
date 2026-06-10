@@ -13,6 +13,10 @@ interface PageProps {
   params: { weddingSlug: string; guestSlug: string }
 }
 
+// Personalized pages revalidate every 30s — guest RSVP status updates appear quickly
+// without hitting Supabase on every single page load.
+export const revalidate = 30
+
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const wedding = await getWeddingBySlug(params.weddingSlug)
   if (!wedding) return {}

@@ -153,18 +153,34 @@ const ICONS = {
 
 // ── Nav config ─────────────────────────────────────────────────────────────────
 
-const NAV_ITEMS: { id: Section; label: string }[] = [
-  { id: 'overview',    label: 'Overview' },
-  { id: 'guests',      label: 'Guests' },
-  { id: 'guestbook',   label: 'Guestbook' },
-  { id: 'story',       label: 'Our Story' },
-  { id: 'gallery',     label: 'Gallery' },
-  { id: 'timeline',    label: 'Programme' },
-  { id: 'analytics',   label: 'Analytics' },
-  { id: 'reminders',   label: 'Reminders' },
-  { id: 'thankyou',    label: 'Thank You' },
-  { id: 'invitations', label: 'Print Card' },
-  { id: 'settings',    label: 'Settings' },
+const NAV_GROUPS: Array<{ label: string; items: { id: Section; label: string }[] }> = [
+  {
+    label: '',
+    items: [{ id: 'overview', label: 'Overview' }],
+  },
+  {
+    label: 'Your Invitation',
+    items: [
+      { id: 'story',    label: 'Our Story' },
+      { id: 'gallery',  label: 'Gallery' },
+      { id: 'timeline', label: 'Programme' },
+      { id: 'settings', label: 'Settings' },
+    ],
+  },
+  {
+    label: 'Your Guests',
+    items: [
+      { id: 'guests',      label: 'Guests' },
+      { id: 'invitations', label: 'Print Card' },
+      { id: 'guestbook',   label: 'Guestbook' },
+      { id: 'reminders',   label: 'Reminders' },
+      { id: 'thankyou',    label: 'Thank You' },
+    ],
+  },
+  {
+    label: 'Insights',
+    items: [{ id: 'analytics', label: 'Analytics' }],
+  },
 ]
 
 const COMING_SOON: { id: Section; label: string }[] = []
@@ -282,23 +298,37 @@ function SidebarContent({
       )}
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-0.5">
-        {NAV_ITEMS.map(item => {
-          if (item.id === 'guestbook' && !showGuestbook) return null
-          return (
-            <NavItem
-              key={item.id}
-              id={item.id}
-              label={item.label}
-              isActive={activeSection === item.id}
-              collapsed={collapsed}
-              badge={item.id === 'guests' ? guestCount : undefined}
-              onClick={() => { onNavigate(item.id); onClose?.() }}
-              themeAccent={themeAccent}
-              themeRaw={themeRaw}
-            />
-          )
-        })}
+      <nav className="flex-1 overflow-y-auto px-2 py-3">
+        {NAV_GROUPS.map((group, gi) => (
+          <div key={gi} className={gi > 0 ? 'mt-3' : ''}>
+            {!collapsed && group.label && (
+              <p className="font-body text-[10px] tracking-[0.2em] uppercase text-ivory/20 px-3 pb-1.5 pt-1">
+                {group.label}
+              </p>
+            )}
+            {collapsed && gi > 0 && (
+              <div className="my-2 border-t border-white/[0.05]" />
+            )}
+            <div className="space-y-0.5">
+              {group.items.map(item => {
+                if (item.id === 'guestbook' && !showGuestbook) return null
+                return (
+                  <NavItem
+                    key={item.id}
+                    id={item.id}
+                    label={item.label}
+                    isActive={activeSection === item.id}
+                    collapsed={collapsed}
+                    badge={item.id === 'guests' ? guestCount : undefined}
+                    onClick={() => { onNavigate(item.id); onClose?.() }}
+                    themeAccent={themeAccent}
+                    themeRaw={themeRaw}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        ))}
 
         {COMING_SOON.length > 0 && (
           <>
@@ -655,7 +685,19 @@ function ThankYouSection({ wedding, guests, appUrl }: { wedding: Wedding; guests
 function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: string }) {
   const [downloading, setDownloading] = React.useState(false)
   const [template, setTemplate]       = React.useState<'classic' | 'royal'>('classic')
-  const cardRef = React.useRef<HTMLDivElement>(null)
+  const cardRef    = React.useRef<HTMLDivElement>(null)
+  const wrapperRef = React.useRef<HTMLDivElement>(null)
+
+  // Scale the 560px card to fit the available container width on mobile
+  React.useEffect(() => {
+    const wrapper = wrapperRef.current
+    const card    = cardRef.current
+    if (!wrapper || !card) return
+    const scale = Math.min(1, wrapper.clientWidth / 560)
+    card.style.transform       = `scale(${scale})`
+    card.style.transformOrigin = 'top center'
+    wrapper.style.height       = `${card.scrollHeight * scale}px`
+  }, [template])
 
   const inviteUrl   = `${appUrl}/e/${wedding.slug}`
   const initials    = `${wedding.couple_names.name1[0] ?? ''}${wedding.couple_names.name2[0] ?? ''}`
@@ -725,7 +767,7 @@ function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: 
       {/* Card preview */}
       <div className="admin-card p-5">
         <p className="text-xs tracking-widest uppercase text-ivory/30 mb-4">Preview</p>
-        <div className="overflow-auto">
+        <div ref={wrapperRef} className="overflow-hidden w-full relative">
           {isClassic ? (
             /* ── CLASSIC ── cream/warm white, serif, SVG corner flourishes ── */
             <div
@@ -1730,7 +1772,12 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
               {activeSection === 'story' && (
                 <motion.div key="story" {...fadeProps}>
                   <SectionHeading title="Our Story" description="Add the milestones that make up your love story. They appear on the invitation page." />
-                  <StoryEditor weddingId={wedding.id} onCountChange={setLocalStoryCount} />
+                  <StoryEditor
+                    weddingId={wedding.id}
+                    coupleName1={wedding.couple_names.name1}
+                    coupleName2={wedding.couple_names.name2}
+                    onCountChange={setLocalStoryCount}
+                  />
                 </motion.div>
               )}
 

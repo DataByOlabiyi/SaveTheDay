@@ -42,9 +42,9 @@ const submitSchema = z.object({
 })
 
 export async function POST(request: NextRequest): Promise<Response> {
-  // Rate-limit: max 5 guestbook posts per minute per IP
-  const ip = request.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = await checkRateLimitAsync({ key: `guestbook:${ip}`, limit: 5, windowMs: 60_000 })
+  // Rate-limit 1: max 5 guestbook posts per minute per IP
+  const ip  = request.headers.get('x-forwarded-for') ?? '0.0.0.0'
+  const rl  = await checkRateLimitAsync({ key: `guestbook:ip:${ip}`, limit: 5, windowMs: 60_000 })
   if (!rl.allowed) {
     return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
   }
@@ -65,6 +65,13 @@ export async function POST(request: NextRequest): Promise<Response> {
   }
 
   const { weddingId, guestId, guestName, message } = parsed.data
+
+  // Rate-limit 2: max 30 guestbook posts per hour per wedding
+  // Prevents targeted spam against a specific couple's wedding
+  const rl2 = await checkRateLimitAsync({ key: `guestbook:wedding:${weddingId}`, limit: 30, windowMs: 60 * 60_000 })
+  if (!rl2.allowed) {
+    return NextResponse.json({ error: 'Too many messages for this wedding' }, { status: 429 })
+  }
 
   // Sanitize all text inputs
   const safeName    = sanitizeText(clampString(guestName, 100))

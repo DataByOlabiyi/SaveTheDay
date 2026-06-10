@@ -15,6 +15,10 @@ interface PageProps {
   searchParams: { guest?: string }
 }
 
+// Revalidate every 60 seconds — serves most guest loads from the edge cache
+// without hitting Supabase on every request when hundreds of guests open simultaneously.
+export const revalidate = 60
+
 export async function generateMetadata({ params, searchParams }: PageProps): Promise<Metadata> {
   const wedding = await getWeddingBySlug(params.weddingSlug)
   if (!wedding) return {}
