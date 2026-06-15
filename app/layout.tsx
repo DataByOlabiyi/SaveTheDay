@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from 'next'
 import { Analytics } from '@vercel/analytics/react'
 import { Toaster } from 'sonner'
 import { WebVitals } from '@/components/atoms/WebVitals'
+import { PWAInstallPrompt } from '@/components/molecules/PWAInstallPrompt'
 import './globals.css'
 
 // ──────────────────────────────────────────────────────────────
@@ -119,6 +120,7 @@ export default function RootLayout({
             },
           }}
         />
+        <PWAInstallPrompt />
         <Analytics />
         <WebVitals />
       </body>
