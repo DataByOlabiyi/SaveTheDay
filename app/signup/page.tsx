@@ -1,73 +1,78 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
+import PasswordInput from '@/components/atoms/PasswordInput'
+import PasswordStrength from '@/components/atoms/PasswordStrength'
 
-const RESEND_COOLDOWN = 30
+function meetsAllRequirements(password: string) {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /[0-9]/.test(password)
+  )
+}
+
+function friendlyError(message: string): string {
+  const lower = message.toLowerCase()
+  if (lower.includes('already registered') || lower.includes('user already exists')) {
+    return 'An account with this email already exists. Try signing in instead.'
+  }
+  return 'Something went wrong. Please try again.'
+}
 
 export default function SignupPage() {
-  const [email, setEmail] = useState('')
-  const [sent, setSent] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [resendCooldown, setResendCooldown] = useState(0)
+  const router = useRouter()
+  const [email, setEmail]                     = useState('')
+  const [password, setPassword]               = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [loading, setLoading]                 = useState(false)
+  const [error, setError]                     = useState('')
+  const [awaitingConfirm, setAwaitingConfirm] = useState(false)
 
-  useEffect(() => {
-    if (resendCooldown <= 0) return
-    const timer = setTimeout(() => setResendCooldown(c => c - 1), 1000)
-    return () => clearTimeout(timer)
-  }, [resendCooldown])
+  const passwordsMatch   = confirmPassword.length > 0 && password === confirmPassword
+  const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword
+  const canSubmit = email && meetsAllRequirements(password) && passwordsMatch && !loading
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
+    if (!meetsAllRequirements(password)) {
+      setError('Please meet all password requirements before continuing.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Passwords do not match.')
+      return
+    }
     setLoading(true)
     setError('')
 
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/create')}`
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, redirectTo, shouldCreateUser: true }),
-    })
+    const supabase = createSupabaseBrowserClient()
+    const { data, error: authError } = await supabase.auth.signUp({ email, password })
 
-    setLoading(false)
-
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      setError(data.error ?? 'Something went wrong. Please try again.')
-    } else {
-      setSent(true)
-      setResendCooldown(RESEND_COOLDOWN)
+    if (authError) {
+      setLoading(false)
+      setError(friendlyError(authError.message))
+      return
     }
-  }
 
-  async function handleResend() {
-    if (resendCooldown > 0 || loading) return
-    setLoading(true)
-    const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/create')}`
-    const res = await fetch('/api/auth/send-otp', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, redirectTo, shouldCreateUser: true }),
-    })
-    setLoading(false)
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}))
-      setError(data.error ?? 'Something went wrong. Please try again.')
-      setSent(false)
+    if (data.session) {
+      await fetch('/api/auth/sync-profile', { method: 'POST' })
+      router.push('/create')
+      router.refresh()
     } else {
-      setResendCooldown(RESEND_COOLDOWN)
+      setLoading(false)
+      setAwaitingConfirm(true)
     }
   }
 
   async function handleGoogle() {
     const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent('/create')}`
-    await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: { redirectTo },
-    })
+    await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo } })
   }
 
   return (
@@ -78,7 +83,7 @@ export default function SignupPage() {
       </Link>
 
       <div className="w-full max-w-sm">
-        {sent ? (
+        {awaitingConfirm ? (
           <div className="text-center">
             <div
               className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-6"
@@ -88,27 +93,16 @@ export default function SignupPage() {
             </div>
             <h1 className="font-display text-2xl text-ivory mb-3">Check your email</h1>
             <p className="font-body text-ivory/40 text-sm leading-relaxed mb-6">
-              We sent a sign-in link to{' '}
+              We sent a confirmation link to{' '}
               <span className="text-ivory/70">{email}</span>.<br />
-              Click it to set up your wedding.
+              Click it to activate your account.
             </p>
-            <div className="flex flex-col items-center gap-3">
-              <button
-                onClick={handleResend}
-                disabled={resendCooldown > 0 || loading}
-                className="font-body text-gold/70 hover:text-gold text-xs tracking-wide transition-colors disabled:text-ivory/20 disabled:cursor-not-allowed"
-              >
-                {resendCooldown > 0
-                  ? `Resend in ${resendCooldown}s`
-                  : loading ? 'Sending…' : 'Resend link'}
-              </button>
-              <button
-                onClick={() => setSent(false)}
-                className="font-body text-ivory/30 text-xs tracking-wide hover:text-ivory/60 transition-colors"
-              >
-                Use a different email
-              </button>
-            </div>
+            <Link
+              href="/login"
+              className="font-body text-gold/70 hover:text-gold text-xs tracking-wide transition-colors"
+            >
+              Back to sign in
+            </Link>
           </div>
         ) : (
           <>
@@ -136,16 +130,60 @@ export default function SignupPage() {
                   onChange={e => setEmail(e.target.value)}
                   required
                   placeholder="you@example.com"
+                  autoComplete="email"
                   className="w-full bg-white/5 border border-white/10 focus:border-gold/50 text-ivory font-body text-sm px-4 py-3 rounded-sm outline-none transition-colors placeholder:text-ivory/20"
                 />
               </div>
 
+              <div>
+                <PasswordInput
+                  label="Password"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="Min. 8 characters"
+                  required
+                  minLength={8}
+                  autoComplete="new-password"
+                />
+                <PasswordStrength password={password} />
+              </div>
+
+              <div>
+                <PasswordInput
+                  label="Confirm password"
+                  value={confirmPassword}
+                  onChange={e => setConfirmPassword(e.target.value)}
+                  placeholder="Repeat your password"
+                  required
+                  autoComplete="new-password"
+                />
+                {confirmPassword.length > 0 && (
+                  <div className="flex items-center gap-2 mt-2">
+                    {passwordsMatch ? (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-green-400 shrink-0">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                        <span className="font-body text-xs text-green-400">Passwords match</span>
+                      </>
+                    ) : (
+                      <>
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400 shrink-0">
+                          <path d="M18 6L6 18M6 6l12 12" />
+                        </svg>
+                        <span className="font-body text-xs text-red-400">Passwords don&apos;t match</span>
+                      </>
+                    )}
+                  </div>
+                )}
+              </div>
+
               <button
                 type="submit"
-                disabled={loading || !email}
+                disabled={!canSubmit}
                 className="w-full bg-gold hover:bg-gold-light disabled:opacity-50 disabled:cursor-not-allowed text-obsidian font-body text-sm tracking-widest uppercase px-6 py-3 transition-colors rounded-sm"
               >
-                {loading ? 'Sending link...' : 'Get started'}
+                {loading ? 'Creating account…' : 'Get started'}
               </button>
             </form>
 

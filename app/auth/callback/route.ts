@@ -6,6 +6,7 @@ import { safeRedirectPath } from '@/lib/utils/redirect'
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url)
   const code = searchParams.get('code')
+  const type = searchParams.get('type')
   const next = safeRedirectPath(searchParams.get('next')) || '/studio'
 
   if (code) {
@@ -13,6 +14,11 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code)
 
     if (!error && data.user) {
+      // Password reset flow — send to the set-new-password page
+      if (type === 'recovery') {
+        return NextResponse.redirect(`${origin}/auth/reset-password`)
+      }
+
       const admin = await createSupabaseServerAdminClient()
 
       // Upsert user profile so the dashboard can look up their weddings
