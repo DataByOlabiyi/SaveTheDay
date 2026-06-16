@@ -51,7 +51,13 @@ export default function SignupPage() {
     setError('')
 
     const supabase = createSupabaseBrowserClient()
-    const { data, error: authError } = await supabase.auth.signUp({ email, password })
+    const { data, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/studio`,
+      },
+    })
 
     if (authError) {
       setLoading(false)
@@ -95,7 +101,7 @@ export default function SignupPage() {
             <p className="font-body text-ivory/40 text-sm leading-relaxed mb-6">
               We sent a confirmation link to{' '}
               <span className="text-ivory/70">{email}</span>.<br />
-              Click it to activate your account.
+              Click it to activate your account, then return to the app to get started.
             </p>
             <Link
               href="/login"

@@ -23,14 +23,13 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // ── /studio/* — must be logged in, scoped to /studio/login ─────
-  if (pathname.startsWith('/studio') && !pathname.startsWith('/studio/login')) {
-    if (!user) return NextResponse.redirect(new URL('/studio/login', request.url))
-  }
-
-  // ── /studio/login — redirect logged-in users to /studio ───────
-  if (pathname.startsWith('/studio/login') && user) {
-    return NextResponse.redirect(new URL('/studio', request.url))
+  // ── /studio/* — must be logged in ────────────────────────────
+  if (pathname.startsWith('/studio')) {
+    if (!user) {
+      const loginUrl = new URL('/login', request.url)
+      loginUrl.searchParams.set('next', '/studio')
+      return NextResponse.redirect(loginUrl)
+    }
   }
 
   // ── /admin/* — must be admin/super_admin, scoped to /admin/login

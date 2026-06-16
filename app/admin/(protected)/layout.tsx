@@ -72,8 +72,8 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </aside>
 
       {/* Mobile top bar */}
-      <div className="md:hidden fixed top-0 inset-x-0 z-50 h-12 flex items-center justify-between px-4"
-        style={{ background: 'rgba(9,9,11,0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)' }}>
+      <div className="md:hidden fixed top-0 inset-x-0 z-50 flex items-end justify-between px-4 pb-3"
+        style={{ background: 'rgba(9,9,11,0.95)', borderBottom: '1px solid rgba(255,255,255,0.06)', backdropFilter: 'blur(12px)', paddingTop: 'max(env(safe-area-inset-top), 12px)' }}>
         <span className="font-display text-gold text-base italic">Admin</span>
         <div className="flex items-center gap-4">
           {NAV.slice(0, 4).map(item => (
@@ -85,7 +85,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
       </div>
 
       {/* Main content */}
-      <div className="flex-1 min-w-0 md:pt-0 pt-12">
+      <div className="flex-1 min-w-0 md:pt-0" style={{ paddingTop: 'calc(max(env(safe-area-inset-top), 12px) + 36px)' }}>
         {children}
       </div>
     </div>

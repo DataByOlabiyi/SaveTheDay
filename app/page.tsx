@@ -181,7 +181,7 @@ export default function LandingPage() {
     <div className="min-h-screen bg-obsidian text-ivory">
 
       {/* Navigation */}
-      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 py-4 border-b border-white/5 backdrop-blur-sm bg-obsidian/80">
+      <nav className="fixed top-0 left-0 right-0 z-50 flex items-center justify-between px-6 pb-4 border-b border-white/5 backdrop-blur-sm bg-obsidian/80" style={{ paddingTop: 'max(env(safe-area-inset-top), 16px)' }}>
         <span className="font-display text-gold text-xl italic tracking-wide">
           Save The Day
         </span>
