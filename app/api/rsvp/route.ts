@@ -89,6 +89,37 @@ export async function POST(request: NextRequest): Promise<Response> {
   const safeEvents    = data.attending_events?.map(e => sanitizeText(e)) ?? null
 
   if (data.guestId) {
+    // Fetch guest to check block status and per-guest plus-one override
+    const { data: guestRecord, error: guestFetchError } = await supabase
+      .from('guests')
+      .select('is_blocked, allow_plus_one')
+      .eq('id', data.guestId)
+      .eq('wedding_id', data.weddingId)
+      .single()
+
+    if (guestFetchError || !guestRecord) {
+      return NextResponse.json({ error: 'Guest not found' }, { status: 404 })
+    }
+
+    if (guestRecord.is_blocked) {
+      return NextResponse.json(
+        { error: 'This invitation is no longer accepting responses.' },
+        { status: 403 }
+      )
+    }
+
+    // Per-guest plus-one override: null means inherit from wedding config
+    const plusOneAllowed = guestRecord.allow_plus_one !== null && guestRecord.allow_plus_one !== undefined
+      ? guestRecord.allow_plus_one
+      : (wedding.config as { allow_plus_one?: boolean }).allow_plus_one !== false
+
+    if (!plusOneAllowed && partySize > 1) {
+      return NextResponse.json(
+        { error: 'A plus-one is not permitted for this invitation.' },
+        { status: 403 }
+      )
+    }
+
     const { error } = await supabase
       .from('guests')
       .update({

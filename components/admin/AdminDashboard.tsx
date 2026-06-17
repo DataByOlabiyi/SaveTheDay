@@ -149,6 +149,8 @@ const ICONS = {
   plus:         ['M12 5v14M5 12h14'],
   lock:         ['M19 11H5a2 2 0 00-2 2v7a2 2 0 002 2h14a2 2 0 002-2v-7a2 2 0 00-2-2zM7 11V7a5 5 0 0110 0v4'],
   search:       ['M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0'],
+  refresh:      ['M1 4v6h6', 'M23 20v-6h-6', 'M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15'],
+  ban:          ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M4.93 4.93l14.14 14.14'],
 }
 
 // ── Nav config ─────────────────────────────────────────────────────────────────
@@ -1145,6 +1147,34 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
     } catch { /* silent */ }
   }, [wedding.id])
 
+  const patchGuest = useCallback(async (
+    guestId: string,
+    action: 'block' | 'unblock' | 'regenerate-link',
+    guestName: string,
+  ) => {
+    if (action === 'regenerate-link' && !confirm(`Regenerate the invitation link for ${guestName}? Their current link will stop working immediately.`)) return
+    try {
+      const res = await fetch('/api/admin/guests', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ weddingId: wedding.id, guestId, action }),
+      })
+      if (!res.ok) return
+      const data = await res.json()
+
+      if (action === 'block') {
+        setLocalGuests(prev => prev.map(g => g.id === guestId ? { ...g, is_blocked: true } : g))
+        showBanner(`${guestName} blocked — link and RSVP deactivated`)
+      } else if (action === 'unblock') {
+        setLocalGuests(prev => prev.map(g => g.id === guestId ? { ...g, is_blocked: false } : g))
+        showBanner(`${guestName} unblocked`)
+      } else if (action === 'regenerate-link') {
+        setLocalGuests(prev => prev.map(g => g.id === guestId ? { ...g, slug: data.newSlug } : g))
+        showBanner('New invitation link generated — old link is now dead')
+      }
+    } catch { /* silent */ }
+  }, [wedding.id])
+
   const copyLink = (guestSlug: string) => {
     const url = `${appUrl}/e/${wedding.slug}/${guestSlug}`
     navigator.clipboard.writeText(url).then(() => {
@@ -1605,10 +1635,14 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                               style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}
                             >
                               <td className="py-3.5 px-4">
-                                <p className="font-body text-sm text-ivory/80">{guest.name}</p>
-                                {(guest.party_size ?? 1) > 1 && (
+                                <p className={`font-body text-sm ${guest.is_blocked ? 'text-ivory/30 line-through decoration-red-500/40' : 'text-ivory/80'}`}>
+                                  {guest.name}
+                                </p>
+                                {guest.is_blocked ? (
+                                  <p className="font-body text-[10px] text-red-400/50 mt-0.5 tracking-widest uppercase">Blocked</p>
+                                ) : (guest.party_size ?? 1) > 1 ? (
                                   <p className="font-body text-xs text-ivory/25 mt-0.5">+{(guest.party_size ?? 1) - 1} guest{(guest.party_size ?? 1) - 1 !== 1 ? 's' : ''}</p>
-                                )}
+                                ) : null}
                               </td>
                               <td className="py-3.5 px-4 hidden sm:table-cell">
                                 <p className="font-body text-xs text-ivory/35">{guest.email || guest.phone || '—'}</p>
@@ -1640,6 +1674,13 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                                     {copied === guest.slug ? '✓' : 'Copy'}
                                   </button>
                                   <button
+                                    onClick={() => patchGuest(guest.id, 'regenerate-link', guest.name)}
+                                    className="text-ivory/20 hover:text-ivory/60 transition-colors"
+                                    title={`Regenerate link for ${guest.name} — old link stops working`}
+                                  >
+                                    <Icon paths={ICONS.refresh} className="w-3 h-3" />
+                                  </button>
+                                  <button
                                     onClick={() => { setQrGuestSlug(guest.slug); setShowQRModal(true) }}
                                     className="text-ivory/25 hover:text-ivory/60 transition-colors"
                                     title={`QR code for ${guest.name}`}
@@ -1658,6 +1699,13 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                                       <path d="M12 0C5.373 0 0 5.373 0 12c0 2.127.558 4.126 1.532 5.859L.058 23.617a.5.5 0 00.61.637l5.939-1.55A11.95 11.95 0 0012 24c6.627 0 12-5.373 12-12S18.627 0 12 0zm0 22c-1.907 0-3.7-.505-5.25-1.385l-.378-.214-3.527.921.937-3.451-.233-.384A9.955 9.955 0 012 12C2 6.477 6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
                                     </svg>
                                   </a>
+                                  <button
+                                    onClick={() => patchGuest(guest.id, guest.is_blocked ? 'unblock' : 'block', guest.name)}
+                                    className={`transition-colors ${guest.is_blocked ? 'text-red-400/70 hover:text-red-400' : 'text-ivory/20 hover:text-red-400/60'}`}
+                                    title={guest.is_blocked ? `Unblock ${guest.name}` : `Block ${guest.name} — deactivates their link and RSVP`}
+                                  >
+                                    <Icon paths={ICONS.ban} className="w-3.5 h-3.5" />
+                                  </button>
                                   <button
                                     onClick={() => deleteGuest(guest.id, guest.name)}
                                     className="text-red-500/25 hover:text-red-400/70 transition-colors"

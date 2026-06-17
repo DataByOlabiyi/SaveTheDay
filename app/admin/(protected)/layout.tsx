@@ -9,11 +9,12 @@ export const metadata: Metadata = {
 }
 
 const NAV = [
-  { href: '/admin',          label: 'Overview'  },
-  { href: '/admin/users',    label: 'Users'     },
-  { href: '/admin/weddings', label: 'Weddings'  },
-  { href: '/admin/team',     label: 'Team'      },
-  { href: '/admin/audit',    label: 'Audit Log' },
+  { href: '/admin',             label: 'Overview'  },
+  { href: '/admin/users',       label: 'Users'     },
+  { href: '/admin/weddings',    label: 'Weddings'  },
+  { href: '/admin/team',        label: 'Team'      },
+  { href: '/admin/audit',       label: 'Audit Log' },
+  { href: '/admin/settings',    label: 'Settings'  },
 ]
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {

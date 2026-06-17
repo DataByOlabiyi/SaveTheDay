@@ -4,6 +4,7 @@ import Link from 'next/link'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { getUserProfile } from '@/lib/db/client'
 import { AccountSettingsForm } from './AccountSettingsForm'
+import { ChangePasswordForm } from './ChangePasswordForm'
 import { AccountDangerZone } from './AccountDangerZone'
 
 export const dynamic = 'force-dynamic'
@@ -52,6 +53,12 @@ export default async function AccountPage() {
           initialBusinessName={profile?.business_name ?? ''}
           initialFullName={profile?.full_name ?? ''}
         />
+
+        <div className="mt-10 pt-8 border-t border-white/5">
+          <p className="font-body text-gold text-xs tracking-[0.3em] uppercase mb-1">Security</p>
+          <h2 className="font-display text-xl text-ivory mb-6">Change password</h2>
+          <ChangePasswordForm />
+        </div>
 
         <div className="mt-10 pt-8 border-t border-white/5">
           <p className="font-body text-ivory/30 text-sm mb-4">

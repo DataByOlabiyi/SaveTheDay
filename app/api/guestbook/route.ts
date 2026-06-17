@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { supabase, createAdminClient } from '@/lib/db/client'
+import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText, clampString } from '@/lib/utils/sanitize'
 
@@ -106,4 +107,46 @@ export async function POST(request: NextRequest): Promise<Response> {
     console.error('Guestbook POST error:', err)
     return NextResponse.json({ error: 'Failed to save message' }, { status: 500 })
   }
+}
+
+// ──────────────────────────────────────────────────────────────
+// DELETE /api/guestbook?entryId=...&weddingId=...
+// Couple/owner deletes a guestbook entry from their Studio
+// ──────────────────────────────────────────────────────────────
+export async function DELETE(request: NextRequest): Promise<Response> {
+  const entryId   = request.nextUrl.searchParams.get('entryId')
+  const weddingId = request.nextUrl.searchParams.get('weddingId')
+
+  if (!entryId || !weddingId) {
+    return NextResponse.json({ error: 'entryId and weddingId are required' }, { status: 400 })
+  }
+
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  const db = createAdminClient()
+
+  // Verify the caller owns this wedding
+  const { data: wedding } = await db
+    .from('weddings')
+    .select('id')
+    .eq('id', weddingId)
+    .eq('user_id', user.id)
+    .single()
+
+  if (!wedding) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const { error } = await db
+    .from('guestbook')
+    .delete()
+    .eq('id', entryId)
+    .eq('wedding_id', weddingId)
+
+  if (error) {
+    console.error('Guestbook DELETE error:', error)
+    return NextResponse.json({ error: 'Failed to delete message' }, { status: 500 })
+  }
+
+  return NextResponse.json({ success: true })
 }

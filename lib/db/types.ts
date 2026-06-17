@@ -177,6 +177,8 @@ export interface Guest {
   rsvp_note?: string
   reminder_sent_at?: string
   thankyou_sent_at?: string
+  is_blocked?: boolean
+  allow_plus_one?: boolean | null
   created_at: string
 }
 

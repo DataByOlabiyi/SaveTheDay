@@ -54,13 +54,16 @@ export default async function PersonalizedWeddingPage({ params }: PageProps) {
   const wedding = await getWeddingBySlug(params.weddingSlug)
   if (!wedding) notFound()
 
-  const [guest, schedule, milestones, albums, photos] = await Promise.all([
+  const [rawGuest, schedule, milestones, albums, photos] = await Promise.all([
     getGuestBySlug(wedding.id, params.guestSlug),
     wedding.config.show_schedule !== false ? getEventSchedule(wedding.id) : Promise.resolve([]),
     wedding.config.show_story !== false    ? getStoryMilestones(wedding.id) : Promise.resolve([]),
     wedding.config.show_gallery !== false  ? getGalleryAlbums(wedding.id) : Promise.resolve([]),
     wedding.config.show_gallery !== false  ? getGalleryPhotos(wedding.id) : Promise.resolve([]),
   ])
+
+  // Blocked guests lose personalisation and RSVP access — they see the generic view
+  const guest = rawGuest?.is_blocked ? null : rawGuest
 
   const invitation = (
     <TheUnveilingPage
