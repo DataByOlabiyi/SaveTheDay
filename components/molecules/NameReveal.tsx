@@ -22,6 +22,12 @@ export function NameReveal({
   delay = 0,
 }: NameRevealProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  // Stable ref so onComplete never needs to be in the effect dependency array.
+  // Without this, an inline arrow function passed as onComplete creates a new
+  // reference on every parent render, causing the effect to cancel and restart
+  // the animation in a loop — leaving the names stuck at opacity: 0.
+  const onCompleteRef = useRef(onComplete)
+  useEffect(() => { onCompleteRef.current = onComplete })
 
   useEffect(() => {
     if (!autoPlay) return
@@ -85,12 +91,12 @@ export function NameReveal({
     // All chars done
     const totalDuration = delay + (chars.length + 5) * stagger + dur + 400
     const completionTimeout = setTimeout(() => {
-      onComplete?.()
+      onCompleteRef.current?.()
     }, totalDuration)
     timeouts.push(completionTimeout)
 
     return () => timeouts.forEach(t => clearTimeout(t))
-  }, [name1, name2, autoPlay, delay, onComplete])
+  }, [name1, name2, autoPlay, delay])
 
   const renderName = (name: string, prefix: string) =>
     name.split('').map((char, i) => (
