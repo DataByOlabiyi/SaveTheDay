@@ -17,7 +17,7 @@ export default async function AdminSettingsPage() {
       {/* Email row */}
       <div className="mb-8 p-4 border border-white/5 rounded-sm" style={{ background: 'rgba(255,255,255,0.01)' }}>
         <p className="font-body text-ivory/25 text-xs tracking-widest uppercase mb-1">Signed in as</p>
-        <p className="font-body text-ivory/80 text-sm">{identity.email}</p>
+        <p className="font-body text-ivory/80 text-sm">{identity?.email}</p>
       </div>
 
       <div className="pt-2">
