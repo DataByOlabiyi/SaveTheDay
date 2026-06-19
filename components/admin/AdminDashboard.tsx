@@ -1223,7 +1223,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="flex" style={{ minHeight: '100dvh', background: '#0F0F11' }}>
+    <div className="flex" style={{ minHeight: '100dvh', background: '#0F0F11', overflowX: 'hidden' }}>
 
       {/* ── Modals ─────────────────────────────────────────────────────────── */}
       {showAddGuest && (
@@ -1261,8 +1261,8 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
             initial={{ opacity: 0, y: -12 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
-            className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full backdrop-blur-sm"
-            style={{ background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.2)', color: '#4ade80' }}
+            className="fixed left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full backdrop-blur-sm"
+            style={{ top: 'calc(env(safe-area-inset-top) + 1rem)', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.2)', color: '#4ade80' }}
           >
             <span className="font-body text-xs tracking-wider">✓ {successMessage}</span>
           </motion.div>
@@ -1304,7 +1304,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
             <motion.aside
               key="mobile-sidebar"
               className="fixed left-0 top-0 h-screen z-50 flex flex-col w-64 md:hidden overflow-y-auto"
-              style={{ background: '#09090B', borderRight: '1px solid rgba(255,255,255,0.05)' }}
+              style={{ background: '#09090B', borderRight: '1px solid rgba(255,255,255,0.05)', paddingTop: 'env(safe-area-inset-top)' }}
               initial={{ x: -260 }}
               animate={{ x: 0 }}
               exit={{ x: -260 }}
@@ -1333,8 +1333,8 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
 
         {/* ── Top bar ─────────────────────────────────────────────────────── */}
         <header
-          className="sticky top-0 z-20 flex items-center justify-between h-14 px-4 md:px-5 shrink-0"
-          style={{ background: 'rgba(9,9,11,0.92)', borderBottom: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(12px)' }}
+          className="sticky top-0 z-20 flex items-center justify-between min-h-[3.5rem] px-4 md:px-5 shrink-0"
+          style={{ background: 'rgba(9,9,11,0.92)', borderBottom: '1px solid rgba(255,255,255,0.05)', backdropFilter: 'blur(12px)', paddingTop: 'env(safe-area-inset-top)' }}
         >
           {/* Left */}
           <div className="flex items-center gap-3 min-w-0">
@@ -1442,7 +1442,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
         </header>
 
         {/* ── Page content ────────────────────────────────────────────────── */}
-        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-hidden">
+        <main className="flex-1 p-4 md:p-6 lg:p-8 overflow-hidden" style={{ paddingBottom: 'max(1rem, env(safe-area-inset-bottom))' }}>
           {/* QR Modal */}
           <AnimatePresence>
             {showQRModal && (

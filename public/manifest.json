@@ -2,7 +2,7 @@
   "name": "Save The Day",
   "short_name": "Save The Day",
   "description": "Luxury digital wedding invitations — a personal message, just for you.",
-  "start_url": "/",
+  "start_url": "/studio",
   "scope": "/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone", "minimal-ui"],

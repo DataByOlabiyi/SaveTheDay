@@ -212,6 +212,15 @@ body {
   -webkit-tap-highlight-color: transparent;
 }
 
+/* Prevent iOS Safari from zooming the viewport when focusing inputs with
+   font-size < 16px. The zoom persists after blur, causing the "zoomed out"
+   effect when dismissing the keyboard in PWA standalone mode. */
+@supports (-webkit-touch-callout: none) {
+  input, textarea, select {
+    font-size: max(1rem, 1em);
+  }
+}
+
 /* ──────────────────────────────────────────────────────────────
    Typography
    ────────────────────────────────────────────────────────────── */
