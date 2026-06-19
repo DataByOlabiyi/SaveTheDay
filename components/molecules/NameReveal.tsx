@@ -103,6 +103,7 @@ export function NameReveal({
       <span
         key={`${prefix}-${i}`}
         data-char
+        className="text-gold-gradient"
         style={{
           display: 'inline-block',
           opacity: 0,
@@ -124,7 +125,7 @@ export function NameReveal({
     >
       {/* Name 1 */}
       <div
-        className="font-display text-gold-gradient tracking-widest"
+        className="font-display tracking-widest"
         style={{
           fontSize: 'clamp(2.5rem, 8vw, 5rem)',
           lineHeight: 1.05,
@@ -161,7 +162,7 @@ export function NameReveal({
 
       {/* Name 2 */}
       <div
-        className="font-display text-gold-gradient tracking-widest"
+        className="font-display tracking-widest"
         style={{
           fontSize: 'clamp(2.5rem, 8vw, 5rem)',
           lineHeight: 1.05,
