@@ -183,7 +183,7 @@ export function DashboardOverview({
                 }`}>
                   {item.done && (
                     <svg width="8" height="8" viewBox="0 0 10 10" fill="none">
-                      <path d="M2 5.5L4 7.5L8 3" stroke="#4ade80" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M2 5.5L4 7.5L8 3" stroke="#3DD9A0" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   )}
                 </div>
@@ -200,10 +200,10 @@ export function DashboardOverview({
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.08 }}
           className="flex items-center gap-3 px-5 py-4 rounded-2xl"
-          style={{ background: 'rgba(74,222,128,0.05)', border: '1px solid rgba(74,222,128,0.15)' }}
+          style={{ background: 'rgba(61,217,160,0.05)', border: '1px solid rgba(61,217,160,0.15)' }}
         >
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shrink-0" />
-          <p className="font-body text-emerald-400 text-sm">
+          <div className="w-2 h-2 rounded-full bg-emerald-light animate-pulse shrink-0" />
+          <p className="font-body text-emerald-light text-sm">
             Your wedding is live at{' '}
             <a
               href={`${appUrl}/e/${wedding.slug}`}
@@ -227,9 +227,9 @@ export function DashboardOverview({
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           {[
             { label: 'Total Guests', value: stats.total, color: '#C9A84C', sub: null },
-            { label: 'Attending', value: stats.attending, color: '#4ade80', sub: stats.totalSeats > stats.attending ? `${stats.totalSeats} seats` : null },
+            { label: 'Attending', value: stats.attending, color: '#3DD9A0', sub: stats.totalSeats > stats.attending ? `${stats.totalSeats} seats` : null },
             { label: 'Awaiting RSVP', value: stats.pending, color: '#C9A84C', sub: null },
-            { label: 'RSVP Rate', value: `${stats.rsvpRate}%`, color: stats.rsvpRate > 50 ? '#4ade80' : '#C9A84C', sub: null },
+            { label: 'RSVP Rate', value: `${stats.rsvpRate}%`, color: stats.rsvpRate > 50 ? '#3DD9A0' : '#C9A84C', sub: null },
           ].map((stat, i) => (
             <motion.div
               key={stat.label}

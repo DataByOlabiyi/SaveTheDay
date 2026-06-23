@@ -43,6 +43,7 @@ const config: Config = {
         'display-lg': ['clamp(2.5rem, 8vw, 5rem)', { lineHeight: '1.1', letterSpacing: '0.08em' }],
         'display-md': ['clamp(1.75rem, 5vw, 3rem)', { lineHeight: '1.15', letterSpacing: '0.06em' }],
         'subtitle': ['clamp(0.875rem, 2.5vw, 1.25rem)', { lineHeight: '1.4', letterSpacing: '0.25em' }],
+        'eyebrow': ['0.6875rem', { lineHeight: '1.2', letterSpacing: '0.25em' }],
       },
       backgroundImage: {
         'emerald-shimmer': 'linear-gradient(90deg, #0CA86E 0%, #3DD9A0 30%, #C0EDD9 50%, #3DD9A0 70%, #0CA86E 100%)',

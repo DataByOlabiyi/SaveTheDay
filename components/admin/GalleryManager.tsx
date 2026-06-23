@@ -256,7 +256,7 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
             initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
             className="flex items-center justify-between px-4 py-2.5 rounded-xl font-body text-xs"
             style={success
-              ? { background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.18)', color: '#4ade80' }
+              ? { background: 'rgba(61,217,160,0.08)', border: '1px solid rgba(61,217,160,0.18)', color: '#3DD9A0' }
               : { background: 'rgba(248,113,113,0.08)', border: '1px solid rgba(248,113,113,0.18)', color: '#f87171' }
             }
           >

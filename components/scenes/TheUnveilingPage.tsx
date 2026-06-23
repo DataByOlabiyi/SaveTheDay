@@ -337,7 +337,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
             <section
               id="section-hero"
               tabIndex={-1}
-              className="relative min-h-screen flex flex-col items-center justify-center px-6 py-20"
+              className="relative min-h-[100svh] flex flex-col items-center justify-center px-6 py-20"
               aria-label="Wedding invitation hero"
             >
               <div className="absolute inset-0 pointer-events-none" style={{
@@ -380,8 +380,8 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                       transition={{ duration: 0.8, delay: 0.2, ease: [0.22, 1, 0.36, 1] }}
                       className="text-center mb-10"
                     >
-                      <p className="font-body tracking-[0.35em] uppercase mb-3"
-                        style={{ fontSize: '0.7rem', color: 'rgba(12, 168, 110, 0.6)' }}>
+                      <p className="font-body text-eyebrow tracking-[0.35em] uppercase mb-3"
+                        style={{ color: 'rgba(12, 168, 110, 0.6)' }}>
                         Save the date
                       </p>
                       <p className="font-display text-gold-gradient"
@@ -416,13 +416,13 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                         <svg width="12" height="14" viewBox="0 0 12 14" fill="none" aria-hidden="true">
                           <path d="M6 0C2.68 0 0 2.68 0 6C0 10.5 6 14 6 14C6 14 12 10.5 12 6C12 2.68 9.32 0 6 0ZM6 8C4.9 8 4 7.1 4 6C4 4.9 4.9 4 6 4C7.1 4 8 4.9 8 6C8 7.1 7.1 8 6 8Z" fill="rgba(12, 168, 110, 0.6)" />
                         </svg>
-                        <p className="font-body tracking-widest uppercase"
-                          style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.6)' }}>
+                        <p className="font-body text-eyebrow tracking-widest uppercase"
+                          style={{ color: 'rgba(12, 168, 110, 0.6)' }}>
                           {city}
                         </p>
                       </div>
-                      <p className="font-display text-ivory/70"
-                        style={{ fontSize: 'clamp(0.875rem, 2.5vw, 1.25rem)', fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em' }}>
+                      <p className="font-display text-ivory/70 text-subtitle"
+                        style={{ fontWeight: 300, fontStyle: 'italic', letterSpacing: '0.04em' }}>
                         {venue}
                       </p>
                       {venue_address && (
@@ -488,8 +488,8 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                 aria-label="Wedding countdown"
               >
                 <div className="text-center mb-10">
-                  <p className="font-body tracking-[0.3em] uppercase mb-3"
-                    style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.5)' }}>
+                  <p className="font-body text-eyebrow tracking-[0.3em] uppercase mb-3"
+                    style={{ color: 'rgba(12, 168, 110, 0.5)' }}>
                     Counting down
                   </p>
                   <GoldDivider />
@@ -502,8 +502,8 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
             {(config.montage_images?.length || config.montage_video) && (
               <section id="section-montage" className="relative py-16 px-0">
                 <div className="text-center mb-10 px-6">
-                  <p className="font-body tracking-[0.3em] uppercase mb-3"
-                    style={{ fontSize: '0.65rem', color: 'rgba(12, 168, 110, 0.5)' }}>
+                  <p className="font-body text-eyebrow tracking-[0.3em] uppercase mb-3"
+                    style={{ color: 'rgba(12, 168, 110, 0.5)' }}>
                     Moments
                   </p>
                   <GoldDivider className="mx-auto" />

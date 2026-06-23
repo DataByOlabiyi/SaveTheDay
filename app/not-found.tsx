@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import { GoldDivider } from '@/components/atoms/GoldText'
 
 export default function NotFound() {
   return (
@@ -28,7 +29,7 @@ export default function NotFound() {
         The page you&apos;re looking for doesn&apos;t exist or may have been moved.
       </p>
 
-      <div className="divider-gold mb-8" />
+      <GoldDivider className="mb-8" />
 
       <div className="flex gap-6 mb-8">
         <Link

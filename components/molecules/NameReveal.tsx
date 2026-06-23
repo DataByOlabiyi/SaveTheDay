@@ -136,7 +136,7 @@ export function NameReveal({
       >
         <span
           data-ampersand
-          className="font-display text-gold-shimmer"
+          className="font-display text-emerald-shimmer"
           style={{
             fontSize: 'clamp(1.5rem, 5vw, 3rem)',
             fontStyle: 'italic',

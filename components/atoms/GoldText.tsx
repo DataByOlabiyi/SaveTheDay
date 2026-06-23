@@ -19,7 +19,7 @@ export function GoldText({
     <Component
       className={cn(
         'font-display',
-        shimmer ? 'text-gold-shimmer' : 'text-gold-gradient',
+        shimmer ? 'text-emerald-shimmer' : 'text-gold-gradient',
         className
       )}
     >

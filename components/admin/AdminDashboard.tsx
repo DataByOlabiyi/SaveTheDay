@@ -1293,7 +1293,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -12 }}
             className="fixed left-1/2 -translate-x-1/2 z-50 px-5 py-2.5 rounded-full backdrop-blur-sm"
-            style={{ top: 'calc(env(safe-area-inset-top) + 1rem)', background: 'rgba(74,222,128,0.12)', border: '1px solid rgba(74,222,128,0.2)', color: '#4ade80' }}
+            style={{ top: 'calc(env(safe-area-inset-top) + 1rem)', background: 'rgba(61,217,160,0.12)', border: '1px solid rgba(61,217,160,0.2)', color: '#3DD9A0' }}
           >
             <span className="font-body text-xs tracking-wider">✓ {successMessage}</span>
           </motion.div>
@@ -1523,7 +1523,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                   {/* Stats row */}
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
-                      { label: 'Attending',     value: stats.attending, color: '#4ade80', sub: `${stats.totalSeats} seats` },
+                      { label: 'Attending',     value: stats.attending, color: '#3DD9A0', sub: `${stats.totalSeats} seats` },
                       { label: 'Declined',      value: stats.declined,  color: '#f87171', sub: undefined },
                       { label: 'Awaiting',      value: stats.pending,   color: '#C9A84C', sub: undefined },
                       { label: 'Total Guests',  value: stats.total,     color: '#C9A84C', sub: undefined },
@@ -1544,7 +1544,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                     <div className="grid sm:grid-cols-2 gap-6">
                       {[
                         { label: 'Open rate', value: stats.openRate, count: `${stats.opened}/${stats.total}`, color: '#C9A84C, #E8CC7A', textColor: 'text-gold' },
-                        { label: 'RSVP rate', value: stats.rsvpRate, count: `${stats.attending + stats.declined}/${stats.total}`, color: '#4ade80, #22c55e', textColor: 'text-green-400' },
+                        { label: 'RSVP rate', value: stats.rsvpRate, count: `${stats.attending + stats.declined}/${stats.total}`, color: '#3DD9A0, #0CA86E', textColor: 'text-emerald-light' },
                       ].map(item => (
                         <div key={item.label}>
                           <div className="flex items-end justify-between mb-1.5">

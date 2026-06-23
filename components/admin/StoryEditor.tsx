@@ -54,7 +54,7 @@ function AdminTextarea({ ...props }: React.TextareaHTMLAttributes<HTMLTextAreaEl
 function VisibilityPill({ visible }: { visible: boolean }) {
   return visible ? (
     <span className="inline-flex items-center gap-1 font-body text-[10px] tracking-wide px-2 py-0.5 rounded-full shrink-0"
-      style={{ background: 'rgba(74,222,128,0.08)', border: '1px solid rgba(74,222,128,0.18)', color: '#4ade80' }}>
+      style={{ background: 'rgba(61,217,160,0.08)', border: '1px solid rgba(61,217,160,0.18)', color: '#3DD9A0' }}>
       <span className="w-1 h-1 rounded-full bg-emerald-400 inline-block" />
       Visible
     </span>

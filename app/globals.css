@@ -245,7 +245,7 @@ body {
   color: transparent;
 }
 
-.text-gold-shimmer {
+.text-emerald-shimmer {
   background: linear-gradient(
     90deg,
     var(--emerald-primary) 0%,
@@ -529,18 +529,6 @@ body {
 /* ──────────────────────────────────────────────────────────────
    Dividers
    ────────────────────────────────────────────────────────────── */
-.divider-gold {
-  width: 60px;
-  height: 1px;
-  background: linear-gradient(
-    90deg,
-    transparent 0%,
-    var(--emerald-primary) 50%,
-    transparent 100%
-  );
-  margin: 0 auto;
-}
-
 .divider-gold-wide {
   width: 120px;
   height: 1px;
@@ -565,7 +553,7 @@ body {
     transition-duration: 0.01ms !important;
   }
 
-  .text-gold-shimmer {
+  .text-emerald-shimmer {
     animation: none;
   }
 }
