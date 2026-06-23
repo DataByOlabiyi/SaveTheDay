@@ -31,5 +31,5 @@ export function clampString(s: string, max: number): string {
 /** Check if a string contains only emoji characters (for emoji field) */
 export function isSingleEmoji(s: string): boolean {
   // Allow 1-3 characters covering most single emojis
-  return s.length <= 8 && /^\p{Emoji}/u.test(s)
+  return s.length <= 8 && /^\p{Emoji_Presentation}/u.test(s)
 }

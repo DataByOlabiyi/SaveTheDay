@@ -93,9 +93,8 @@ export function MusicPlayer({ tracks: propTracks, src }: MusicPlayerProps) {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 8, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute bottom-12 left-0 rounded-xl p-4 w-64"
+            className="absolute bottom-12 left-0 rounded-xl p-4 w-64 bg-charcoal-deep"
             style={{
-              background: '#0B140F',
               border: '1px solid rgba(12,168,110,0.2)',
               boxShadow: '0 0 30px rgba(12,168,110,0.1)',
             }}

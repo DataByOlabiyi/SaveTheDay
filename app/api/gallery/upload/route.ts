@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { MAX_GALLERY_PHOTOS } from '@/lib/constants'
+import { sanitizeText } from '@/lib/utils/sanitize'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -24,10 +26,11 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
   }
 
-  const weddingId = formData.get('weddingId')?.toString()
-  const albumId   = formData.get('albumId')?.toString() || null
-  const caption   = formData.get('caption')?.toString() || null
-  const file      = formData.get('file') as File | null
+  const weddingId    = formData.get('weddingId')?.toString()
+  const albumId      = formData.get('albumId')?.toString() || null
+  const rawCaption   = formData.get('caption')?.toString() || null
+  const caption      = rawCaption !== null ? sanitizeText(rawCaption) : null
+  const file         = formData.get('file') as File | null
 
   if (!weddingId || !file) {
     return NextResponse.json({ error: 'weddingId and file required' }, { status: 400 })
@@ -76,6 +79,7 @@ export async function POST(req: NextRequest) {
     })
 
   if (uploadError) {
+    Sentry.captureException(uploadError)
     console.error('Storage upload error:', uploadError)
     return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
   }
@@ -96,6 +100,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (dbError) {
+    Sentry.captureException(dbError)
     console.error('Gallery insert error:', dbError)
     return NextResponse.json({ error: 'Failed to save photo record' }, { status: 500 })
   }

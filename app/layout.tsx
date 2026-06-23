@@ -1,14 +1,25 @@
 import type { Metadata, Viewport } from 'next'
+import { Cormorant_Garamond, Jost } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/react'
 import { Toaster } from 'sonner'
 import { WebVitals } from '@/components/atoms/WebVitals'
 import { PWAInstallPrompt } from '@/components/molecules/PWAInstallPrompt'
 import './globals.css'
 
-// ──────────────────────────────────────────────────────────────
-// Fonts are loaded via CSS @import in globals.css
-// This avoids build-time network dependency and works offline
-// ──────────────────────────────────────────────────────────────
+const cormorant = Cormorant_Garamond({
+  subsets: ['latin'],
+  weight: ['300', '400', '500', '600'],
+  style: ['normal', 'italic'],
+  variable: '--font-cormorant',
+  display: 'swap',
+})
+
+const jost = Jost({
+  subsets: ['latin'],
+  weight: ['300', '400', '500'],
+  variable: '--font-jost',
+  display: 'swap',
+})
 
 // ──────────────────────────────────────────────────────────────
 // Default Metadata (overridden per-page for personalization)
@@ -80,11 +91,10 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
+      className={`${cormorant.variable} ${jost.variable}`}
     >
       <head>
         {/* Preconnect to external resources for speed */}
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://res.cloudinary.com" />
 
         {/* ── PWA / iOS home screen tweaks ──────────────────────── */}

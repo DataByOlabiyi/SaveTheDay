@@ -83,7 +83,7 @@ export function PWAInstallPrompt() {
           role="dialog"
           aria-label="Install Save The Day app"
         >
-          <div className="relative rounded-2xl border border-gold/20 bg-[#0E1510] px-5 py-4 shadow-2xl backdrop-blur-md">
+          <div className="relative rounded-2xl border border-gold/20 bg-charcoal-deep px-5 py-4 shadow-2xl backdrop-blur-md">
             {/* Dismiss */}
             <button
               onClick={dismiss}

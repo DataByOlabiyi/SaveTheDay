@@ -9,6 +9,7 @@ import {
   DEMO_STORY_MILESTONES, DEMO_GALLERY_ALBUMS, DEMO_GALLERY_PHOTOS, DEMO_EVENT_SCHEDULE,
 } from './demo'
 import { slugify } from '@/lib/utils/slugify'
+import { sanitizeText } from '@/lib/utils/sanitize'
 
 // ──────────────────────────────────────────────────────────────
 // Supabase clients
@@ -98,7 +99,11 @@ export async function getWeddingBySlugForOwner(
       .single()
 
     if (error || !data) return null
-    return data as Wedding
+    const wedding = data as Wedding
+    if (wedding?.config) {
+      delete (wedding.config as unknown as Record<string, unknown>).privacy_password_hash
+    }
+    return wedding
   } catch {
     return null
   }
@@ -126,6 +131,13 @@ export async function createWedding(
 ): Promise<{ wedding: Wedding | null; error?: string }> {
   try {
     const admin = createAdminClient()
+
+    // BILLING ENFORCEMENT GOES HERE (currently free during launch)
+    // When billing goes live:
+    //   1. Fetch user's subscription: select tier from subscriptions where user_id = userId
+    //   2. Fetch limit: select max_weddings from tier_limits where tier = subscription.tier
+    //   3. Count existing weddings: select count(*) from weddings where user_id = userId
+    //   4. If count >= max_weddings return { wedding: null, error: 'Wedding limit reached for your plan' }
 
     const baseSlug = slugify(`${input.name1}-${input.name2}`)
     let slug = baseSlug
@@ -519,8 +531,8 @@ export async function addGuestbookEntry(
   const { error } = await supabase.from('guestbook').insert({
     wedding_id: weddingId,
     guest_id: guestId,
-    guest_name: guestName,
-    message,
+    guest_name: sanitizeText(guestName),
+    message: sanitizeText(message),
   })
 
   if (error) return { success: false, error: error.message }

@@ -103,9 +103,8 @@ export function QRCodeModal({
         animate={{ scale: 1, opacity: 1 }}
         exit={{ scale: 0.92, opacity: 0 }}
         transition={{ duration: 0.3, ease: [0.22, 1, 0.36, 1] }}
-        className="relative rounded-xl p-8 max-w-sm w-full text-center"
+        className="relative rounded-xl p-8 max-w-sm w-full text-center bg-charcoal-deep"
         style={{
-          background: '#0B140F',
           border: '1px solid rgba(12,168,110,0.2)',
           boxShadow: '0 0 60px rgba(12,168,110,0.15)',
         }}

@@ -1,8 +1,13 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { createAdminClient } from '@/lib/db/client'
 import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText } from '@/lib/utils/sanitize'
+
+function escapeHtml(s: string): string {
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#x27;')
+}
 
 const rsvpRequestSchema = z.object({
   weddingId:        z.string().uuid(),
@@ -45,9 +50,14 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   const data = parsed.data
 
-  // Cloudflare Turnstile verification (enforced only when secret key is configured)
+  // Cloudflare Turnstile verification
   const turnstileSecret = process.env.TURNSTILE_SECRET_KEY
-  if (turnstileSecret) {
+  if (!turnstileSecret) {
+    if (process.env.NODE_ENV === 'production') {
+      return NextResponse.json({ error: 'Bot verification is not configured' }, { status: 503 })
+    }
+    // In dev, skip silently
+  } else {
     if (!data.turnstileToken) {
       return NextResponse.json({ error: 'Bot verification required' }, { status: 403 })
     }
@@ -139,6 +149,7 @@ export async function POST(request: NextRequest): Promise<Response> {
       .eq('wedding_id', data.weddingId)
 
     if (error) {
+      Sentry.captureException(error)
       console.error('RSVP update error:', error)
       return NextResponse.json({ error: 'Failed to save RSVP' }, { status: 500 })
     }
@@ -161,6 +172,7 @@ export async function POST(request: NextRequest): Promise<Response> {
     })
 
     if (error) {
+      Sentry.captureException(error)
       console.error('Anonymous RSVP insert error:', error)
       return NextResponse.json({ error: 'Failed to save RSVP' }, { status: 500 })
     }
@@ -193,6 +205,7 @@ async function verifyTurnstile(token: string, ip: string, secret: string): Promi
     const json = await res.json() as { success: boolean }
     return json.success === true
   } catch (err) {
+    Sentry.captureException(err)
     console.error('[turnstile] verification error:', err)
     return false
   }
@@ -238,9 +251,9 @@ async function notifyCouple(
       html: `
         <div style="font-family: sans-serif; max-width: 480px; margin: 0 auto; padding: 32px; background: #080C0A; color: #FAF7F2;">
           <p style="color: #C9A84C; font-size: 12px; letter-spacing: 0.2em; text-transform: uppercase;">Save The Day</p>
-          <h2 style="font-size: 24px; margin: 16px 0;">${coupleName}</h2>
+          <h2 style="font-size: 24px; margin: 16px 0;">${escapeHtml(coupleName)}</h2>
           <p style="color: #999; line-height: 1.6;">
-            <strong style="color: #FAF7F2;">${guestName}</strong> has responded to your invitation.
+            <strong style="color: #FAF7F2;">${escapeHtml(guestName)}</strong> has responded to your invitation.
           </p>
           <div style="margin: 24px 0; padding: 16px; border: 1px solid rgba(201,168,76,0.2); border-radius: 4px; background: rgba(201,168,76,0.05);">
             <p style="margin: 0; color: ${status === 'attending' ? '#4ade80' : '#f87171'}; font-weight: bold;">

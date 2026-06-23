@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 
 const ALLOWED_REACTIONS = ['❤️', '🥂', '✨', '🎊', '🙏', '💐']
 
@@ -16,7 +17,7 @@ const schema = z.object({
 // POST /api/guestbook/react — toggle an emoji reaction on a guestbook entry
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `react:${ip}`, limit: 30, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `react:${ip}`, limit: 30, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
   let body: unknown
@@ -81,7 +82,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ reactions: updated?.reactions ?? reactions })
   } catch (err) {
-    console.error('Reaction POST error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Failed to update reaction' }, { status: 500 })
   }
 }

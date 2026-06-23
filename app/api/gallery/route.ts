@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText, clampString, isSafeUrl } from '@/lib/utils/sanitize'
 
 async function assertOwnership(userId: string, weddingId: string): Promise<boolean> {
@@ -25,6 +26,21 @@ export async function GET(req: NextRequest) {
 
   try {
     const db = createAdminClient()
+
+    // Non-published weddings are only visible to the owner
+    const { data: wedding } = await db
+      .from('weddings')
+      .select('status, user_id')
+      .eq('id', weddingId)
+      .single()
+
+    if (wedding && wedding.status !== 'published') {
+      const authClient = await createSupabaseServerClient()
+      const { data: { user } } = await authClient.auth.getUser()
+      if (!user || user.id !== wedding.user_id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+      }
+    }
 
     const tableNotFound = (err: unknown) =>
       (err as { code?: string } | null)?.code === 'PGRST205' ||
@@ -53,7 +69,7 @@ export async function GET(req: NextRequest) {
       photos: photosRes.data ?? [],
     })
   } catch (err) {
-    console.error('Gallery GET error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ albums: [], photos: [] })
   }
 }
@@ -86,7 +102,7 @@ const bodySchema = z.union([albumSchema, photoSchema])
 
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = checkRateLimit({ key: `gallery-write:${ip}`, limit: 60, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `gallery-write:${ip}`, limit: 60, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
   const supabase = await createSupabaseServerClient()
@@ -157,7 +173,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ photo: data }, { status: 201 })
     }
   } catch (err) {
-    console.error('Gallery POST error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Failed to save' }, { status: 500 })
   }
 }
@@ -186,7 +202,7 @@ export async function DELETE(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Gallery DELETE error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Failed to delete' }, { status: 500 })
   }
 }

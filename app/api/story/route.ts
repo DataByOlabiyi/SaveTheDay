@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
@@ -53,7 +54,7 @@ export async function GET(req: NextRequest) {
     }
     return NextResponse.json({ milestones: data ?? [] })
   } catch (err) {
-    console.error('Story GET error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ milestones: [] })
   }
 }
@@ -131,7 +132,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ milestone: data }, { status: 201 })
     }
   } catch (err) {
-    console.error('Story POST error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Failed to save milestone' }, { status: 500 })
   }
 }
@@ -170,6 +171,7 @@ export async function PATCH(req: NextRequest) {
 
   try {
     const db = createAdminClient()
+    // N queries, bounded by max 50 — acceptable until a DB function is added
     await Promise.all(
       orders.map(({ id, sort_order }) =>
         db.from('story_milestones')
@@ -180,7 +182,7 @@ export async function PATCH(req: NextRequest) {
     )
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Story PATCH error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Failed to reorder' }, { status: 500 })
   }
 }
@@ -212,7 +214,7 @@ export async function DELETE(req: NextRequest) {
     if (error) throw error
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Story DELETE error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Failed to delete' }, { status: 500 })
   }
 }

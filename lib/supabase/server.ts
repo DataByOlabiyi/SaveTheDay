@@ -1,5 +1,6 @@
 import { createServerClient, type CookieOptions } from '@supabase/ssr'
 import { cookies } from 'next/headers'
+import { createAdminClient } from '@/lib/db/client'
 
 export async function createSupabaseServerClient() {
   const cookieStore = await cookies()
@@ -27,12 +28,5 @@ export async function createSupabaseServerClient() {
 }
 
 export async function createSupabaseServerAdminClient() {
-  const { createClient } = await import('@supabase/supabase-js')
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-  if (!serviceKey) throw new Error('SUPABASE_SERVICE_ROLE_KEY is required')
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    serviceKey,
-    { auth: { autoRefreshToken: false, persistSession: false } }
-  )
+  return createAdminClient()
 }

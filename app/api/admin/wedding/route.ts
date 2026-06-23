@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import { revalidatePath } from 'next/cache'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
@@ -210,8 +212,14 @@ export async function PATCH(req: NextRequest) {
 
     if (updateError) throw updateError
 
+    revalidatePath(`/e/${wedding.slug}`)
+    revalidatePath(`/e/${wedding.slug}/gallery`)
+
+    delete (wedding.config as Record<string, unknown>).privacy_password_hash
+
     return NextResponse.json({ wedding })
   } catch (err) {
+    Sentry.captureException(err)
     console.error('Wedding PATCH error:', err)
     return NextResponse.json({ error: 'Failed to update wedding' }, { status: 500 })
   }

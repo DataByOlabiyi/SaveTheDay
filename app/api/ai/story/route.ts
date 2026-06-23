@@ -1,10 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText } from '@/lib/utils/sanitize'
 import Anthropic from '@anthropic-ai/sdk'
+
+const anthropic = process.env.ANTHROPIC_API_KEY
+  ? new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
+  : null
 
 const requestSchema = z.object({
   weddingId:  z.string().uuid(),
@@ -16,16 +21,14 @@ export async function POST(request: NextRequest): Promise<Response> {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  // Rate limit: 5 AI generations per hour per IP (AI calls are expensive)
-  const ip = request.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  const rl  = await checkRateLimitAsync({ key: `ai:story:${ip}`, limit: 5, windowMs: 60 * 60_000 })
-  if (!rl.allowed) {
-    return NextResponse.json({ error: 'Too many requests. Please wait before generating again.' }, { status: 429 })
+  if (!anthropic) {
+    return NextResponse.json({ error: 'AI generation is not configured' }, { status: 503 })
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY
-  if (!apiKey) {
-    return NextResponse.json({ error: 'AI generation is not configured' }, { status: 503 })
+  // Rate limit: 5 AI generations per hour per user (AI calls are expensive)
+  const rl  = await checkRateLimitAsync({ key: `ai:story:${user.id}`, limit: 5, windowMs: 60 * 60_000 })
+  if (!rl.allowed) {
+    return NextResponse.json({ error: 'Too many requests. Please wait before generating again.' }, { status: 429 })
   }
 
   let body: unknown
@@ -60,8 +63,6 @@ export async function POST(request: NextRequest): Promise<Response> {
   const name2 = sanitizeText(wedding.couple_names.name2)
   const safeKeywords = keywords ? sanitizeText(keywords) : ''
 
-  const client = new Anthropic({ apiKey })
-
   const prompt = `You are helping a couple create beautiful story milestones for their digital wedding invitation.
 
 Couple: ${name1} and ${name2}
@@ -69,7 +70,7 @@ ${safeKeywords ? `Additional context: ${safeKeywords}` : ''}
 
 Generate exactly 5 romantic love story milestones in JSON format. Each milestone should be a different chapter of their love story (e.g. how they met, first date, a memorable trip, the proposal, celebrating their future).
 
-Write descriptions in second person ("They met at…" / "${name1} and ${name2} found themselves…") — warm, personal, cinematic. Each description should be 2-3 sentences.
+Write descriptions in third person ("They met at…" / "${name1} and ${name2} found themselves…") — warm, personal, cinematic. Each description should be 2-3 sentences.
 
 Return ONLY a JSON array with no markdown, no code block:
 [
@@ -82,9 +83,11 @@ Return ONLY a JSON array with no markdown, no code block:
 ]`
 
   try {
-    const message = await client.messages.create({
-      model:      'claude-haiku-4-5-20251001',
-      max_tokens: 1024,
+    const message = await anthropic.messages.create({
+      model:       'claude-haiku-4-5-20251001',
+      max_tokens:  1024,
+      system:      'You are a romantic copywriter helping couples create beautiful digital wedding invitations. Write in a warm, cinematic, literary style. Return only valid JSON with no markdown.',
+      temperature: 0.7,
       messages: [{ role: 'user', content: prompt }],
     }, {
       timeout: 8000, // 8s — safely under Vercel's 10s function limit
@@ -98,8 +101,8 @@ Return ONLY a JSON array with no markdown, no code block:
     let milestones: { title: string; emoji: string; date_label: string; description: string }[]
     try {
       milestones = JSON.parse(jsonText)
-    } catch {
-      console.error('[ai/story] Failed to parse AI response:', raw)
+    } catch (parseErr) {
+      Sentry.captureException(parseErr, { extra: { raw } })
       return NextResponse.json({ error: 'AI returned an unexpected format. Please try again.' }, { status: 502 })
     }
 
@@ -118,7 +121,7 @@ Return ONLY a JSON array with no markdown, no code block:
 
     return NextResponse.json({ milestones: safe })
   } catch (err) {
-    console.error('[ai/story] Anthropic error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'AI generation failed. Please try again.' }, { status: 502 })
   }
 }

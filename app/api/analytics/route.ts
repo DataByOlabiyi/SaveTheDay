@@ -13,7 +13,10 @@ const schema = z.object({
   weddingId: z.string().uuid(),
   guestId:   z.string().uuid().optional(),
   eventType: z.enum(VALID_EVENT_TYPES),
-  metadata:  z.record(z.unknown()).optional(),
+  metadata:  z.record(z.string().max(100), z.string().max(500)).refine(
+    m => Object.keys(m).length <= 10,
+    { message: 'metadata may not have more than 10 keys' },
+  ).optional(),
 })
 
 export async function POST(request: NextRequest) {
@@ -38,6 +41,18 @@ export async function POST(request: NextRequest) {
 
   try {
     const supabase = createAdminClient()
+
+    // Only accept events for published weddings — prevents pollution of any couple's analytics
+    const { data: wedding } = await supabase
+      .from('weddings')
+      .select('status')
+      .eq('id', weddingId)
+      .single()
+
+    if (!wedding || wedding.status !== 'published') {
+      return NextResponse.json({ ok: true }) // Silent — never break client
+    }
+
     await supabase.from('analytics_events').insert({
       wedding_id: weddingId,
       guest_id: guestId ?? null,

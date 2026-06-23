@@ -24,7 +24,7 @@ export async function middleware(request: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
 
   // ── /studio/* — must be logged in ────────────────────────────
-  if (pathname.startsWith('/studio')) {
+  if (pathname === '/studio' || pathname.startsWith('/studio/')) {
     if (!user) {
       const loginUrl = new URL('/login', request.url)
       loginUrl.searchParams.set('next', '/studio')
@@ -33,7 +33,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── /admin/* — must be admin/super_admin, scoped to /admin/login
-  if (pathname.startsWith('/admin') && !pathname.startsWith('/admin/login')) {
+  if ((pathname === '/admin' || pathname.startsWith('/admin/')) && pathname !== '/admin/login' && !pathname.startsWith('/admin/login/')) {
     if (!user) return NextResponse.redirect(new URL('/admin/login', request.url))
 
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -58,7 +58,7 @@ export async function middleware(request: NextRequest) {
   }
 
   // ── /admin/login — redirect logged-in admins to /admin ────────
-  if (pathname.startsWith('/admin/login') && user) {
+  if ((pathname === '/admin/login' || pathname.startsWith('/admin/login/')) && user) {
     const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (serviceKey) {
       const { createClient } = await import('@supabase/supabase-js')

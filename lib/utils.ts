@@ -34,16 +34,6 @@ export function padZero(n: number): string {
   return String(n).padStart(2, '0')
 }
 
-/** Slugify a string for URL usage */
-export function slugify(str: string): string {
-  return str
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '')
-    .replace(/\s+/g, '-')
-    .replace(/-+/g, '-')
-}
-
 /** Check if we're on a touch device */
 export function isTouchDevice(): boolean {
   if (typeof window === 'undefined') return false

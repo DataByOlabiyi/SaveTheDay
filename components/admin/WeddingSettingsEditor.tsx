@@ -358,7 +358,7 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
                 className={[
                   'relative text-left p-3.5 rounded-xl transition-all duration-200',
                   isSelected
-                    ? 'ring-2 ring-offset-2 ring-offset-[#09090B]'
+                    ? 'ring-2 ring-offset-2 ring-offset-obsidian'
                     : 'hover:bg-white/[0.04] border border-white/[0.07]',
                 ].join(' ')}
                 style={isSelected ? {

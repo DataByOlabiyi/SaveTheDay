@@ -1,7 +1,4 @@
-/* Google Fonts — loaded at runtime, cached after first visit */
-@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400&family=Jost:wght@300;400;500&display=swap');
-
-/* Font variable definitions — used throughout the design system */
+/* Font variables are injected by next/font in app/layout.tsx */
 
 @tailwind base;
 @tailwind components;

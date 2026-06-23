@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { sanitizeText } from '@/lib/utils/sanitize'
@@ -75,9 +76,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // Email reminders via Resend (if configured)
   const resendKey = process.env.RESEND_API_KEY
-  if (resendKey) {
-    const emailGuests = guests.filter(g => g.email)
-    for (const g of emailGuests) {
+  const emailGuests = guests.filter(g => g.email)
+  if (resendKey && emailGuests.length > 0) {
+    const emailBatch = emailGuests.map(g => {
       const inviteUrl = `${appUrl}/e/${wedding.slug}/${g.slug}`
       const subject   = `Reminder: You haven't RSVP'd yet — ${coupleName}`
       const html = `
@@ -98,17 +99,19 @@ export async function POST(request: NextRequest): Promise<Response> {
           </p>
         </div>
       `
-      fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
-        body: JSON.stringify({
-          from:    process.env.RESEND_FROM_EMAIL ?? 'notifications@savetheday.app',
-          to:      g.email,
-          subject,
-          html,
-        }),
-      }).catch(() => {})
-    }
+      return {
+        from:    process.env.RESEND_FROM_EMAIL ?? 'notifications@savetheday.app',
+        to:      g.email as string,
+        subject,
+        html,
+      }
+    })
+
+    fetch('https://api.resend.com/emails/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
+      body: JSON.stringify(emailBatch),
+    }).catch((err: unknown) => { Sentry.captureException(err) })
   }
 
   return NextResponse.json({ success: true, links: reminderLinks, count: guests.length })

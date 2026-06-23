@@ -132,11 +132,16 @@ export async function getAllWeddings(
     emailMap[p.id] = p.email
   }
 
-  const weddings: AdminWeddingRow[] = (data as Array<Wedding & { guests: [{ count: number }] }>).map(w => ({
-    ...w,
-    guest_count: w.guests?.[0]?.count ?? 0,
-    owner_email: emailMap[w.user_id ?? ''] ?? '—',
-  }))
+  const weddings: AdminWeddingRow[] = (data as Array<Wedding & { guests: [{ count: number }] }>).map(w => {
+    if (w.config) {
+      delete (w.config as unknown as Record<string, unknown>).privacy_password_hash
+    }
+    return {
+      ...w,
+      guest_count: w.guests?.[0]?.count ?? 0,
+      owner_email: emailMap[w.user_id ?? ''] ?? '—',
+    }
+  })
 
   return { weddings, total: count ?? 0 }
 }
@@ -215,14 +220,9 @@ export async function adminDeleteWedding(
 export async function adminDeleteUser(
   userId: string
 ): Promise<{ success: boolean; error?: string }> {
-  const db = createAdminClient()
   // Deleting from auth.users cascades to user_profiles and weddings (via FK)
-  const { createClient } = await import('@supabase/supabase-js')
-  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY!
-  const authAdmin = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, serviceKey, {
-    auth: { autoRefreshToken: false, persistSession: false },
-  })
-  const { error } = await authAdmin.auth.admin.deleteUser(userId)
+  const db = createAdminClient()
+  const { error } = await db.auth.admin.deleteUser(userId)
   if (error) return { success: false, error: error.message }
   return { success: true }
 }

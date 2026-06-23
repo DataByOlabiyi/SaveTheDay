@@ -20,10 +20,15 @@ export function PhotoLightbox({
   photos, currentIndex, onClose, onNext, onPrev, goToIndex,
   onDownload, allowDownload = false,
 }: PhotoLightboxProps) {
-  const photo    = photos[currentIndex]
-  const hasPrev  = currentIndex > 0
-  const hasNext  = currentIndex < photos.length - 1
-  const thumbRef = useRef<HTMLDivElement>(null)
+  const photo          = photos[currentIndex]
+  const hasPrev        = currentIndex > 0
+  const hasNext        = currentIndex < photos.length - 1
+  const thumbRef       = useRef<HTMLDivElement>(null)
+  const closeButtonRef = useRef<HTMLButtonElement>(null)
+
+  useEffect(() => {
+    closeButtonRef.current?.focus()
+  }, [])
 
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape')                  onClose()
@@ -79,6 +84,7 @@ export function PhotoLightbox({
             </button>
           )}
           <button
+            ref={closeButtonRef}
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center text-ivory/50 hover:text-ivory transition-colors"
             aria-label="Close lightbox"

@@ -1,0 +1,28 @@
+-- ──────────────────────────────────────────────────────────────
+-- Migration 016 — Migration numbering collision note
+--
+-- What: No-op migration. Contains only a documentation comment.
+--
+-- Why: The supabase/migrations/ directory contains two pairs of
+--      files that share a numeric prefix:
+--
+--        001_new_policies_and_analytics_fn.sql  (original)
+--        001_add_missing_guest_columns.sql      (hotfix, applied later)
+--
+--        002_reactions_roles_audit.sql          (original)
+--        002_fix_rls_policies.sql               (hotfix, applied later)
+--
+--      These files were applied as emergency hotfixes before the
+--      sequential migration workflow was established. Renaming them
+--      now would desync the Supabase migration history table
+--      (supabase_migrations.schema_migrations) and prevent future
+--      migrations from applying cleanly.
+--
+--      All four files have been applied. Their DDL is idempotent
+--      (IF NOT EXISTS / DROP IF EXISTS / ON CONFLICT). Do not
+--      rename, modify, or re-apply any of these files.
+--
+--      New migrations must use prefix 017_ or higher.
+-- ──────────────────────────────────────────────────────────────
+
+SELECT 1; -- no-op

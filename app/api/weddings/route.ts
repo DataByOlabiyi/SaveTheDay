@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createWedding, upsertUserProfile } from '@/lib/db/client'
+import { sanitizeText } from '@/lib/utils/sanitize'
 
 const schema = z.object({
   name1:        z.string().min(1).max(60).trim(),
@@ -22,7 +24,8 @@ export async function POST(request: NextRequest) {
   let body: unknown
   try {
     body = await request.json()
-  } catch {
+  } catch (err) {
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
@@ -38,14 +41,15 @@ export async function POST(request: NextRequest) {
   await upsertUserProfile(user.id, user.email ?? '')
 
   const { wedding, error } = await createWedding(user.id, {
-    name1: parsed.data.name1,
-    name2: parsed.data.name2,
+    name1: sanitizeText(parsed.data.name1),
+    name2: sanitizeText(parsed.data.name2),
     wedding_date: parsed.data.wedding_date,
-    venue: parsed.data.venue,
-    city: parsed.data.city,
+    venue: sanitizeText(parsed.data.venue),
+    city: parsed.data.city !== undefined ? sanitizeText(parsed.data.city) : undefined,
   })
 
   if (error || !wedding) {
+    Sentry.captureException(new Error(error ?? 'Failed to create wedding'))
     return NextResponse.json({ error: error ?? 'Failed to create wedding' }, { status: 500 })
   }
 

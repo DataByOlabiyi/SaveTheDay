@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
+import gsap from 'gsap'
 import { cn } from '@/lib/utils'
 import { NAME_STAGGER } from '@/lib/animations/timelines'
 
@@ -22,6 +23,7 @@ export function NameReveal({
   delay = 0,
 }: NameRevealProps) {
   const containerRef = useRef<HTMLDivElement>(null)
+  const spanRefs = useRef<(HTMLSpanElement | null)[]>([])
   // Stable ref so onComplete never needs to be in the effect dependency array.
   // Without this, an inline arrow function passed as onComplete creates a new
   // reference on every parent render, causing the effect to cancel and restart
@@ -35,37 +37,25 @@ export function NameReveal({
     const container = containerRef.current
     if (!container) return
 
-    const chars = container.querySelectorAll<HTMLSpanElement>('[data-char]')
     const ampersand = container.querySelector<HTMLSpanElement>('[data-ampersand]')
 
-    // Reset to initial state
-    chars.forEach(char => {
-      char.style.opacity = '0'
-      char.style.transform = `translateY(${NAME_STAGGER.translateY}px)`
-    })
     if (ampersand) {
       ampersand.style.opacity = '0'
       ampersand.style.transform = 'scale(0.8)'
     }
 
     const stagger = NAME_STAGGER.delay
-    const dur = NAME_STAGGER.enterDuration
 
-    const timeouts: ReturnType<typeof setTimeout>[] = []
-
-    // Animate each character
-    chars.forEach((char, i) => {
-      const t = setTimeout(() => {
-        char.style.transition = `opacity ${dur}ms var(--ease-expo-out), transform ${dur}ms var(--ease-expo-out)`
-        char.style.opacity = '1'
-        char.style.transform = 'translateY(0)'
-      }, delay + i * stagger)
-      timeouts.push(t)
+    const tl = gsap.timeline({ delay: delay / 1000 })
+    spanRefs.current.forEach((el, i) => {
+      if (!el) return
+      tl.fromTo(el, { opacity: 0, y: 10 }, { opacity: 1, y: 0, duration: 0.4 }, i * (stagger / 1000))
     })
 
     // Animate ampersand with special scale effect
     const name1Chars = name1.length
     const ampStart = delay + name1Chars * stagger + 200
+    const ampTimeouts: ReturnType<typeof setTimeout>[] = []
     if (ampersand) {
       const t = setTimeout(() => {
         ampersand.style.transition = `opacity 600ms var(--ease-dramatic), transform 600ms var(--ease-dramatic)`
@@ -85,24 +75,27 @@ export function NameReveal({
           }
         }, 600)
       }, ampStart)
-      timeouts.push(t)
+      ampTimeouts.push(t)
     }
 
     // All chars done
-    const totalDuration = delay + (chars.length + 5) * stagger + dur + 400
+    const totalDuration = delay + (spanRefs.current.length + 5) * stagger + 400
     const completionTimeout = setTimeout(() => {
       onCompleteRef.current?.()
     }, totalDuration)
-    timeouts.push(completionTimeout)
+    ampTimeouts.push(completionTimeout)
 
-    return () => timeouts.forEach(t => clearTimeout(t))
+    return () => {
+      tl.kill()
+      ampTimeouts.forEach(t => clearTimeout(t))
+    }
   }, [name1, name2, autoPlay, delay])
 
-  const renderName = (name: string, prefix: string) =>
+  const renderName = (name: string, prefix: string, offset: number) =>
     name.split('').map((char, i) => (
       <span
         key={`${prefix}-${i}`}
-        data-char
+        ref={el => { spanRefs.current[offset + i] = el }}
         className="text-gold-gradient"
         style={{
           display: 'inline-block',
@@ -133,7 +126,7 @@ export function NameReveal({
           letterSpacing: '0.08em',
         }}
       >
-        {renderName(name1, 'n1')}
+        {renderName(name1, 'n1', 0)}
       </div>
 
       {/* Ampersand */}
@@ -170,7 +163,7 @@ export function NameReveal({
           letterSpacing: '0.08em',
         }}
       >
-        {renderName(name2, 'n2')}
+        {renderName(name2, 'n2', name1.length)}
       </div>
     </div>
   )

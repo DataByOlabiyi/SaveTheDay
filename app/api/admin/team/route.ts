@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { requireAdmin } from '@/lib/utils/adminAuth'
 import { getTeamMembers, setUserRole, writeAuditLog } from '@/lib/db/admin'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
+
+const postBodySchema = z.object({
+  email: z.string().email(),
+})
 
 // GET /api/admin/team — list all admin/super_admin members
 export async function GET() {
@@ -18,8 +24,20 @@ export async function POST(req: NextRequest) {
   const admin = await requireAdmin('super_admin')
   if (!admin) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
-  const { email } = await req.json()
-  if (!email?.trim()) return NextResponse.json({ error: 'email required' }, { status: 400 })
+  let body: unknown
+  try {
+    body = await req.json()
+  } catch (err) {
+    Sentry.captureException(err)
+    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
+  }
+
+  const parsed = postBodySchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
+  }
+
+  const { email } = parsed.data
 
   const db = createAdminClient()
 

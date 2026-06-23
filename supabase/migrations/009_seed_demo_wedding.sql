@@ -4,6 +4,13 @@
 -- The demo user is a synthetic service-account UUID that owns the demo wedding.
 -- It does NOT exist in auth.users, so the weddings.user_id FK is nullable — set to NULL.
 
+-- ── 0. Clear any existing demo-wedding so canonical id is always used ─────────
+-- If a demo-wedding row exists with a different id (e.g. from manual seeding),
+-- the subsequent ON CONFLICT (slug) DO NOTHING would silently skip the insert,
+-- leaving the canonical id absent and breaking every FK reference below.
+-- Demo data is safe to drop — it was previously in-memory, not real user data.
+DELETE FROM weddings WHERE slug = 'demo-wedding';
+
 -- ── 1. Wedding row ────────────────────────────────────────────────────────────
 
 INSERT INTO weddings (
@@ -50,7 +57,7 @@ VALUES (
     "intro_text": "The beginning of forever",
     "hashtag": "#AdaezeAndEmekaForever",
     "allow_downloads": true,
-    "gift_registry_note": "Your presence is our greatest gift. If you wish to bless us further, we've shared our details below.",
+    "gift_registry_note": "Your presence is our greatest gift. If you wish to bless us further, we''ve shared our details below.",
     "bank_details": [
       {
         "bank_name": "Zenith Bank",
@@ -85,6 +92,10 @@ VALUES (
 ON CONFLICT (slug) DO NOTHING;
 
 -- ── 2. Guests ─────────────────────────────────────────────────────────────────
+
+-- party_size is in schema.sql but was never added via a migration.
+ALTER TABLE guests
+  ADD COLUMN IF NOT EXISTS party_size INT NOT NULL DEFAULT 1;
 
 INSERT INTO guests (
   id,

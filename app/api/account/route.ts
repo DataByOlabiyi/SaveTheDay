@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/db/client'
 import { adminDeleteUser } from '@/lib/db/admin'
+import { sanitizeText } from '@/lib/utils/sanitize'
 
 const schema = z.object({
   account_type:  z.enum(['couple', 'planner']),
@@ -26,17 +28,22 @@ export async function PATCH(request: NextRequest) {
   }
 
   const admin = createAdminClient()
+  const rawBusinessName = parsed.data.business_name ?? null
+  const rawFullName = parsed.data.full_name ?? null
   const { error } = await admin
     .from('user_profiles')
     .upsert({
       id:            user.id,
       email:         user.email ?? '',
       account_type:  parsed.data.account_type,
-      business_name: parsed.data.business_name ?? null,
-      full_name:     parsed.data.full_name ?? null,
+      business_name: rawBusinessName !== null ? sanitizeText(rawBusinessName) : null,
+      full_name:     rawFullName !== null ? sanitizeText(rawFullName) : null,
     }, { onConflict: 'id' })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    Sentry.captureException(error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ success: true })
 }
 

@@ -62,8 +62,7 @@ const nextConfig = {
   async headers() {
     const csp = [
       "default-src 'self'",
-      // Next.js SSR/hydration requires unsafe-inline; unsafe-eval needed by GSAP
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+      "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
       "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
       "font-src 'self' data: https://fonts.gstatic.com",
       "img-src 'self' data: blob: https://res.cloudinary.com https://*.supabase.co https://api.qrserver.com",

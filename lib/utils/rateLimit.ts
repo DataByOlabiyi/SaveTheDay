@@ -46,17 +46,17 @@ function inMemoryLimit({ key, limit, windowMs }: RateLimitOptions): RateLimitRes
 
 let redisClient: import('@upstash/redis').Redis | null = null
 
-function getRedisLimiter(limit: number, windowMs: number) {
+async function getRedisLimiter(limit: number, windowMs: number) {
   const url   = process.env.UPSTASH_REDIS_REST_URL
   const token = process.env.UPSTASH_REDIS_REST_TOKEN
   if (!url || !token) return null
 
   if (!redisClient) {
-    const { Redis } = require('@upstash/redis')
+    const { Redis } = await import('@upstash/redis')
     redisClient = new Redis({ url, token })
   }
 
-  const { Ratelimit } = require('@upstash/ratelimit')
+  const { Ratelimit } = await import('@upstash/ratelimit')
   return new Ratelimit({
     redis:     redisClient,
     limiter:   Ratelimit.slidingWindow(limit, `${windowMs}ms`),
@@ -69,7 +69,7 @@ const isProduction = process.env.NODE_ENV === 'production'
 // ── Public API ────────────────────────────────────────────────
 
 export async function checkRateLimitAsync(opts: RateLimitOptions): Promise<RateLimitResult> {
-  const limiter = getRedisLimiter(opts.limit, opts.windowMs)
+  const limiter = await getRedisLimiter(opts.limit, opts.windowMs)
 
   if (limiter) {
     try {

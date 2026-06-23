@@ -25,6 +25,22 @@ type FilterStatus = 'all' | 'attending' | 'declined' | 'pending'
 
 // ── Confirm modal ──────────────────────────────────────────────────────────────
 
+const focusableSelectors = 'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+
+function handleModalKeyDown(e: React.KeyboardEvent<HTMLDivElement>) {
+  if (e.key !== 'Tab') return
+  const focusable = Array.from(
+    e.currentTarget.querySelectorAll<HTMLElement>(focusableSelectors)
+  ).filter(el => !el.hasAttribute('disabled'))
+  const first = focusable[0]
+  const last  = focusable[focusable.length - 1]
+  if (e.shiftKey) {
+    if (document.activeElement === first) { e.preventDefault(); last?.focus() }
+  } else {
+    if (document.activeElement === last) { e.preventDefault(); first?.focus() }
+  }
+}
+
 function ConfirmModal({
   title,
   description,
@@ -54,8 +70,8 @@ function ConfirmModal({
         animate={{ opacity: 1, scale: 1 }}
         exit={{ opacity: 0, scale: 0.95 }}
         transition={{ duration: 0.2 }}
-        className="w-full max-w-sm rounded-2xl p-6"
-        style={{ background: '#1A1A1C', border: '1px solid rgba(255,255,255,0.10)' }}
+        className="w-full max-w-sm rounded-2xl p-6 bg-charcoal border border-white/10"
+        onKeyDown={handleModalKeyDown}
       >
         <h2 className="font-display text-ivory/90 text-xl mb-2" style={{ fontWeight: 300 }}>{title}</h2>
         <p className="font-body text-ivory/40 text-sm leading-relaxed mb-5">{description}</p>
@@ -1058,6 +1074,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
   const [qrGuestSlug, setQrGuestSlug]           = useState<string | null>(null)
   const [successMessage, setSuccessMessage]     = useState<string | null>(null)
   const [showDeleteModal, setShowDeleteModal]   = useState(false)
+  const [confirmDelete, setConfirmDelete]       = useState<string | null>(null)
 
   const showBanner = (msg: string) => {
     setSuccessMessage(msg)
@@ -1134,8 +1151,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
     return `https://wa.me/?text=${encodeURIComponent(text)}`
   }
 
-  const deleteGuest = useCallback(async (guestId: string, guestName: string) => {
-    if (!confirm(`Remove ${guestName} from the guest list?`)) return
+  const doDeleteGuest = useCallback(async (guestId: string) => {
     try {
       const res = await fetch(
         `/api/admin/guests?weddingId=${encodeURIComponent(wedding.id)}&guestId=${encodeURIComponent(guestId)}`,
@@ -1146,6 +1162,10 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
       showBanner('Guest removed')
     } catch { /* silent */ }
   }, [wedding.id])
+
+  const deleteGuest = useCallback((guestId: string) => {
+    setConfirmDelete(guestId)
+  }, [])
 
   const patchGuest = useCallback(async (
     guestId: string,
@@ -1223,7 +1243,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
-    <div className="flex" style={{ minHeight: '100dvh', background: '#0F0F11', overflowX: 'hidden' }}>
+    <div className="flex bg-obsidian" style={{ minHeight: '100dvh', overflowX: 'hidden' }}>
 
       {/* ── Modals ─────────────────────────────────────────────────────────── */}
       {showAddGuest && (
@@ -1252,6 +1272,17 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
           />
         )}
       </AnimatePresence>
+      <AnimatePresence>
+        {confirmDelete && (
+          <ConfirmModal
+            title="Remove guest?"
+            description={`Remove ${localGuests.find(g => g.id === confirmDelete)?.name ?? 'this guest'} from the guest list? This cannot be undone.`}
+            confirmLabel="Remove"
+            onConfirm={() => { const id = confirmDelete; setConfirmDelete(null); doDeleteGuest(id) }}
+            onCancel={() => setConfirmDelete(null)}
+          />
+        )}
+      </AnimatePresence>
 
       {/* ── Success banner ──────────────────────────────────────────────────── */}
       <AnimatePresence>
@@ -1271,8 +1302,8 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
 
       {/* ── Desktop sidebar ─────────────────────────────────────────────────── */}
       <aside
-        className="hidden md:flex flex-col sticky top-0 h-screen overflow-y-auto transition-all duration-300 ease-in-out shrink-0"
-        style={{ width: SIDEBAR_W, background: '#09090B', borderRight: '1px solid rgba(255,255,255,0.05)' }}
+        className="hidden md:flex flex-col sticky top-0 h-screen overflow-y-auto transition-all duration-300 ease-in-out shrink-0 bg-obsidian"
+        style={{ width: SIDEBAR_W, borderRight: '1px solid rgba(255,255,255,0.05)' }}
       >
         <SidebarContent
           wedding={wedding}
@@ -1303,8 +1334,8 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
             />
             <motion.aside
               key="mobile-sidebar"
-              className="fixed left-0 top-0 h-screen z-50 flex flex-col w-64 md:hidden overflow-y-auto"
-              style={{ background: '#09090B', borderRight: '1px solid rgba(255,255,255,0.05)', paddingTop: 'env(safe-area-inset-top)' }}
+              className="fixed left-0 top-0 h-screen z-50 flex flex-col w-64 md:hidden overflow-y-auto bg-obsidian"
+              style={{ borderRight: '1px solid rgba(255,255,255,0.05)', paddingTop: 'env(safe-area-inset-top)' }}
               initial={{ x: -260 }}
               animate={{ x: 0 }}
               exit={{ x: -260 }}
@@ -1383,8 +1414,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                 <>
                   <div className="fixed inset-0 z-30" onClick={() => setPreviewOpen(false)} />
                   <div
-                    className="absolute right-0 top-7 z-40 w-64 rounded-xl overflow-hidden shadow-xl"
-                    style={{ background: '#1A1A1C', border: '1px solid rgba(255,255,255,0.10)' }}
+                    className="absolute right-0 top-7 z-40 w-64 rounded-xl overflow-hidden shadow-xl bg-charcoal border border-white/10"
                   >
                     <div className="px-4 py-3 border-b border-white/[0.06]">
                       <p className="font-body text-[10px] tracking-widest uppercase text-ivory/30">
@@ -1707,7 +1737,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                                     <Icon paths={ICONS.ban} className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => deleteGuest(guest.id, guest.name)}
+                                    onClick={() => deleteGuest(guest.id)}
                                     className="text-red-500/25 hover:text-red-400/70 transition-colors"
                                     title={`Remove ${guest.name}`}
                                   >

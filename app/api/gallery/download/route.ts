@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
-import { checkRateLimit } from '@/lib/utils/rateLimit'
+import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 
 const schema = z.object({
   photoId:   z.string().uuid(),
@@ -12,8 +13,7 @@ const schema = z.object({
 // POST /api/gallery/download — increment download counter
 export async function POST(req: NextRequest) {
   const ip = req.headers.get('x-forwarded-for') ?? '0.0.0.0'
-  // Allow 30 downloads per minute per IP
-  const rl  = checkRateLimit({ key: `gallery-dl:${ip}`, limit: 30, windowMs: 60_000 })
+  const rl  = await checkRateLimitAsync({ key: `gallery-dl:${ip}`, limit: 30, windowMs: 60_000 })
   if (!rl.allowed) return NextResponse.json({ error: 'Too many requests' }, { status: 429 })
 
   let body: unknown
@@ -29,6 +29,17 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createAdminClient()
 
+    // Only track downloads for published weddings — prevents counter inflation
+    const { data: wedding } = await supabase
+      .from('weddings')
+      .select('status')
+      .eq('id', weddingId)
+      .single()
+
+    if (!wedding || wedding.status !== 'published') {
+      return NextResponse.json({ success: true }) // Silent
+    }
+
     // Increment download counter
     await supabase.rpc('increment_download_count', { photo_id: photoId })
 
@@ -42,7 +53,7 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ success: true })
   } catch (err) {
-    console.error('Download POST error:', err)
+    Sentry.captureException(err)
     return NextResponse.json({ error: 'Failed to track download' }, { status: 500 })
   }
 }

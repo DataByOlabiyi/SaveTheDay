@@ -1,7 +1,15 @@
+import * as Sentry from '@sentry/nextjs'
 import { NextRequest, NextResponse } from 'next/server'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/db/client'
 import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
+import { sanitizeText } from '@/lib/utils/sanitize'
 import { MAX_GALLERY_PHOTOS } from '@/lib/constants'
+
+const uploadFieldsSchema = z.object({
+  weddingId: z.string().uuid(),
+  guestId:   z.string().uuid(),
+})
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -20,14 +28,25 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid form data' }, { status: 400 })
   }
 
-  const weddingId = formData.get('weddingId')?.toString()
-  const guestId   = formData.get('guestId')?.toString()
-  const caption   = formData.get('caption')?.toString() || null
-  const file      = formData.get('file') as File | null
+  const rawWeddingId = formData.get('weddingId')?.toString()
+  const rawGuestId   = formData.get('guestId')?.toString()
+  const rawCaption   = formData.get('caption')?.toString() || null
+  const file         = formData.get('file') as File | null
 
-  if (!weddingId || !guestId || !file) {
-    return NextResponse.json({ error: 'weddingId, guestId, and file required' }, { status: 400 })
+  const parsedFields = uploadFieldsSchema.safeParse({ weddingId: rawWeddingId, guestId: rawGuestId })
+  if (!parsedFields.success) {
+    return NextResponse.json(
+      { error: 'Validation failed', details: parsedFields.error.flatten() },
+      { status: 422 },
+    )
   }
+
+  if (!file) {
+    return NextResponse.json({ error: 'file required' }, { status: 400 })
+  }
+
+  const { weddingId, guestId } = parsedFields.data
+  const caption = rawCaption ? sanitizeText(rawCaption) : null
 
   const db = createAdminClient()
 
@@ -82,6 +101,7 @@ export async function POST(req: NextRequest) {
     .upload(path, arrayBuffer, { contentType: file.type, upsert: false })
 
   if (uploadError) {
+    Sentry.captureException(uploadError)
     console.error('Guest upload storage error:', uploadError)
     return NextResponse.json({ error: `Upload failed: ${uploadError.message}` }, { status: 500 })
   }
@@ -102,6 +122,7 @@ export async function POST(req: NextRequest) {
     .single()
 
   if (dbError) {
+    Sentry.captureException(dbError)
     console.error('Guest upload DB error:', dbError)
     return NextResponse.json({ error: 'Failed to save photo record' }, { status: 500 })
   }

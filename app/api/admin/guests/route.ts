@@ -1,7 +1,24 @@
 import { NextRequest, NextResponse } from 'next/server'
+import * as Sentry from '@sentry/nextjs'
+import { z } from 'zod'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { slugify } from '@/lib/utils/slugify'
+import { sanitizeText } from '@/lib/utils/sanitize'
+
+const addGuestSchema = z.object({
+  weddingId: z.string().uuid(),
+  name:      z.string().min(1).max(100),
+  email:     z.string().email().optional().or(z.literal('')),
+  phone:     z.string().max(30).optional().or(z.literal('')),
+})
+
+const patchGuestSchema = z.object({
+  weddingId: z.string().uuid(),
+  guestId:   z.string().uuid(),
+  action:    z.enum(['block', 'unblock', 'regenerate-link', 'set-plus-one']),
+  value:     z.boolean().nullable().optional(),
+})
 
 async function verifyOwnership(userId: string, weddingId: string) {
   const db = createAdminClient()
@@ -68,15 +85,17 @@ export async function PATCH(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  let body: { weddingId?: string; guestId?: string; action?: string; value?: boolean | null }
-  try { body = await req.json() } catch {
+  let rawBody: unknown
+  try { rawBody = await req.json() } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { weddingId, guestId, action, value } = body
-  if (!weddingId) return NextResponse.json({ error: 'weddingId is required' }, { status: 400 })
-  if (!guestId)   return NextResponse.json({ error: 'guestId is required' }, { status: 400 })
-  if (!action)    return NextResponse.json({ error: 'action is required' }, { status: 400 })
+  const parsed = patchGuestSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
+  }
+
+  const { weddingId, guestId, action, value } = parsed.data
 
   const isOwner = await verifyOwnership(user.id, weddingId)
   if (!isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -90,7 +109,10 @@ export async function PATCH(req: NextRequest) {
       .eq('id', guestId)
       .eq('wedding_id', weddingId)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      Sentry.captureException(error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json({ success: true, is_blocked: action === 'block' })
   }
 
@@ -118,7 +140,10 @@ export async function PATCH(req: NextRequest) {
       .eq('id', guestId)
       .eq('wedding_id', weddingId)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      Sentry.captureException(error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json({ success: true, newSlug })
   }
 
@@ -130,7 +155,10 @@ export async function PATCH(req: NextRequest) {
       .eq('id', guestId)
       .eq('wedding_id', weddingId)
 
-    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    if (error) {
+      Sentry.captureException(error)
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
     return NextResponse.json({ success: true, allow_plus_one: value ?? null })
   }
 
@@ -143,14 +171,18 @@ export async function POST(req: NextRequest) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
 
-  let body: Record<string, string>
-  try { body = await req.json() } catch {
+  let rawBody: unknown
+  try { rawBody = await req.json() } catch {
     return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
   }
 
-  const { weddingId, name, email, phone } = body
-  if (!weddingId) return NextResponse.json({ error: 'weddingId is required' }, { status: 400 })
-  if (!name?.trim()) return NextResponse.json({ error: 'name is required' }, { status: 400 })
+  const parsed = addGuestSchema.safeParse(rawBody)
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.flatten() }, { status: 422 })
+  }
+
+  const { weddingId, name, email, phone } = parsed.data
+  const safeName = sanitizeText(name.trim())
 
   const isOwner = await verifyOwnership(user.id, weddingId)
   if (!isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
@@ -163,7 +195,7 @@ export async function POST(req: NextRequest) {
     .eq('wedding_id', weddingId)
 
   const usedSlugs = new Set((existingGuests ?? []).map((g: { slug: string }) => g.slug))
-  const baseSlug = slugify(name.trim())
+  const baseSlug = slugify(safeName)
   let slug = baseSlug
   let attempt = 0
   while (usedSlugs.has(slug)) {
@@ -175,7 +207,7 @@ export async function POST(req: NextRequest) {
     .from('guests')
     .insert({
       wedding_id: weddingId,
-      name: name.trim(),
+      name: safeName,
       slug,
       email: email?.trim() || null,
       phone: phone?.trim() || null,
@@ -183,6 +215,58 @@ export async function POST(req: NextRequest) {
     .select()
     .single()
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    Sentry.captureException(error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
   return NextResponse.json({ guest: data }, { status: 201 })
+}
+
+// PUT /api/admin/guests — edit a guest's name, email, or phone
+const editGuestSchema = z.object({
+  weddingId: z.string().uuid(),
+  guestId:   z.string().uuid(),
+  name:      z.string().min(1).max(100),
+  email:     z.string().email().optional().or(z.literal('')),
+  phone:     z.string().max(30).optional().or(z.literal('')),
+})
+
+export async function PUT(req: NextRequest) {
+  const supabase = await createSupabaseServerClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+
+  let body: unknown
+  try { body = await req.json() } catch {
+    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 })
+  }
+
+  const parsed = editGuestSchema.safeParse(body)
+  if (!parsed.success) {
+    return NextResponse.json({ error: 'Validation failed', details: parsed.error.flatten() }, { status: 422 })
+  }
+
+  const { weddingId, guestId, name, email, phone } = parsed.data
+
+  const isOwner = await verifyOwnership(user.id, weddingId)
+  if (!isOwner) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
+
+  const db = createAdminClient()
+  const { data, error } = await db
+    .from('guests')
+    .update({
+      name:  sanitizeText(name.trim()),
+      email: email?.trim() || null,
+      phone: phone?.trim() || null,
+    })
+    .eq('id', guestId)
+    .eq('wedding_id', weddingId)
+    .select()
+    .single()
+
+  if (error) {
+    Sentry.captureException(error)
+    return NextResponse.json({ error: error.message }, { status: 500 })
+  }
+  return NextResponse.json({ guest: data })
 }

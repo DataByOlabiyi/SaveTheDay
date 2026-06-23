@@ -1,14 +1,31 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import dynamic from 'next/dynamic'
 import { motion, AnimatePresence } from 'framer-motion'
 import { EnvelopeScene } from '@/components/organisms/EnvelopeScene'
-import { MontageScene } from '@/components/organisms/MontageScene'
-import { LoveStoryScene } from '@/components/organisms/LoveStoryScene'
-import { GalleryScene } from '@/components/organisms/GalleryScene'
 import { VenueSection } from '@/components/organisms/VenueSection'
 import { RSVPForm } from '@/components/organisms/RSVPForm'
-import { GuestbookScene } from '@/components/organisms/GuestbookScene'
+
+const LoveStoryScene = dynamic(() => import('@/components/organisms/LoveStoryScene').then(m => ({ default: m.LoveStoryScene })), {
+  ssr: false,
+  loading: () => <div className="min-h-screen" />,
+})
+
+const MontageScene = dynamic(() => import('@/components/organisms/MontageScene').then(m => ({ default: m.MontageScene })), {
+  ssr: false,
+  loading: () => <div className="min-h-screen" />,
+})
+
+const GalleryScene = dynamic(() => import('@/components/organisms/GalleryScene').then(m => ({ default: m.GalleryScene })), {
+  ssr: false,
+  loading: () => <div className="min-h-screen" />,
+})
+
+const GuestbookScene = dynamic(() => import('@/components/organisms/GuestbookScene').then(m => ({ default: m.GuestbookScene })), {
+  ssr: false,
+  loading: () => <div className="min-h-screen" />,
+})
 import { CountdownTimer } from '@/components/molecules/CountdownTimer'
 import { NameReveal } from '@/components/molecules/NameReveal'
 import { GoldDivider } from '@/components/atoms/GoldText'
@@ -92,8 +109,9 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
   const [showQR, setShowQR]                   = useState(false)
   const [showRSVPBurst, setShowRSVPBurst]     = useState(false)
   const [rsvpBurstOrigin, setRsvpBurstOrigin] = useState<{ x: number; y: number } | null>(null)
-  const rsvpSectionRef = useRef<HTMLDivElement>(null)
-  const rsvpRef        = useRef<HTMLDivElement>(null)
+  const rsvpSectionRef  = useRef<HTMLDivElement>(null)
+  const rsvpRef         = useRef<HTMLDivElement>(null)
+  const scrollYRef      = useRef(0)
 
   const { couple_names, wedding_date, venue, venue_address, city, config } = wedding
   const weddingDate = formatWeddingDate(wedding_date)
@@ -122,11 +140,22 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
     }
   }, [wedding.id, guest?.id, guest?.opened_at])
 
-  // Lock body scroll during intro
+  // Lock body scroll during intro; save/restore position to prevent iOS scroll-jump
   useEffect(() => {
-    if (phase === 'intro') document.body.classList.add('scroll-locked')
-    else document.body.classList.remove('scroll-locked')
-    return () => document.body.classList.remove('scroll-locked')
+    if (phase === 'intro') {
+      scrollYRef.current = window.scrollY
+      document.body.classList.add('scroll-locked')
+      document.body.style.top = `-${scrollYRef.current}px`
+    } else {
+      document.body.classList.remove('scroll-locked')
+      document.body.style.top = ''
+      window.scrollTo(0, scrollYRef.current)
+    }
+    return () => {
+      document.body.classList.remove('scroll-locked')
+      document.body.style.top = ''
+      window.scrollTo(0, scrollYRef.current)
+    }
   }, [phase])
 
   const handleSealCracked = () => {
@@ -266,7 +295,6 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   exit={{ opacity: 0, y: 16 }}
                   transition={{ duration: 0.5, delay: 0.5, ease: [0.22, 1, 0.36, 1] }}
                   className="fixed bottom-6 right-4 z-40 safe-bottom"
-                  style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
                 >
                   <button
                     onClick={handleScrollToRSVP}
@@ -499,8 +527,8 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                 initialPhotos={photos}
                 galleryHref={
                   guest?.slug
-                    ? `/${wedding.slug}/gallery?guest=${guest.slug}`
-                    : `/${wedding.slug}/gallery`
+                    ? `/e/${wedding.slug}/gallery?guest=${guest.slug}`
+                    : `/e/${wedding.slug}/gallery`
                 }
               />
             )}

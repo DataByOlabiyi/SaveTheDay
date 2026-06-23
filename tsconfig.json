@@ -32,10 +32,7 @@
     "next-env.d.ts",
     "**/*.ts",
     "**/*.tsx",
-    ".next/types/**/*.ts",
-    "C:\\Users\\DELL\\AppData\\Local\\savetheday-next/types/**/*.ts",
-    "C:\\tmp\\savetheday-next/types/**/*.ts",
-    "../../../.next-savetheday/types/**/*.ts"
+    ".next/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

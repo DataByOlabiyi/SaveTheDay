@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { sanitizeText } from '@/lib/utils/sanitize'
@@ -81,9 +82,9 @@ export async function POST(request: NextRequest): Promise<Response> {
 
   // Email via Resend (if configured)
   const resendKey = process.env.RESEND_API_KEY
-  if (resendKey) {
-    const emailGuests = guests.filter(g => g.email)
-    for (const g of emailGuests) {
+  const emailGuests = guests.filter(g => g.email)
+  if (resendKey && emailGuests.length > 0) {
+    const emailBatch = emailGuests.map(g => {
       const gallerySection = galleryUrl
         ? `<div style="margin: 20px 0;"><a href="${galleryUrl}" style="display: inline-block; padding: 12px 24px; background: rgba(201,168,76,0.15); color: #C9A84C; text-decoration: none; border: 1px solid rgba(201,168,76,0.3); font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase;">View Our Gallery →</a></div>`
         : ''
@@ -101,17 +102,19 @@ export async function POST(request: NextRequest): Promise<Response> {
           </p>
         </div>
       `
-      fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
-        body: JSON.stringify({
-          from:    process.env.RESEND_FROM_EMAIL ?? 'notifications@savetheday.app',
-          to:      g.email,
-          subject: `Thank you from ${coupleName}`,
-          html,
-        }),
-      }).catch(() => {})
-    }
+      return {
+        from:    process.env.RESEND_FROM_EMAIL ?? 'notifications@savetheday.app',
+        to:      g.email as string,
+        subject: `Thank you from ${coupleName}`,
+        html,
+      }
+    })
+
+    fetch('https://api.resend.com/emails/batch', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${resendKey}` },
+      body: JSON.stringify(emailBatch),
+    }).catch((err: unknown) => { Sentry.captureException(err) })
   }
 
   return NextResponse.json({ success: true, links: waLinks, count: guests.length })

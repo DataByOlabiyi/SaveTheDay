@@ -380,27 +380,34 @@ export function RSVPForm({
                         key={event}
                         className="flex items-center gap-3 cursor-pointer group"
                       >
-                        <div
-                          onClick={() => {
+                        <input
+                          type="checkbox"
+                          className="sr-only"
+                          value={event}
+                          checked={checked}
+                          onChange={() => {
                             const current = attendingEvents
                             const next = checked
                               ? current.filter(e => e !== event)
                               : [...current, event]
                             setValue('attending_events', next)
                           }}
+                        />
+                        <span
                           className={cn(
                             'w-5 h-5 rounded flex items-center justify-center flex-shrink-0 border transition-all duration-150',
                             checked
                               ? 'bg-emerald-DEFAULT border-emerald-DEFAULT'
                               : 'border-white/20 bg-transparent group-hover:border-emerald-DEFAULT/50'
                           )}
+                          aria-hidden="true"
                         >
                           {checked && (
                             <svg width="10" height="8" viewBox="0 0 10 8" fill="none">
                               <path d="M1 4l3 3 5-5" stroke="#000" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
                           )}
-                        </div>
+                        </span>
                         <span className="font-body text-sm text-ivory/70 group-hover:text-ivory/90 transition-colors">
                           {event}
                         </span>
