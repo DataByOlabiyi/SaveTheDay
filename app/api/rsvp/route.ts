@@ -53,10 +53,7 @@ export async function POST(request: NextRequest): Promise<Response> {
   // Cloudflare Turnstile verification
   const turnstileSecret = process.env.TURNSTILE_SECRET_KEY
   if (!turnstileSecret) {
-    if (process.env.NODE_ENV === 'production') {
-      return NextResponse.json({ error: 'Bot verification is not configured' }, { status: 503 })
-    }
-    // In dev, skip silently
+    // Skip Turnstile verification when key is not configured (dev or unconfigured prod)
   } else {
     if (!data.turnstileToken) {
       return NextResponse.json({ error: 'Bot verification required' }, { status: 403 })
