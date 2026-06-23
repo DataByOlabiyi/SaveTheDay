@@ -167,6 +167,7 @@ const ICONS = {
   search:       ['M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0'],
   refresh:      ['M1 4v6h6', 'M23 20v-6h-6', 'M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15'],
   ban:          ['M12 22a10 10 0 100-20 10 10 0 000 20z', 'M4.93 4.93l14.14 14.14'],
+  eye:          ['M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z', 'M12 9a3 3 0 100 6 3 3 0 000-6z'],
 }
 
 // ── Nav config ─────────────────────────────────────────────────────────────────
@@ -1394,7 +1395,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
               My Weddings
             </Link>
             <span className="hidden md:block text-white/10 text-xs">/</span>
-            <span className="font-display text-ivory/80 text-sm italic truncate max-w-[160px] md:max-w-none">
+            <span className="font-display text-ivory/80 text-sm italic truncate max-w-[100px] sm:max-w-[160px] md:max-w-none">
               {wedding.couple_names.name1} &amp; {wedding.couple_names.name2}
             </span>
           </div>
@@ -1456,6 +1457,16 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
             {/* Status + Publish/Unpublish */}
             <StatusPill status={wedding.status} />
             <PublishButton weddingId={wedding.id} currentStatus={wedding.status} themeAccent={invTheme.accent} />
+
+            {/* Mobile-only: quick preview link */}
+            <button
+              className="sm:hidden flex items-center justify-center w-7 h-7 rounded-full text-ivory/60 hover:text-ivory/90 transition-colors"
+              style={{ background: 'rgba(255,255,255,0.06)', border: '1px solid rgba(255,255,255,0.08)' }}
+              onClick={() => window.open(`/e/${wedding.slug}`, '_blank')}
+              aria-label="Preview invitation"
+            >
+              <Icon paths={ICONS.eye} />
+            </button>
 
             {/* User avatar */}
             <button
