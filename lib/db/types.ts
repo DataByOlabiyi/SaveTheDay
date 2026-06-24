@@ -103,6 +103,7 @@ export interface WeddingConfig {
   show_accommodations?: boolean
 
   // ── RSVP ──
+  rsvp_open?:       boolean
   allow_plus_one:   boolean
   collect_dietary:  boolean
   rsvp_deadline?:   string

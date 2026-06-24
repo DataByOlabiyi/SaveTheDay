@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import type { GalleryPhoto } from '@/lib/db/types'
@@ -54,7 +55,7 @@ export function PhotoLightbox({
 
   if (!photo) return null
 
-  return (
+  return createPortal(
     <motion.div
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
@@ -212,6 +213,7 @@ export function PhotoLightbox({
           ))}
         </div>
       )}
-    </motion.div>
+    </motion.div>,
+    document.body
   )
 }

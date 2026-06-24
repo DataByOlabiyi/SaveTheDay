@@ -80,7 +80,11 @@ export async function POST(request: NextRequest): Promise<Response> {
   if (wedding.status !== 'published') {
     return NextResponse.json({ error: 'This wedding is not accepting RSVPs' }, { status: 403 })
   }
-  const deadline = (wedding.config as { rsvp_deadline?: string })?.rsvp_deadline
+  const weddingConfig = wedding.config as { rsvp_open?: boolean; rsvp_deadline?: string }
+  if (weddingConfig.rsvp_open === false) {
+    return NextResponse.json({ error: 'RSVP is currently closed' }, { status: 403 })
+  }
+  const deadline = weddingConfig.rsvp_deadline
   if (deadline && new Date(deadline) < new Date()) {
     return NextResponse.json({ error: 'RSVP deadline has passed' }, { status: 410 })
   }

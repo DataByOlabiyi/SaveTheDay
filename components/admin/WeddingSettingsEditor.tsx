@@ -87,6 +87,12 @@ const TOGGLE_GROUPS: {
     label: 'Guest Experience',
     items: [
       {
+        key: 'rsvp_open',
+        label: 'Accept RSVPs',
+        description: 'When off, the RSVP section is hidden from guests',
+        paths: ['M9 12l2 2 4-4m6 2a9 9 0 1 1-18 0 9 9 0 0 1 18 0'],
+      },
+      {
         key: 'show_guestbook',
         label: 'Guestbook',
         description: 'Allow guests to leave messages',
@@ -196,7 +202,7 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
       show_countdown: true, show_guestbook: true, show_story: true,
       show_gallery: true, show_schedule: true, show_venue_map: false,
       show_gift_registry: false, allow_plus_one: true, collect_dietary: true,
-      allow_downloads: true, show_post_uploads: false,
+      allow_downloads: true, show_post_uploads: false, rsvp_open: true,
     },
     ...wedding.config,
   })

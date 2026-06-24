@@ -44,6 +44,7 @@ const configSchema = z.object({
   show_gift_registry:   z.boolean().optional(),
   show_post_uploads:    z.boolean().optional(),
   show_accommodations:  z.boolean().optional(),
+  rsvp_open:            z.boolean().optional(),
   allow_plus_one:       z.boolean().optional(),
   collect_dietary:      z.boolean().optional(),
   collect_meal_choice:  z.boolean().optional(),

@@ -73,7 +73,7 @@ function buildSections(
   // Gallery: only show if config allows AND there are albums with photos
   if (config.show_gallery !== false && albumsCount > 0)
     sections.push({ id: 'section-gallery', label: 'Photos' })
-  sections.push({ id: 'section-rsvp', label: 'RSVP' })
+  if (config.rsvp_open !== false) sections.push({ id: 'section-rsvp', label: 'RSVP' })
   if (config.show_schedule || config.show_venue_map || config.dress_code ||
       (config.show_accommodations && config.accommodations?.length))
     sections.push({ id: 'section-venue', label: 'Details' })
@@ -288,7 +288,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
 
             {/* ── Sticky RSVP shortcut pill — visible for logged-in guests before they RSVP ── */}
             <AnimatePresence>
-              {guest && !rsvpDone && !showRSVP && (
+              {config.rsvp_open !== false && guest && !rsvpDone && !showRSVP && (
                 <motion.div
                   initial={{ opacity: 0, y: 16 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -534,7 +534,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
             )}
 
             {/* ── RSVP ── */}
-            <section
+            {config.rsvp_open !== false && <section
               id="section-rsvp"
               ref={rsvpSectionRef}
               className="relative py-20 px-6 overflow-hidden"
@@ -656,7 +656,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   </motion.div>
                 )}
               </div>
-            </section>
+            </section>}
 
             {/* ── Post-RSVP card ── */}
             <AnimatePresence>
