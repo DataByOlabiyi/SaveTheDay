@@ -4,11 +4,13 @@ import { TheUnveilingPage } from '@/components/scenes/TheUnveilingPage'
 import { ErrorBoundary } from '@/components/atoms/ErrorBoundary'
 import { PasswordGate } from '@/components/atoms/PasswordGate'
 import {
-  getWeddingBySlug, getWeddingBySlugForOwner, getGuestBySlug, getEventSchedule,
+  getWeddingBySlug, checkWeddingExists, getWeddingBySlugForOwner,
+  getGuestBySlug, getEventSchedule,
   getStoryMilestones, getGalleryAlbums, getGalleryPhotos,
 } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { buildOGMetadata } from '@/lib/personalization/guest'
+import { WeddingComingSoon } from '@/components/atoms/WeddingComingSoon'
 
 interface PageProps {
   params: { weddingSlug: string }
@@ -66,7 +68,11 @@ export default async function WeddingPage({ params, searchParams }: PageProps) {
       const owned = await getWeddingBySlugForOwner(params.weddingSlug, user.id)
       if (owned) wedding = owned
     }
-    if (!wedding) notFound()
+    if (!wedding) {
+      const exists = await checkWeddingExists(params.weddingSlug)
+      if (!exists) notFound()
+      return <WeddingComingSoon />
+    }
   }
 
   const [guest, schedule, allMilestones, allAlbums, photos] = await Promise.all([

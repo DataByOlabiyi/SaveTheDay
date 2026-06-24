@@ -47,6 +47,7 @@ export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
       .from('weddings')
       .select('*')
       .eq('slug', slug)
+      .eq('status', 'published')
       .single()
 
     if (!error && data) {
@@ -63,6 +64,20 @@ export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
   // Fallback: serves in-memory demo until migration 009 seeds the real DB row
   if (slug === 'demo-wedding') return DEMO_WEDDING
   return null
+}
+
+/** Returns true if a wedding with this slug exists in any status (draft, ready, published). */
+export async function checkWeddingExists(slug: string): Promise<boolean> {
+  if (slug === 'demo-wedding') return true
+  try {
+    const admin = createAdminClient()
+    const { data } = await admin
+      .from('weddings')
+      .select('id')
+      .eq('slug', slug)
+      .single()
+    return !!data
+  } catch { return false }
 }
 
 /** For internal use only — returns the full config including privacy_password_hash for verification. */

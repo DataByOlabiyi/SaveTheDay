@@ -4,10 +4,11 @@ import { TheUnveilingPage } from '@/components/scenes/TheUnveilingPage'
 import { ErrorBoundary } from '@/components/atoms/ErrorBoundary'
 import { PasswordGate } from '@/components/atoms/PasswordGate'
 import {
-  getWeddingBySlug, getGuestBySlug, getEventSchedule,
+  getWeddingBySlug, checkWeddingExists, getGuestBySlug, getEventSchedule,
   getStoryMilestones, getGalleryAlbums, getGalleryPhotos,
 } from '@/lib/db/client'
 import { buildOGMetadata } from '@/lib/personalization/guest'
+import { WeddingComingSoon } from '@/components/atoms/WeddingComingSoon'
 
 interface PageProps {
   params: { weddingSlug: string; guestSlug: string }
@@ -52,7 +53,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function PersonalizedWeddingPage({ params }: PageProps) {
   const wedding = await getWeddingBySlug(params.weddingSlug)
-  if (!wedding) notFound()
+  if (!wedding) {
+    const exists = await checkWeddingExists(params.weddingSlug)
+    if (!exists) notFound()
+    return <WeddingComingSoon />
+  }
 
   const [rawGuest, schedule, milestones, albums, photos] = await Promise.all([
     getGuestBySlug(wedding.id, params.guestSlug),
