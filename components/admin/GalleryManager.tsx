@@ -5,11 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import type { GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
 import { MAX_GALLERY_PHOTOS } from '@/lib/constants'
-import { supabase } from '@/lib/db/client'
 
-const GALLERY_BUCKET  = 'wedding-gallery'
-const MAX_FILE_SIZE   = 10 * 1024 * 1024
-const ALLOWED_TYPES   = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+const MAX_FILE_SIZE = 10 * 1024 * 1024
+const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 interface GalleryManagerProps {
   weddingId: string
@@ -236,19 +234,29 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
       }
 
       try {
-        // Upload directly to Supabase Storage — bypasses Vercel's 4.5 MB payload limit
-        const ext  = file.name.split('.').pop() ?? 'jpg'
-        const path = `${weddingId}/${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`
+        // Step 1: get a server-issued signed upload URL (bypasses Vercel's 4.5 MB limit
+        // and avoids sending the user's session token from the browser)
+        const signedRes = await fetch('/api/gallery/signed-url', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ weddingId, fileName: file.name, albumId: activeAlbum ?? undefined }),
+        })
+        if (!signedRes.ok) {
+          let msg = `Could not get upload URL (${signedRes.status})`
+          try { const e = await signedRes.json(); msg = e.error ?? msg } catch { /* not JSON */ }
+          setError(msg); continue
+        }
+        const { signedUrl, publicUrl } = await signedRes.json()
 
-        const { data: uploadData, error: storageErr } = await supabase.storage
-          .from(GALLERY_BUCKET)
-          .upload(path, file, { contentType: file.type, upsert: false })
+        // Step 2: PUT the file directly to Supabase Storage — no Vercel function involved
+        const putRes = await fetch(signedUrl, {
+          method:  'PUT',
+          headers: { 'Content-Type': file.type },
+          body:    file,
+        })
+        if (!putRes.ok) { setError(`Upload failed (${putRes.status})`); continue }
 
-        if (storageErr) { setError(`Upload failed: ${storageErr.message}`); continue }
-
-        const { data: { publicUrl } } = supabase.storage.from(GALLERY_BUCKET).getPublicUrl(uploadData.path)
-
-        // Persist the record via the existing gallery API
+        // Step 3: persist the record via the existing gallery API
         const res = await fetch('/api/gallery', {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
