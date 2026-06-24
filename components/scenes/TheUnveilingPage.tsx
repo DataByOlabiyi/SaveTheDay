@@ -523,6 +523,8 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                 weddingId={wedding.id}
                 guestId={guest?.id}
                 allowDownloads={config.allow_downloads !== false}
+                watermarkDownloads={config.watermark_downloads === true}
+                watermarkText={`${couple_names.name1} & ${couple_names.name2} • SaveTheDay`}
                 initialAlbums={albums}
                 initialPhotos={photos}
                 galleryHref={

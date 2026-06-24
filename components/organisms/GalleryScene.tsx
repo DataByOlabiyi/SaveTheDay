@@ -7,23 +7,28 @@ import Link from 'next/link'
 import { GoldDivider } from '@/components/atoms/GoldText'
 import { PhotoLightbox } from '@/components/molecules/PhotoLightbox'
 import { Events } from '@/lib/analytics/events'
+import { applyWatermark } from '@/lib/utils/watermark'
 import type { GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
 
 const INITIAL_COUNT = 12   // photos shown in the invitation preview
 
 interface GallerySceneProps {
-  weddingId:       string
-  guestId?:        string
-  allowDownloads?: boolean
-  initialAlbums?:  GalleryAlbum[]
-  initialPhotos?:  GalleryPhoto[]
+  weddingId:          string
+  guestId?:           string
+  allowDownloads?:    boolean
+  watermarkDownloads?: boolean
+  watermarkText?:     string
+  initialAlbums?:     GalleryAlbum[]
+  initialPhotos?:     GalleryPhoto[]
   /** Full gallery page URL — e.g. /moji-olabiyi/gallery */
-  galleryHref?:    string
+  galleryHref?:       string
 }
 
 export function GalleryScene({
   weddingId, guestId,
   allowDownloads = false,
+  watermarkDownloads = false,
+  watermarkText = 'SaveTheDay',
   initialAlbums, initialPhotos,
   galleryHref,
 }: GallerySceneProps) {
@@ -82,26 +87,40 @@ export function GalleryScene({
   const handleDownload = useCallback(async (photo: GalleryPhoto) => {
     setDownloading(photo.id)
     try {
-      await fetch(`/api/gallery/download`, {
+      await fetch('/api/gallery/download', {
         method:  'POST',
         headers: { 'Content-Type': 'application/json' },
         body:    JSON.stringify({ photoId: photo.id, weddingId }),
       })
       Events.photoDownloaded(weddingId, guestId, photo.id)
 
-      const a   = document.createElement('a')
-      a.href    = photo.url
-      a.download = photo.caption ? `${photo.caption}.jpg` : `photo-${photo.id}.jpg`
-      a.target  = '_blank'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+      const filename = photo.caption ? `${photo.caption}.jpg` : `photo-${photo.id}.jpg`
+
+      if (watermarkDownloads) {
+        const blob = await applyWatermark(photo, watermarkText)
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href     = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        const a    = document.createElement('a')
+        a.href     = photo.url
+        a.download = filename
+        a.target   = '_blank'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
     } catch {
       // silent fail
     } finally {
       setDownloading(null)
     }
-  }, [weddingId, guestId])
+  }, [weddingId, guestId, watermarkDownloads, watermarkText])
 
   /* ── Loading skeleton ── */
   if (loading) {

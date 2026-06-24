@@ -8,6 +8,7 @@ import { GoldDivider } from '@/components/atoms/GoldText'
 import { PhotoLightbox } from '@/components/molecules/PhotoLightbox'
 import { ParticleField } from '@/components/atoms/ParticleField'
 import { Events } from '@/lib/analytics/events'
+import { applyWatermark } from '@/lib/utils/watermark'
 import type { Wedding, GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
 
 interface FullGalleryPageProps {
@@ -27,9 +28,9 @@ export function FullGalleryPage({
   const [lightboxIdx, setLightboxIdx] = useState<number | null>(null)
   const [downloading, setDownloading] = useState<string | null>(null)
 
-  const visiblePhotos = activeAlbum
-    ? photos.filter(p => p.album_id === activeAlbum)
-    : photos
+  const visiblePhotos      = activeAlbum ? photos.filter(p => p.album_id === activeAlbum) : photos
+  const watermarkDownloads = wedding.config.watermark_downloads === true
+  const watermarkText      = `${wedding.couple_names.name1} & ${wedding.couple_names.name2} • SaveTheDay`
 
   const openLightbox  = (idx: number) => setLightboxIdx(idx)
   const closeLightbox = () => setLightboxIdx(null)
@@ -46,19 +47,34 @@ export function FullGalleryPage({
         body:    JSON.stringify({ photoId: photo.id, weddingId: wedding.id }),
       })
       Events.photoDownloaded(wedding.id, guestId, photo.id)
-      const a    = document.createElement('a')
-      a.href     = photo.url
-      a.download = photo.caption ? `${photo.caption}.jpg` : `photo-${photo.id}.jpg`
-      a.target   = '_blank'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+
+      const filename = photo.caption ? `${photo.caption}.jpg` : `photo-${photo.id}.jpg`
+
+      if (watermarkDownloads) {
+        const blob = await applyWatermark(photo, watermarkText)
+        const url  = URL.createObjectURL(blob)
+        const a    = document.createElement('a')
+        a.href     = url
+        a.download = filename
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        URL.revokeObjectURL(url)
+      } else {
+        const a    = document.createElement('a')
+        a.href     = photo.url
+        a.download = filename
+        a.target   = '_blank'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      }
     } catch {
       // silent fail
     } finally {
       setDownloading(null)
     }
-  }, [wedding.id, guestId])
+  }, [wedding.id, guestId, watermarkDownloads, watermarkText])
 
   const { couple_names } = wedding
 
