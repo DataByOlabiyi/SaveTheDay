@@ -47,7 +47,6 @@ export async function getWeddingBySlug(slug: string): Promise<Wedding | null> {
       .from('weddings')
       .select('*')
       .eq('slug', slug)
-      .eq('status', 'published')
       .single()
 
     if (!error && data) {
