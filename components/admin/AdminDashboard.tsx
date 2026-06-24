@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
-import { useRouter } from 'next/navigation'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import type { Wedding, Guest, GuestbookEntry } from '@/lib/db/types'
 import { formatWeddingDate } from '@/lib/personalization/guest'
@@ -22,6 +22,8 @@ import { QRCodeModal } from '@/components/molecules/QRCodeModal'
 
 type Section = 'overview' | 'guests' | 'guestbook' | 'story' | 'gallery' | 'analytics' | 'settings' | 'invitations' | 'timeline' | 'reminders' | 'thankyou'
 type FilterStatus = 'all' | 'attending' | 'declined' | 'pending'
+
+const VALID_SECTIONS = new Set<Section>(['overview', 'guests', 'guestbook', 'story', 'gallery', 'analytics', 'settings', 'invitations', 'timeline', 'reminders', 'thankyou'])
 
 // ── Confirm modal ──────────────────────────────────────────────────────────────
 
@@ -1022,7 +1024,11 @@ function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: 
 
 export function AdminDashboard({ wedding, guests: initialGuests, userEmail, galleryPhotoCount = 0, storyMilestoneCount = 0 }: AdminDashboardProps) {
   const router = useRouter()
-  const invTheme = getTheme(wedding.config.invitation_theme)
+  const searchParams = useSearchParams()
+
+  // ── Wedding state (kept local so settings saves reflect immediately) ─────────
+  const [localWedding, setLocalWedding] = useState<Wedding>(wedding)
+  const invTheme = getTheme(localWedding.config.invitation_theme)
 
   // ── Guest state ──────────────────────────────────────────────────────────────
   const [localGuests, setLocalGuests] = useState<Guest[]>(initialGuests)
@@ -1044,6 +1050,11 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
   const [activeSection, setActiveSection] = useState<Section>('overview')
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
+  useEffect(() => {
+    const s = searchParams.get('section') as Section | null
+    setActiveSection(s && VALID_SECTIONS.has(s) ? s : 'overview')
+  }, [searchParams])
 
   // ── Guest list state ─────────────────────────────────────────────────────────
   const [search, setSearch]   = useState('')
@@ -1111,11 +1122,11 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
 
   // ── Setup checklist ──────────────────────────────────────────────────────────
   const setupChecklist = useMemo(() => [
-    { id: 'basics', label: 'Wedding details',      done: !!(wedding.venue && wedding.wedding_date && wedding.couple_names.name1) },
-    { id: 'story',  label: 'Couple story',         done: localStoryCount > 0 || !!(wedding.config.intro_text) },
-    { id: 'media',  label: 'Cover photo or video', done: !!(wedding.config.montage_images?.length || wedding.config.intro_video_url || galleryPhotoCount > 0) },
+    { id: 'basics', label: 'Wedding details',      done: !!(localWedding.venue && localWedding.wedding_date && localWedding.couple_names.name1) },
+    { id: 'story',  label: 'Couple story',         done: localStoryCount > 0 || !!(localWedding.config.intro_text) },
+    { id: 'media',  label: 'Cover photo or video', done: !!(localWedding.config.montage_images?.length || localWedding.config.intro_video_url || galleryPhotoCount > 0) },
     { id: 'guests', label: 'Guest list',            done: localGuests.length > 0 },
-  ], [wedding, localGuests.length, galleryPhotoCount, localStoryCount])
+  ], [localWedding, localGuests.length, galleryPhotoCount, localStoryCount])
 
   const setupPercent = useMemo(() => {
     const done = setupChecklist.filter(c => c.done).length
@@ -1235,9 +1246,10 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
   const navigate = (s: string) => {
     setActiveSection(s as Section)
     setMobileNavOpen(false)
+    router.replace(`?section=${s}`, { scroll: false })
   }
 
-  const showGuestbook = wedding.config.show_guestbook !== false
+  const showGuestbook = localWedding.config.show_guestbook !== false
 
   // ── Layout constants ─────────────────────────────────────────────────────────
   const SIDEBAR_W = sidebarCollapsed ? 68 : 240
@@ -1315,7 +1327,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
           userEmail={userEmail}
           themeAccent={invTheme.accent}
           themeRaw={invTheme.raw}
-          onNavigate={s => setActiveSection(s)}
+          onNavigate={navigate}
           onLogout={handleLogout}
         />
       </aside>
@@ -1351,7 +1363,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
                 userEmail={userEmail}
                 themeAccent={invTheme.accent}
                 themeRaw={invTheme.raw}
-                onNavigate={s => setActiveSection(s)}
+                onNavigate={navigate}
                 onLogout={handleLogout}
                 onClose={() => setMobileNavOpen(false)}
               />
@@ -1911,7 +1923,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
               {activeSection === 'settings' && (
                 <motion.div key="settings" {...fadeProps} className="space-y-8">
                   <SectionHeading title="Settings" description="Edit venue details, dress code, feature toggles and more." />
-                  <WeddingSettingsEditor wedding={wedding} />
+                  <WeddingSettingsEditor wedding={localWedding} onSaved={setLocalWedding} />
 
                   {/* ── Danger zone ── */}
                   <div
