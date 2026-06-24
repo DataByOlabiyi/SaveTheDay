@@ -13,10 +13,11 @@ export const metadata: Metadata = {
 }
 
 interface PageProps {
-  params: { weddingSlug: string }
+  params:       { weddingSlug: string }
+  searchParams?: { section?: string }
 }
 
-export default async function WeddingStudioPage({ params }: PageProps) {
+export default async function WeddingStudioPage({ params, searchParams }: PageProps) {
   const supabase = await createSupabaseServerClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) redirect(`/login?next=/studio/${params.weddingSlug}`)
@@ -39,6 +40,7 @@ export default async function WeddingStudioPage({ params }: PageProps) {
       userEmail={user.email ?? undefined}
       galleryPhotoCount={galleryPhotoCount ?? 0}
       storyMilestoneCount={storyMilestoneCount ?? 0}
+      initialSection={searchParams?.section}
     />
   )
 }

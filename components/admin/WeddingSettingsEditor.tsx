@@ -660,8 +660,6 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
           {[
             { label: 'Intro Text', key: 'intro_text' as keyof WeddingConfig, placeholder: 'The beginning of forever' },
             { label: 'Wedding Hashtag', key: 'hashtag' as keyof WeddingConfig, placeholder: '#MojiAndOlabiyiForever' },
-            { label: 'Gift Registry URL', key: 'gift_registry_url' as keyof WeddingConfig, placeholder: 'https://...' },
-            { label: 'Gift Registry Note', key: 'gift_registry_note' as keyof WeddingConfig, placeholder: 'Your presence is our greatest gift' },
           ].map(({ label, key, placeholder }) => (
             <div key={key as string}>
               <label className="rsvp-label">{label}</label>
@@ -723,104 +721,6 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
               rows={4}
             />
           </div>
-        </div>
-      </div>
-
-      {/* ── Gift / Bank Details ── */}
-      <div className="admin-card p-5">
-        <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-1">Gift &amp; Bank Details</h3>
-        <p className="text-[11px] text-ivory/25 mb-5">
-          Add bank account details guests can copy directly from the invitation.
-        </p>
-        <div className="space-y-4">
-          {(config.bank_details ?? []).map((bank, i) => (
-            <div
-              key={i}
-              className="rounded-xl p-4 space-y-3"
-              style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
-            >
-              <div className="flex items-center justify-between mb-1">
-                <p className="text-xs text-ivory/40 tracking-wider uppercase">Account {i + 1}</p>
-                <button
-                  onClick={() => {
-                    const list = (config.bank_details ?? []).filter((_, ci) => ci !== i)
-                    setConfigField('bank_details', list.length ? list : undefined)
-                  }}
-                  className="text-ivory/25 hover:text-red-400 transition-colors text-xs"
-                  aria-label="Remove account"
-                >
-                  Remove
-                </button>
-              </div>
-              {[
-                { label: 'Bank Name', field: 'bank_name', placeholder: 'First Bank, GTBank, Zenith…' },
-                { label: 'Account Number', field: 'account_number', placeholder: '0123456789' },
-                { label: 'Account Name', field: 'account_name', placeholder: 'Adaeze Okafor' },
-                { label: 'Label (optional)', field: 'label', placeholder: 'e.g. Bride, Groom, Joint' },
-              ].map(({ label, field, placeholder }) => (
-                <div key={field}>
-                  <label className="rsvp-label">{label}</label>
-                  <input
-                    type="text"
-                    value={(bank as unknown as Record<string, string>)[field] ?? ''}
-                    onChange={e => {
-                      const list = [...(config.bank_details ?? [])]
-                      list[i] = { ...list[i], [field]: e.target.value }
-                      setConfigField('bank_details', list)
-                    }}
-                    placeholder={placeholder}
-                    className="rsvp-input py-2"
-                  />
-                </div>
-              ))}
-              {/* Currency */}
-              <div>
-                <label className="rsvp-label">Currency (optional)</label>
-                <select
-                  value={bank.currency ?? ''}
-                  onChange={e => {
-                    const list = [...(config.bank_details ?? [])]
-                    list[i] = { ...list[i], currency: (e.target.value as import('@/lib/db/types').BankCurrency) || undefined }
-                    setConfigField('bank_details', list)
-                  }}
-                  className="rsvp-input py-2"
-                >
-                  <option value="">Select currency…</option>
-                  <option value="NGN">₦ NGN — Nigerian Naira</option>
-                  <option value="GBP">£ GBP — British Pound</option>
-                  <option value="USD">$ USD — US Dollar</option>
-                  <option value="EUR">€ EUR — Euro</option>
-                  <option value="GHS">₵ GHS — Ghanaian Cedi</option>
-                  <option value="KES">KSh KES — Kenyan Shilling</option>
-                </select>
-              </div>
-              {/* Per-account note */}
-              <div>
-                <label className="rsvp-label">Note (optional)</label>
-                <input
-                  type="text"
-                  value={bank.note ?? ''}
-                  onChange={e => {
-                    const list = [...(config.bank_details ?? [])]
-                    list[i] = { ...list[i], note: e.target.value || undefined }
-                    setConfigField('bank_details', list)
-                  }}
-                  placeholder="e.g. For our honeymoon in Santorini 🌅"
-                  maxLength={80}
-                  className="rsvp-input py-2"
-                />
-              </div>
-            </div>
-          ))}
-          <button
-            onClick={() => {
-              const list = [...(config.bank_details ?? []), { bank_name: '', account_number: '', account_name: '' }]
-              setConfigField('bank_details', list)
-            }}
-            className="text-xs text-emerald-DEFAULT/60 hover:text-emerald-DEFAULT transition-colors"
-          >
-            + Add bank account
-          </button>
         </div>
       </div>
 
@@ -899,6 +799,128 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
           ))}
         </div>
       </div>
+
+      {/* ── Gift Registry (shown only when toggle is on) ── */}
+      {config.show_gift_registry && (
+        <div className="admin-card p-5">
+          <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-1">Gift Registry</h3>
+          <p className="text-[11px] text-ivory/25 mb-5">
+            Add a registry link and/or bank accounts guests can copy directly from your invitation.
+          </p>
+          <div className="space-y-4">
+            {/* Registry URL + Note */}
+            {[
+              { label: 'Registry URL (optional)', key: 'gift_registry_url' as keyof WeddingConfig, placeholder: 'https://...' },
+              { label: 'Registry Note (optional)', key: 'gift_registry_note' as keyof WeddingConfig, placeholder: 'Your presence is our greatest gift' },
+            ].map(({ label, key, placeholder }) => (
+              <div key={key as string}>
+                <label className="rsvp-label">{label}</label>
+                <input
+                  type="text"
+                  value={(config[key] as string) ?? ''}
+                  onChange={e => setConfigField(key, e.target.value || undefined)}
+                  placeholder={placeholder}
+                  className="rsvp-input"
+                />
+              </div>
+            ))}
+
+            {/* Bank accounts */}
+            {(config.bank_details ?? []).length > 0 && (
+              <div
+                className="h-px mt-2"
+                style={{ background: 'rgba(255,255,255,0.06)' }}
+              />
+            )}
+            {(config.bank_details ?? []).map((bank, i) => (
+              <div
+                key={i}
+                className="rounded-xl p-4 space-y-3"
+                style={{ background: 'rgba(255,255,255,0.02)', border: '1px solid rgba(255,255,255,0.07)' }}
+              >
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-xs text-ivory/40 tracking-wider uppercase">Account {i + 1}</p>
+                  <button
+                    onClick={() => {
+                      const list = (config.bank_details ?? []).filter((_, ci) => ci !== i)
+                      setConfigField('bank_details', list.length ? list : undefined)
+                    }}
+                    className="text-ivory/25 hover:text-red-400 transition-colors text-xs"
+                    aria-label="Remove account"
+                  >
+                    Remove
+                  </button>
+                </div>
+                {[
+                  { label: 'Bank Name', field: 'bank_name', placeholder: 'First Bank, GTBank, Zenith…' },
+                  { label: 'Account Number', field: 'account_number', placeholder: '0123456789' },
+                  { label: 'Account Name', field: 'account_name', placeholder: 'Adaeze Okafor' },
+                  { label: 'Label (optional)', field: 'label', placeholder: 'e.g. Bride, Groom, Joint' },
+                ].map(({ label, field, placeholder }) => (
+                  <div key={field}>
+                    <label className="rsvp-label">{label}</label>
+                    <input
+                      type="text"
+                      value={(bank as unknown as Record<string, string>)[field] ?? ''}
+                      onChange={e => {
+                        const list = [...(config.bank_details ?? [])]
+                        list[i] = { ...list[i], [field]: e.target.value }
+                        setConfigField('bank_details', list)
+                      }}
+                      placeholder={placeholder}
+                      className="rsvp-input py-2"
+                    />
+                  </div>
+                ))}
+                <div>
+                  <label className="rsvp-label">Currency (optional)</label>
+                  <select
+                    value={bank.currency ?? ''}
+                    onChange={e => {
+                      const list = [...(config.bank_details ?? [])]
+                      list[i] = { ...list[i], currency: (e.target.value as import('@/lib/db/types').BankCurrency) || undefined }
+                      setConfigField('bank_details', list)
+                    }}
+                    className="rsvp-input py-2"
+                  >
+                    <option value="">Select currency…</option>
+                    <option value="NGN">₦ NGN — Nigerian Naira</option>
+                    <option value="GBP">£ GBP — British Pound</option>
+                    <option value="USD">$ USD — US Dollar</option>
+                    <option value="EUR">€ EUR — Euro</option>
+                    <option value="GHS">₵ GHS — Ghanaian Cedi</option>
+                    <option value="KES">KSh KES — Kenyan Shilling</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="rsvp-label">Note (optional)</label>
+                  <input
+                    type="text"
+                    value={bank.note ?? ''}
+                    onChange={e => {
+                      const list = [...(config.bank_details ?? [])]
+                      list[i] = { ...list[i], note: e.target.value || undefined }
+                      setConfigField('bank_details', list)
+                    }}
+                    placeholder="e.g. For our honeymoon fund"
+                    maxLength={80}
+                    className="rsvp-input py-2"
+                  />
+                </div>
+              </div>
+            ))}
+            <button
+              onClick={() => {
+                const list = [...(config.bank_details ?? []), { bank_name: '', account_number: '', account_name: '' }]
+                setConfigField('bank_details', list)
+              }}
+              className="text-xs text-emerald-DEFAULT/60 hover:text-emerald-DEFAULT transition-colors"
+            >
+              + Add bank account
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Save button */}
       {error && (

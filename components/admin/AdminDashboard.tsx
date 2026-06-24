@@ -121,6 +121,7 @@ interface AdminDashboardProps {
   userEmail?:            string
   galleryPhotoCount?:    number
   storyMilestoneCount?:  number
+  initialSection?:       string
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -1022,7 +1023,7 @@ function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: 
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export function AdminDashboard({ wedding, guests: initialGuests, userEmail, galleryPhotoCount = 0, storyMilestoneCount = 0 }: AdminDashboardProps) {
+export function AdminDashboard({ wedding, guests: initialGuests, userEmail, galleryPhotoCount = 0, storyMilestoneCount = 0, initialSection }: AdminDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -1047,10 +1048,14 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
   }, [wedding.id])
 
   // ── Layout state ─────────────────────────────────────────────────────────────
-  const [activeSection, setActiveSection] = useState<Section>('overview')
+  const [activeSection, setActiveSection] = useState<Section>(() => {
+    const s = initialSection as Section | undefined
+    return s && VALID_SECTIONS.has(s) ? s : 'overview'
+  })
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
+  // Sync section from URL on back/forward navigation
   useEffect(() => {
     const s = searchParams.get('section') as Section | null
     setActiveSection(s && VALID_SECTIONS.has(s) ? s : 'overview')
