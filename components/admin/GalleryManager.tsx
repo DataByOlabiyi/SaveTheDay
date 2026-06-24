@@ -5,6 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import type { GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
 import { MAX_GALLERY_PHOTOS } from '@/lib/constants'
+import { supabase } from '@/lib/db/client'
+
+const GALLERY_BUCKET  = 'wedding-gallery'
+const MAX_FILE_SIZE   = 10 * 1024 * 1024
+const ALLOWED_TYPES   = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 interface GalleryManagerProps {
   weddingId: string
@@ -204,7 +209,7 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
 
   const handleFileUpload = async (files: FileList) => {
     if (!files.length) return
-    const fileArr  = Array.from(files)
+    const fileArr   = Array.from(files)
     const slotsLeft = MAX_GALLERY_PHOTOS - photos.length
     if (slotsLeft <= 0) { setError('Gallery is full — delete some photos to upload new ones.'); return }
     const toUpload = fileArr.slice(0, slotsLeft)
@@ -215,17 +220,59 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
     let uploaded = 0
 
     for (let idx = 0; idx < toUpload.length; idx++) {
-      const file     = toUpload[idx]
-      const formData = new FormData()
-      formData.append('file',      file)
-      formData.append('weddingId', weddingId)
-      if (activeAlbum) formData.append('albumId', activeAlbum)
+      const file = toUpload[idx]
       setUploadLabel(`Uploading ${idx + 1} of ${toUpload.length}…`)
+
+      // Client-side validation (mirrors server-side checks)
+      if (file.size > MAX_FILE_SIZE) {
+        setError(`${file.name} is too large — max 10 MB per photo`)
+        setUploadPct(Math.round(((idx + 1) / toUpload.length) * 100))
+        continue
+      }
+      if (!ALLOWED_TYPES.includes(file.type)) {
+        setError(`${file.name} is not a supported format — use JPEG, PNG, WebP or GIF`)
+        setUploadPct(Math.round(((idx + 1) / toUpload.length) * 100))
+        continue
+      }
+
       try {
-        const res = await fetch('/api/gallery/upload', { method: 'POST', body: formData })
-        if (res.ok) { const d = await res.json(); setPhotos(prev => [...prev, d.photo]); uploaded++ }
-        else { const err = await res.json(); setError(err.error ?? 'Upload failed') }
-      } catch { setError('Upload failed') }
+        // Upload directly to Supabase Storage — bypasses Vercel's 4.5 MB payload limit
+        const ext  = file.name.split('.').pop() ?? 'jpg'
+        const path = `${weddingId}/${Date.now()}-${Math.random().toString(16).slice(2)}.${ext}`
+
+        const { data: uploadData, error: storageErr } = await supabase.storage
+          .from(GALLERY_BUCKET)
+          .upload(path, file, { contentType: file.type, upsert: false })
+
+        if (storageErr) { setError(`Upload failed: ${storageErr.message}`); continue }
+
+        const { data: { publicUrl } } = supabase.storage.from(GALLERY_BUCKET).getPublicUrl(uploadData.path)
+
+        // Persist the record via the existing gallery API
+        const res = await fetch('/api/gallery', {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type:          'photo',
+            weddingId,
+            albumId:       activeAlbum ?? undefined,
+            url:           publicUrl,
+            thumbnail_url: publicUrl,
+            sort_order:    Math.floor(Date.now() / 1000),
+          }),
+        })
+
+        if (res.ok) {
+          const d = await res.json()
+          setPhotos(prev => [...prev, d.photo])
+          uploaded++
+        } else {
+          let msg = `Failed to save photo record (${res.status})`
+          try { const err = await res.json(); msg = err.error ?? msg } catch { /* not JSON */ }
+          setError(msg)
+        }
+      } catch (e) { setError(e instanceof Error ? e.message : 'Upload failed') }
+
       setUploadPct(Math.round(((idx + 1) / toUpload.length) * 100))
     }
 
