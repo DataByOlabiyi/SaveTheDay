@@ -1,12 +1,57 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import type { AdminWeddingRow } from '@/lib/db/admin'
 
-const STATUS_COLORS: Record<string, string> = {
-  published: 'text-emerald-400',
-  ready:     'text-blue-400',
-  draft:     'text-ivory/30',
+const STATUS_OPTIONS = [
+  { value: 'draft',     label: 'Draft',     color: 'text-ivory/40' },
+  { value: 'ready',     label: 'Ready',     color: 'text-blue-400' },
+  { value: 'published', label: 'Published', color: 'text-emerald-400' },
+] as const
+
+function StatusDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const current = STATUS_OPTIONS.find(o => o.value === value) ?? STATUS_OPTIONS[0]
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className={`flex items-center gap-1 font-body text-xs capitalize ${current.color}`}
+      >
+        {current.label}
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div
+          className="absolute top-full left-0 mt-1 z-20 rounded-xl overflow-hidden py-1 min-w-[110px]"
+          style={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
+        >
+          {STATUS_OPTIONS.map(o => (
+            <button
+              key={o.value}
+              onClick={() => { onChange(o.value); setOpen(false) }}
+              className={`w-full text-left px-3 py-2 font-body text-xs capitalize hover:bg-white/5 transition-colors ${o.value === value ? o.color : 'text-ivory/40'}`}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export default function AdminWeddingsPage() {
@@ -92,15 +137,7 @@ export default function AdminWeddingsPage() {
                 </td>
                 <td className="py-3 px-4 font-body text-xs text-ivory/30">{w.owner_email}</td>
                 <td className="py-3 px-4">
-                  <select
-                    value={w.status}
-                    onChange={e => setStatus(w.id, e.target.value)}
-                    className={`bg-transparent font-body text-xs capitalize outline-none cursor-pointer ${STATUS_COLORS[w.status] ?? 'text-ivory/30'}`}
-                  >
-                    <option value="draft">Draft</option>
-                    <option value="ready">Ready</option>
-                    <option value="published">Published</option>
-                  </select>
+                  <StatusDropdown value={w.status} onChange={v => setStatus(w.id, v)} />
                 </td>
                 <td className="py-3 px-4 font-body text-sm text-ivory/40">{w.guest_count}</td>
                 <td className="py-3 px-4 font-body text-xs text-ivory/25">

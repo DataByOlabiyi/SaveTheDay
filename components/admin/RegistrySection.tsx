@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { motion } from 'framer-motion'
 import type { Wedding, GiftRegistryItem, BankDetail } from '@/lib/db/types'
 
@@ -17,6 +17,61 @@ const CURRENCIES: { value: string; label: string }[] = [
   { value: 'GHS', label: '₵ GHS — Ghanaian Cedi' },
   { value: 'KES', label: 'KSh KES — Kenyan Shilling' },
 ]
+
+function CurrencyDropdown({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  const current = CURRENCIES.find(c => c.value === value)
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        className="rsvp-input py-2 flex items-center justify-between w-full text-left"
+        style={{ color: current ? undefined : 'rgba(250,247,242,0.2)' }}
+      >
+        <span>{current ? current.label : 'Select currency…'}</span>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
+          <path d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {open && (
+        <div
+          className="absolute top-full left-0 right-0 mt-1 z-20 rounded-xl overflow-hidden py-1"
+          style={{ background: '#18181b', border: '1px solid rgba(255,255,255,0.1)', boxShadow: '0 8px 24px rgba(0,0,0,0.5)' }}
+        >
+          <button
+            type="button"
+            onClick={() => { onChange(''); setOpen(false) }}
+            className="w-full text-left px-3 py-2 font-body text-xs text-ivory/30 hover:bg-white/5 transition-colors"
+          >
+            None
+          </button>
+          {CURRENCIES.map(c => (
+            <button
+              key={c.value}
+              type="button"
+              onClick={() => { onChange(c.value); setOpen(false) }}
+              className={`w-full text-left px-3 py-2 font-body text-xs hover:bg-white/5 transition-colors ${c.value === value ? 'text-gold' : 'text-ivory/60'}`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
 
 export function RegistrySection({ wedding, onSaved }: RegistrySectionProps) {
   const appUrl = typeof window !== 'undefined' ? window.location.origin : ''
@@ -246,16 +301,10 @@ export function RegistrySection({ wedding, onSaved }: RegistrySectionProps) {
               ))}
               <div>
                 <label className="rsvp-label">Currency (optional)</label>
-                <select
+                <CurrencyDropdown
                   value={bank.currency ?? ''}
-                  onChange={e => updateBank(i, 'currency', e.target.value)}
-                  className="rsvp-input py-2"
-                >
-                  <option value="">Select currency…</option>
-                  {CURRENCIES.map(c => (
-                    <option key={c.value} value={c.value}>{c.label}</option>
-                  ))}
-                </select>
+                  onChange={v => updateBank(i, 'currency', v)}
+                />
               </div>
               <div>
                 <label className="rsvp-label">Note (optional)</label>

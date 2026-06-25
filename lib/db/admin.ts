@@ -70,10 +70,9 @@ export async function getAllUsers(
   const db     = createAdminClient()
   const offset = page * pageSize
 
-  // Use embedded count to get wedding_count in a single query
   let query = db
     .from('user_profiles')
-    .select('*, weddings(count)', { count: 'exact' })
+    .select('*', { count: 'exact' })
     .order('created_at', { ascending: false })
     .range(offset, offset + pageSize - 1)
 
@@ -84,9 +83,23 @@ export async function getAllUsers(
   const { data, count, error } = await query
   if (error || !data) return { users: [], total: 0 }
 
-  const users: AdminUserRow[] = (data as Array<UserProfile & { weddings: [{ count: number }] }>).map(u => ({
+  // Fetch wedding counts separately — embedded count requires a PostgREST-visible FK
+  // which may not exist if weddings.user_id references auth.users rather than user_profiles
+  const userIds = (data as UserProfile[]).map(u => u.id)
+  const weddingCounts: Record<string, number> = {}
+  if (userIds.length > 0) {
+    const { data: weddingRows } = await db
+      .from('weddings')
+      .select('user_id')
+      .in('user_id', userIds)
+    for (const w of weddingRows ?? []) {
+      weddingCounts[w.user_id] = (weddingCounts[w.user_id] ?? 0) + 1
+    }
+  }
+
+  const users: AdminUserRow[] = (data as UserProfile[]).map(u => ({
     ...u,
-    wedding_count: u.weddings?.[0]?.count ?? 0,
+    wedding_count: weddingCounts[u.id] ?? 0,
   }))
 
   return { users, total: count ?? 0 }
@@ -115,7 +128,7 @@ export async function getAllWeddings(
     .range(offset, offset + pageSize - 1)
 
   if (search) {
-    query = query.or(`slug.ilike.%${search}%,city.ilike.%${search}%,venue.ilike.%${search}%`)
+    query = query.or(`slug.ilike.%${search}%,city.ilike.%${search}%,venue.ilike.%${search}%,couple_names->>name1.ilike.%${search}%,couple_names->>name2.ilike.%${search}%`)
   }
 
   const { data, count, error } = await query
