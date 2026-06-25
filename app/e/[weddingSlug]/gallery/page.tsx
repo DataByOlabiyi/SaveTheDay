@@ -4,6 +4,10 @@ import {
   getWeddingBySlug, getGalleryAlbums, getGalleryPhotos, getGuestBySlug,
 } from '@/lib/db/client'
 import { FullGalleryPage } from '@/components/organisms/FullGalleryPage'
+import { PasswordGate } from '@/components/atoms/PasswordGate'
+
+// Revalidate every 60 seconds — matches the invitation page cache window
+export const revalidate = 60
 
 interface PageProps {
   params:       { weddingSlug: string }
@@ -35,7 +39,7 @@ export default async function GalleryPage({ params, searchParams }: PageProps) {
     ? `/e/${params.weddingSlug}/${searchParams.guest}`
     : `/e/${params.weddingSlug}`
 
-  return (
+  const page = (
     <FullGalleryPage
       wedding={wedding}
       albums={albums}
@@ -45,4 +49,14 @@ export default async function GalleryPage({ params, searchParams }: PageProps) {
       allowDownloads={wedding.config.allow_downloads !== false}
     />
   )
+
+  return wedding.config.is_private ? (
+    <PasswordGate
+      slug={wedding.slug}
+      coupleName1={wedding.couple_names.name1}
+      coupleName2={wedding.couple_names.name2}
+    >
+      {page}
+    </PasswordGate>
+  ) : page
 }

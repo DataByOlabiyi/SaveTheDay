@@ -29,3 +29,19 @@ jobs:
 
       - name: Test
         run: npm run test
+
+      - name: Build
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder
+          NEXT_PUBLIC_APP_URL: https://localhost:3000
+          NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME: placeholder
+          NEXT_PUBLIC_SENTRY_DSN: ""
+          NEXT_PUBLIC_VITALS_ENDPOINT: ""
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: placeholder
+          SUPABASE_SERVICE_ROLE_KEY: placeholder
+          UPSTASH_REDIS_REST_URL: https://placeholder.upstash.io
+          UPSTASH_REDIS_REST_TOKEN: placeholder
+          RESEND_API_KEY: placeholder
+          RESEND_FROM_EMAIL: noreply@placeholder.app

@@ -68,6 +68,17 @@ If you are uncertain whether something is trivial, run the workflow.
 
 All database shapes live in `lib/db/types.ts`. These mirror the Supabase schema exactly. Do not invent parallel types — extend or reference what's there.
 
+### Caching and ISR
+
+Guest-facing pages are ISR with `export const revalidate = 60` — serves edge-cached HTML for 60 seconds before revalidating in the background. This means:
+- Invitation page (`app/e/[weddingSlug]/page.tsx`) and gallery page (`app/e/[weddingSlug]/gallery/page.tsx`) both use 60s ISR.
+- Do not remove `revalidate` from these pages. Without it, every guest load hits Supabase directly.
+- Studio/admin pages must NOT have `revalidate` — they need fresh session-aware data.
+
+### Async email pattern
+
+All couple notification emails are fire-and-forget — `notifyCouple()` in the RSVP route is called without `await`, errors caught with `.catch()`. This keeps the RSVP response time fast regardless of Resend latency. Do not `await` email sends in public API routes.
+
 ### Component hierarchy
 
 ```
@@ -133,6 +144,32 @@ Only `__tests__/utils.test.ts` exists, covering pure utility functions. There ar
 
 ---
 
+## Operations
+
+### CI/CD pipeline (`.github/workflows/ci.yml`)
+
+Every push to `main` and every PR runs: **type-check → lint → test → build**. The build step uses placeholder env vars so Next.js can compile without real secrets. If any step fails, do not merge or deploy.
+
+To add a new required `NEXT_PUBLIC_*` env var: add a placeholder entry to the `env:` block in the `Build` step of the CI workflow, and add the real value in Vercel's environment variable settings.
+
+### Uptime monitoring
+
+Set up [Uptime Robot](https://uptimerobot.com) (free tier) or [Better Uptime](https://betterstack.com/uptime) to monitor these endpoints every 5 minutes:
+
+| Monitor | URL | Alert if down for |
+|---|---|---|
+| Invitation page | `https://savetheday.app/e/demo-wedding` | 2 min |
+| RSVP API | `https://savetheday.app/api/rsvp` (POST — expect 422, not 5xx) | 2 min |
+| Studio login | `https://savetheday.app/studio` | 2 min |
+
+Alert destination: email to the couple/admin email on record. Sentry catches runtime errors; uptime monitoring catches total outages that Sentry won't see.
+
+### Vercel deployment
+
+Deployments are triggered automatically by Vercel on push to `main`. No manual deploy step needed. Preview deployments are created for all PRs. Production environment variables are managed in the Vercel dashboard — never commit `.env.local` to git.
+
+---
+
 ## Definition of done
 
 A task is done when:
@@ -140,6 +177,7 @@ A task is done when:
 - [ ] TypeScript compiles cleanly: `npm run type-check`
 - [ ] Lint passes: `npm run lint`
 - [ ] Existing tests pass: `npm run test`
+- [ ] Build succeeds: `npm run build` (mirrors what CI runs)
 - [ ] Any new pure-function logic has a corresponding Vitest test
 - [ ] Security rules respected: Zod validation, `sanitizeText`, rate limiting on all new public API routes
 - [ ] No new Tailwind colors, no `any`, no `console.log` left in production paths
