@@ -21,6 +21,9 @@ C:/tmp/savetheday-next/
 .DS_Store
 *.pem
 
+# PWA build sourcemaps (generated, change with every build)
+public/*.map
+
 # debug
 npm-debug.log*
 yarn-debug.log*
