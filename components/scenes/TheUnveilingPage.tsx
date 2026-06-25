@@ -36,7 +36,6 @@ import { AddToCalendarButton } from '@/components/molecules/AddToCalendarButton'
 import { GuestPhotoUpload } from '@/components/molecules/GuestPhotoUpload'
 import { SectionDots } from '@/components/atoms/SectionDots'
 import { MusicPlayer } from '@/components/molecules/MusicPlayer'
-import { GiftRegistry } from '@/components/molecules/GiftRegistry'
 import { QRCodeModal } from '@/components/molecules/QRCodeModal'
 import { ThemeToggle } from '@/components/atoms/ThemeToggle'
 import { Events } from '@/lib/analytics/events'
@@ -697,15 +696,57 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
               />
             )}
 
-            {/* ── GIFT REGISTRY ── */}
+            {/* ── GIFT REGISTRY CTA ── */}
             {config.show_gift_registry && (
-              <GiftRegistry
-                registryUrl={config.gift_registry_url}
-                registryNote={config.gift_registry_note}
-                bankDetails={config.bank_details}
-                coupleName1={couple_names.name1}
-                coupleName2={couple_names.name2}
-              />
+              <section
+                id="section-registry"
+                className="relative py-20 px-6"
+                aria-labelledby="registry-cta-heading"
+              >
+                <div className="max-w-sm mx-auto text-center">
+                  {/* Decorative ring */}
+                  <div className="relative w-16 h-16 mx-auto mb-8" aria-hidden="true">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 20, repeat: Infinity, ease: 'linear' }}
+                      className="absolute inset-0 rounded-full"
+                      style={{ border: '1px dashed rgba(201,168,76,0.25)' }}
+                    />
+                    <div
+                      className="absolute inset-2 rounded-full flex items-center justify-center text-2xl"
+                      style={{ background: 'rgba(201,168,76,0.06)', border: '1px solid rgba(201,168,76,0.15)' }}
+                    >
+                      🎁
+                    </div>
+                  </div>
+
+                  <p className="font-body tracking-[0.3em] uppercase mb-3" style={{ fontSize: '0.65rem', color: 'rgba(201,168,76,0.5)' }}>
+                    Gift Registry
+                  </p>
+                  <h2
+                    id="registry-cta-heading"
+                    className="font-display text-ivory/80 mb-4"
+                    style={{ fontSize: 'clamp(1.25rem, 3.5vw, 2rem)', fontWeight: 300, fontStyle: 'italic' }}
+                  >
+                    A gift for the journey ahead
+                  </h2>
+                  <GoldDivider className="mb-6" />
+                  <p className="font-body text-ivory/45 text-sm leading-relaxed mb-8">
+                    {config.gift_registry_note ??
+                      `Your presence at our wedding is the greatest gift we could ask for. If you&apos;d like to celebrate with a gift, tap below to view our registry.`}
+                  </p>
+                  <motion.a
+                    href={guest ? `/e/${wedding.slug}/${guest.slug}/registry` : `/e/${wedding.slug}/registry`}
+                    className="btn-gold inline-flex items-center gap-2"
+                    whileTap={{ scale: 0.97 }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                      <path d="M20 12v10H4V12M22 7H2v5h20V7zM12 22V7m0 0H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zm0 0h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7" />
+                    </svg>
+                    View Gift Registry
+                  </motion.a>
+                </div>
+              </section>
             )}
 
             {/* ── GUESTBOOK ── */}

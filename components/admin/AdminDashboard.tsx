@@ -13,6 +13,7 @@ import { ImportGuestsModal } from './ImportGuestsModal'
 import { StoryEditor } from './StoryEditor'
 import { GalleryManager } from './GalleryManager'
 import { WeddingSettingsEditor } from './WeddingSettingsEditor'
+import { RegistrySection } from './RegistrySection'
 import { AnalyticsPanel } from './AnalyticsPanel'
 import { DashboardOverview } from './DashboardOverview'
 import { ScheduleEditor } from './ScheduleEditor'
@@ -20,10 +21,10 @@ import { QRCodeModal } from '@/components/molecules/QRCodeModal'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
-type Section = 'overview' | 'guests' | 'guestbook' | 'story' | 'gallery' | 'analytics' | 'settings' | 'invitations' | 'timeline' | 'reminders' | 'thankyou'
+type Section = 'overview' | 'guests' | 'guestbook' | 'story' | 'gallery' | 'analytics' | 'settings' | 'invitations' | 'timeline' | 'reminders' | 'thankyou' | 'registry'
 type FilterStatus = 'all' | 'attending' | 'declined' | 'pending'
 
-const VALID_SECTIONS = new Set<Section>(['overview', 'guests', 'guestbook', 'story', 'gallery', 'analytics', 'settings', 'invitations', 'timeline', 'reminders', 'thankyou'])
+const VALID_SECTIONS = new Set<Section>(['overview', 'guests', 'guestbook', 'story', 'gallery', 'analytics', 'settings', 'invitations', 'timeline', 'reminders', 'thankyou', 'registry'])
 
 // ── Confirm modal ──────────────────────────────────────────────────────────────
 
@@ -155,6 +156,7 @@ const ICONS = {
   timeline:     ['M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01'],
   reminders:    ['M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9', 'M13.73 21a2 2 0 01-3.46 0'],
   thankyou:     ['M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z'],
+  registry:     ['M20 12v10H4V12', 'M22 7H2v5h20V7z', 'M12 22V7', 'M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7z', 'M12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z'],
   logout:       ['M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4', 'M16 17l5-5-5-5', 'M21 12H9'],
   menu:         ['M3 12h18', 'M3 6h18', 'M3 18h18'],
   chevronLeft:  ['M15 18l-6-6 6-6'],
@@ -186,6 +188,7 @@ const NAV_GROUPS: Array<{ label: string; items: { id: Section; label: string }[]
       { id: 'story',    label: 'Our Story' },
       { id: 'gallery',  label: 'Gallery' },
       { id: 'timeline', label: 'Programme' },
+      { id: 'registry', label: 'Gift Registry' },
       { id: 'settings', label: 'Settings' },
     ],
   },
@@ -1921,6 +1924,13 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
               {activeSection === 'invitations' && (
                 <motion.div key="invitations" {...fadeProps}>
                   <InvitationCardSection wedding={wedding} appUrl={appUrl} />
+                </motion.div>
+              )}
+
+              {/* ── Registry ──────────────────────────────────────────────── */}
+              {activeSection === 'registry' && (
+                <motion.div key="registry" {...fadeProps}>
+                  <RegistrySection wedding={localWedding} onSaved={setLocalWedding} />
                 </motion.div>
               )}
 

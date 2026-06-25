@@ -32,7 +32,16 @@ const bankDetailSchema = z.array(z.object({
   account_number: z.string().min(1).max(30),
   account_name:   z.string().min(1).max(100),
   label:          z.string().max(50).optional(),
+  currency:       z.enum(['NGN', 'GBP', 'USD', 'EUR', 'GHS', 'KES']).optional(),
+  note:           z.string().max(80).optional(),
 })).max(5).optional()
+
+const giftRegistryItemSchema = z.array(z.object({
+  id:          z.string().uuid(),
+  name:        z.string().min(1).max(200),
+  price_range: z.string().max(100).optional(),
+  link:        z.string().url().max(500).optional().or(z.literal('')),
+})).max(50).optional()
 
 const configSchema = z.object({
   show_countdown:       z.boolean().optional(),
@@ -58,6 +67,7 @@ const configSchema = z.object({
   hashtag:              z.string().max(100).optional().nullable(),
   gift_registry_url:    z.string().url().max(500).optional().nullable(),
   gift_registry_note:   z.string().max(200).optional().nullable(),
+  gift_registry_items:  giftRegistryItemSchema,
   rsvp_deadline:        z.string().optional().nullable(),
   dress_code:           dressCodeSchema,
   accommodations:       accommodationSchema,
@@ -218,6 +228,7 @@ export async function PATCH(req: NextRequest) {
 
     revalidatePath(`/e/${wedding.slug}`)
     revalidatePath(`/e/${wedding.slug}/gallery`)
+    revalidatePath(`/e/${wedding.slug}/registry`)
 
     delete (wedding.config as Record<string, unknown>).privacy_password_hash
 

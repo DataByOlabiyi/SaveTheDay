@@ -72,6 +72,13 @@ export interface Accommodation {
 
 export type BankCurrency = 'NGN' | 'GBP' | 'USD' | 'EUR' | 'GHS' | 'KES'
 
+export interface GiftRegistryItem {
+  id:           string
+  name:         string
+  price_range?: string
+  link?:        string
+}
+
 export interface BankDetail {
   bank_name:      string
   account_number: string
@@ -138,9 +145,10 @@ export interface WeddingConfig {
   download_limit?:      number
 
   // ── Gift registry ──
-  gift_registry_url?:  string
-  gift_registry_note?: string
-  bank_details?:       BankDetail[]
+  gift_registry_url?:   string
+  gift_registry_note?:  string
+  gift_registry_items?: GiftRegistryItem[]
+  bank_details?:        BankDetail[]
 
   // ── RSVP extras ──
   collect_meal_choice?: boolean
