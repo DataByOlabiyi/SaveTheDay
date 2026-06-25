@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 
 export default function ForgotPasswordPage() {
   const [email, setEmail]     = useState('')
@@ -13,9 +12,13 @@ export default function ForgotPasswordPage() {
     e.preventDefault()
     setLoading(true)
 
-    const supabase = createSupabaseBrowserClient()
     const redirectTo = `${window.location.origin}/auth/callback?type=recovery`
-    await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+
+    await fetch('/api/auth/reset-password', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, redirectTo }),
+    })
 
     setLoading(false)
     setSent(true)
@@ -39,8 +42,7 @@ export default function ForgotPasswordPage() {
             </div>
             <h1 className="font-display text-2xl text-ivory mb-3">Check your email</h1>
             <p className="font-body text-ivory/40 text-sm leading-relaxed mb-6">
-              If <span className="text-ivory/70">{email}</span> is registered,<br />
-              you&apos;ll receive a password reset link shortly.
+              If that address is registered, you&apos;ll receive a password reset link shortly.
             </p>
             <Link
               href="/login"

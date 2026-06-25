@@ -2,6 +2,7 @@
 // UPSTASH_REDIS_REST_URL + UPSTASH_REDIS_REST_TOKEN are required in production.
 // In-memory is intentionally only for local dev: it does not work across
 // multiple serverless instances and provides zero protection in a deployed env.
+import * as Sentry from '@sentry/nextjs'
 
 interface RateLimitOptions {
   key:      string
@@ -79,15 +80,21 @@ export async function checkRateLimitAsync(opts: RateLimitOptions): Promise<RateL
       // Redis is unavailable — fall back to in-memory limiting rather than
       // blocking all traffic. A Redis outage should degrade gracefully, not
       // take down RSVP submissions on an actual wedding day.
-      console.error('[rateLimit] Redis error — falling back to in-memory limiting:', err)
+      Sentry.captureMessage('[rateLimit] Redis error — falling back to in-memory limiting', {
+        level: 'warning',
+        extra: { error: String(err) },
+      })
       return inMemoryLimit(opts)
     }
   }
 
-  // Redis not configured — warn loudly in production but allow through with
-  // in-memory limiting so the app remains functional.
+  // Redis not configured — alert in production so the team knows protection
+  // is degraded. In-memory fallback keeps the app functional but is not
+  // suitable for multi-instance deployments.
   if (isProduction) {
-    console.error('[rateLimit] UPSTASH_REDIS_REST_URL/TOKEN not set in production. Using in-memory fallback (not suitable for multi-instance deployments).')
+    Sentry.captureMessage('[rateLimit] UPSTASH_REDIS_REST_URL/TOKEN not set — using in-memory fallback', {
+      level: 'warning',
+    })
   }
 
   return inMemoryLimit(opts)

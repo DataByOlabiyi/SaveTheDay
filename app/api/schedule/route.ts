@@ -50,7 +50,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ items: data ?? [] })
   } catch (err) {
     Sentry.captureException(err)
-    console.error('Schedule GET error:', err)
     return NextResponse.json({ items: [] })
   }
 }
@@ -103,7 +102,7 @@ export async function POST(req: NextRequest) {
       .single()
     if (error) {
       Sentry.captureException(error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
     }
     return NextResponse.json({ item: data })
   }

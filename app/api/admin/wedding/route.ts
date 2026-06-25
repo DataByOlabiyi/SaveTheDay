@@ -107,7 +107,10 @@ export async function DELETE(req: NextRequest) {
   if (!wedding) return NextResponse.json({ error: 'Forbidden' }, { status: 403 })
 
   const { error } = await db.from('weddings').delete().eq('id', weddingId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    Sentry.captureException(error)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
+  }
   return NextResponse.json({ success: true })
 }
 
@@ -221,7 +224,6 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ wedding })
   } catch (err) {
     Sentry.captureException(err)
-    console.error('Wedding PATCH error:', err)
     return NextResponse.json({ error: 'Failed to update wedding' }, { status: 500 })
   }
 }

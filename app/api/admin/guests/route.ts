@@ -50,7 +50,10 @@ export async function GET(req: NextRequest) {
     .eq('wedding_id', weddingId)
     .order('name', { ascending: true })
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    Sentry.captureException(error)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
+  }
   return NextResponse.json({ guests: data })
 }
 
@@ -75,7 +78,10 @@ export async function DELETE(req: NextRequest) {
     .eq('id', guestId)
     .eq('wedding_id', weddingId)
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+  if (error) {
+    Sentry.captureException(error)
+    return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
+  }
   return NextResponse.json({ success: true })
 }
 
@@ -111,7 +117,7 @@ export async function PATCH(req: NextRequest) {
 
     if (error) {
       Sentry.captureException(error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
     }
     return NextResponse.json({ success: true, is_blocked: action === 'block' })
   }
@@ -142,7 +148,7 @@ export async function PATCH(req: NextRequest) {
 
     if (error) {
       Sentry.captureException(error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
     }
     return NextResponse.json({ success: true, newSlug })
   }
@@ -157,7 +163,7 @@ export async function PATCH(req: NextRequest) {
 
     if (error) {
       Sentry.captureException(error)
-      return NextResponse.json({ error: error.message }, { status: 500 })
+      return NextResponse.json({ error: 'An unexpected error occurred' }, { status: 500 })
     }
     return NextResponse.json({ success: true, allow_plus_one: value ?? null })
   }

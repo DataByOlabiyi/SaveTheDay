@@ -16,14 +16,6 @@ function meetsAllRequirements(password: string) {
   )
 }
 
-function friendlyError(message: string): string {
-  const lower = message.toLowerCase()
-  if (lower.includes('already registered') || lower.includes('user already exists')) {
-    return 'An account with this email already exists. Try signing in instead.'
-  }
-  return 'Something went wrong. Please try again.'
-}
-
 export default function SignupPage() {
   const router = useRouter()
   const [email, setEmail]                     = useState('')
@@ -33,7 +25,7 @@ export default function SignupPage() {
   const [error, setError]                     = useState('')
   const [awaitingConfirm, setAwaitingConfirm] = useState(false)
 
-  const passwordsMatch   = confirmPassword.length > 0 && password === confirmPassword
+  const passwordsMatch    = confirmPassword.length > 0 && password === confirmPassword
   const passwordsMismatch = confirmPassword.length > 0 && password !== confirmPassword
   const canSubmit = email && meetsAllRequirements(password) && passwordsMatch && !loading
 
@@ -50,28 +42,29 @@ export default function SignupPage() {
     setLoading(true)
     setError('')
 
-    const supabase = createSupabaseBrowserClient()
-    const { data, error: authError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback?next=/studio`,
-      },
+    const emailRedirectTo = `${window.location.origin}/auth/callback?next=/studio`
+
+    const res = await fetch('/api/auth/signup', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, password, emailRedirectTo }),
     })
 
-    if (authError) {
+    const data = await res.json().catch(() => ({}))
+
+    if (!res.ok) {
       setLoading(false)
-      setError(friendlyError(authError.message))
+      setError(data.error ?? 'Something went wrong. Please try again.')
       return
     }
 
-    if (data.session) {
+    if (data.requiresConfirmation) {
+      setLoading(false)
+      setAwaitingConfirm(true)
+    } else {
       await fetch('/api/auth/sync-profile', { method: 'POST' })
       router.push('/create')
       router.refresh()
-    } else {
-      setLoading(false)
-      setAwaitingConfirm(true)
     }
   }
 

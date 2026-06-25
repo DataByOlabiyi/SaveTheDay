@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
+import * as Sentry from '@sentry/nextjs'
 import { createAdminClient } from '@/lib/db/client'
 import { createSupabaseServerClient } from '@/lib/supabase/server'
 import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
@@ -55,7 +56,8 @@ export async function POST(req: NextRequest) {
     .createSignedUploadUrl(path)
 
   if (error || !data) {
-    return NextResponse.json({ error: `Could not create upload URL: ${error?.message ?? 'unknown'}` }, { status: 500 })
+    Sentry.captureException(error ?? new Error('createSignedUploadUrl returned no data'))
+    return NextResponse.json({ error: 'Could not create upload URL' }, { status: 500 })
   }
 
   const { data: { publicUrl } } = db.storage.from(BUCKET).getPublicUrl(path)

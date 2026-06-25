@@ -45,7 +45,14 @@ export default function ResetPasswordPage() {
     setLoading(false)
 
     if (updateError) {
-      setError(updateError.message)
+      const msg = updateError.message.toLowerCase()
+      if (msg.includes('expired') || msg.includes('invalid')) {
+        setError('This reset link has expired. Please request a new one.')
+      } else if (msg.includes('same') || msg.includes('different from')) {
+        setError('Your new password must be different from your current password.')
+      } else {
+        setError('Could not update your password. Please try again.')
+      }
     } else {
       router.push('/studio')
       router.refresh()

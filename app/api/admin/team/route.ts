@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
 
   if (error || !profile) {
     return NextResponse.json(
-      { error: 'No account found with that email. Ask them to sign up first.' },
+      { error: 'Could not find an account for that email address.' },
       { status: 404 }
     )
   }
@@ -86,6 +86,17 @@ export async function DELETE(req: NextRequest) {
   }
 
   const db = createAdminClient()
+
+  // Prevent orphaning — ensure at least one other super_admin will remain
+  const { count } = await db
+    .from('user_profiles')
+    .select('id', { count: 'exact', head: true })
+    .eq('role', 'super_admin')
+    .neq('id', userId)
+
+  if (count === 0) {
+    return NextResponse.json({ error: 'Cannot remove the last super admin' }, { status: 400 })
+  }
 
   const result = await setUserRole(userId, 'user')
   if (!result.success) return NextResponse.json({ error: result.error }, { status: 500 })

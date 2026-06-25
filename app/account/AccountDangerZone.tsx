@@ -2,26 +2,50 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
+import PasswordInput from '@/components/atoms/PasswordInput'
 
 export function AccountDangerZone() {
   const router = useRouter()
-  const [step,  setStep]  = useState<'idle' | 'confirm' | 'deleting'>('idle')
-  const [error, setError] = useState<string | null>(null)
+  const [step,     setStep]     = useState<'idle' | 'confirm' | 'deleting'>('idle')
+  const [password, setPassword] = useState('')
+  const [error,    setError]    = useState<string | null>(null)
+  // Server tells us when a password is required (email+password accounts)
+  const [needsPassword, setNeedsPassword] = useState(false)
 
   const handleDelete = async () => {
     setStep('deleting')
     setError(null)
-    try {
-      const res = await fetch('/api/account', { method: 'DELETE' })
-      if (!res.ok) {
-        const data = await res.json()
-        throw new Error(data.error ?? 'Deletion failed')
-      }
+
+    const res = await fetch('/api/account', {
+      method:  'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify(password ? { password } : {}),
+    })
+
+    if (res.ok) {
       router.push('/')
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to delete account')
-      setStep('confirm')
+      return
     }
+
+    const data = await res.json().catch(() => ({}))
+
+    if (data.requiresPassword) {
+      // First attempt told us a password is needed — show the password field
+      setNeedsPassword(true)
+      setStep('confirm')
+      setError(null)
+      return
+    }
+
+    setError(data.error ?? 'Failed to delete account')
+    setStep('confirm')
+  }
+
+  const handleConfirmClick = () => {
+    setStep('confirm')
+    setNeedsPassword(false)
+    setPassword('')
+    setError(null)
   }
 
   return (
@@ -36,7 +60,7 @@ export function AccountDangerZone() {
 
       {step === 'idle' && (
         <button
-          onClick={() => setStep('confirm')}
+          onClick={handleConfirmClick}
           className="font-body text-sm text-red-400/60 hover:text-red-400 transition-colors tracking-wide"
         >
           Delete account…
@@ -49,15 +73,28 @@ export function AccountDangerZone() {
             This permanently deletes your account and all weddings, guests, and photos.
             This cannot be undone.
           </p>
+
+          {needsPassword && (
+            <div>
+              <PasswordInput
+                label="Confirm your password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                autoComplete="current-password"
+              />
+            </div>
+          )}
+
           <div className="flex gap-3">
             <button
               onClick={handleDelete}
-              className="font-body text-sm text-red-400 border border-red-500/40 hover:border-red-500/60 px-4 py-2 rounded-sm transition-colors"
+              disabled={needsPassword && !password}
+              className="font-body text-sm text-red-400 border border-red-500/40 hover:border-red-500/60 disabled:opacity-40 disabled:cursor-not-allowed px-4 py-2 rounded-sm transition-colors"
             >
               Yes, delete my account
             </button>
             <button
-              onClick={() => setStep('idle')}
+              onClick={() => { setStep('idle'); setPassword(''); setNeedsPassword(false); setError(null) }}
               className="font-body text-sm text-ivory/40 hover:text-ivory/70 px-4 py-2 transition-colors"
             >
               Cancel

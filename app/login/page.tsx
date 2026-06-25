@@ -6,17 +6,6 @@ import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
 import PasswordInput from '@/components/atoms/PasswordInput'
 
-function friendlyError(message: string): string {
-  const lower = message.toLowerCase()
-  if (lower.includes('invalid login credentials') || lower.includes('invalid credentials')) {
-    return 'Incorrect email or password. Please try again.'
-  }
-  if (lower.includes('email not confirmed')) {
-    return 'Please confirm your email address first. Check your inbox.'
-  }
-  return 'Something went wrong. Please try again.'
-}
-
 function LoginContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
@@ -32,17 +21,22 @@ function LoginContent() {
     setLoading(true)
     setError('')
 
-    const supabase = createSupabaseBrowserClient()
-    const { error: authError } = await supabase.auth.signInWithPassword({ email, password })
+    const res = await fetch('/api/auth/login', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ email, password }),
+    })
 
     setLoading(false)
 
-    if (authError) {
-      setError(friendlyError(authError.message))
-    } else {
-      router.push(next)
-      router.refresh()
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}))
+      setError(data.error ?? 'Something went wrong. Please try again.')
+      return
     }
+
+    router.push(next)
+    router.refresh()
   }
 
   async function handleGoogle() {
