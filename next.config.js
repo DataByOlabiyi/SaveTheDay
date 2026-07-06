@@ -69,7 +69,7 @@ const nextConfig = {
       "media-src 'self' blob: https://res.cloudinary.com https://*.supabase.co",
       "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://vitals.vercel-insights.com https://va.vercel-scripts.com https://api.paystack.co https://checkout.paystack.com",
       "worker-src 'self' blob:",
-      "frame-src https://checkout.paystack.com",
+      "frame-src https://checkout.paystack.com https://www.google.com https://maps.google.com",
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
