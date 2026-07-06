@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Image from 'next/image'
 import type { GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
 import { MAX_GALLERY_PHOTOS } from '@/lib/constants'
+import { useIsIOSStandalone } from '@/lib/utils/platform'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
@@ -144,6 +145,7 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
   const [addingAlbum,  setAddingAlbum]  = useState(false)
   const [newAlbumName, setNewAlbumName] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const isIOSStandalone = useIsIOSStandalone()
 
   const usedSlots   = photos.length
   const remaining   = MAX_GALLERY_PHOTOS - usedSlots
@@ -470,6 +472,19 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
         </div>
       )}
 
+      {/* iOS standalone hint — home-screen Safari PWA can't multi-select files */}
+      {albums.length > 0 && isIOSStandalone && (
+        <div className="flex items-start gap-2.5 px-3.5 py-2.5 rounded-xl"
+          style={{ background: 'rgba(12,168,110,0.05)', border: '1px solid rgba(12,168,110,0.10)' }}>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#0CA86E" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-px">
+            <path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6M15 3h6v6M10 14L21 3" />
+          </svg>
+          <p className="font-body text-[11px] text-emerald-DEFAULT/70 leading-relaxed">
+            You&apos;re viewing Studio as an installed app. Open this page in your regular browser tab to select multiple photos at once.
+          </p>
+        </div>
+      )}
+
       {/* Upload zone — only show when albums exist */}
       {albums.length > 0 && (
         <div
@@ -498,7 +513,7 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
             ref={fileInputRef}
             type="file"
             multiple
-            accept="image/jpeg,image/png,image/webp,image/gif"
+            accept="image/*"
             className="hidden"
             onChange={e => e.target.files && handleFileUpload(e.target.files)}
             disabled={isAtLimit}

@@ -199,11 +199,11 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
         className="relative"
         style={{
           paddingBottom: '70%',
-          perspective: '700px',
           filter: 'drop-shadow(0 28px 40px rgba(0,0,0,0.85)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))',
         }}
       >
-        <div className="absolute inset-0">
+        {/* perspective lives here, not on the outer wrapper, so it actually applies to the flap's rotateX below */}
+        <div className="absolute inset-0" style={{ perspective: '700px' }}>
 
           {/* ── Envelope base (back face) ── */}
           <div
@@ -335,16 +335,23 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
       tabIndex={isClickable ? 0 : -1}
     >
       <motion.div
-        animate={isClickable ? {
-          filter: [
-            'drop-shadow(0 0 6px rgba(12,168,110,0.45))',
-            'drop-shadow(0 0 20px rgba(12,168,110,0.85))',
-            'drop-shadow(0 0 6px rgba(12,168,110,0.45))',
-          ],
-        } : {}}
-        transition={{ duration: 2.2, repeat: Infinity }}
+        style={{ filter: 'drop-shadow(0 0 10px rgba(12,168,110,0.6))' }}
         className={`relative inline-flex items-center justify-center ${isOpening ? 'opacity-0 transition-opacity duration-300' : ''}`}
       >
+        {/* Glow layer — replaces the old animated drop-shadow filter (filter keyframes forced a repaint every frame) */}
+        {isClickable && (
+          <motion.div
+            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none rounded-full"
+            style={{
+              width: 120,
+              height: 120,
+              background: 'radial-gradient(circle, rgba(12,168,110,0.45) 0%, transparent 70%)',
+            }}
+            animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.9, 1.05, 0.9] }}
+            transition={{ duration: 2.2, repeat: Infinity }}
+          />
+        )}
+
         {/* Sonar ping rings */}
         {isClickable && (
           <>

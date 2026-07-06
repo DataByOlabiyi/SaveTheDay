@@ -3,6 +3,7 @@
 import { useRef } from 'react'
 import { motion, useInView } from 'framer-motion'
 import { GoldDivider } from '@/components/atoms/GoldText'
+import { buildGoogleMapsEmbedUrl } from '@/lib/utils/venue'
 import type { WeddingConfig, EventScheduleItem, Accommodation } from '@/lib/db/types'
 
 interface VenueSectionProps {
@@ -77,6 +78,7 @@ export function VenueSection({ venue, venueAddress, city, config, schedule }: Ve
   const showMap           = config.show_venue_map && !!config.google_maps_url
   const mapsUrl           = config.google_maps_url
     || `https://maps.google.com/?q=${encodeURIComponent([venue, venueAddress, city].filter(Boolean).join(', '))}`
+  const mapEmbedUrl       = buildGoogleMapsEmbedUrl(venue, venueAddress, city)
   const showSchedule      = config.show_schedule && schedule.length > 0
   const hasDressCode      = !!config.dress_code
   const accommodations    = config.show_accommodations ? (config.accommodations ?? []) : []
@@ -124,15 +126,19 @@ export function VenueSection({ venue, venueAddress, city, config, schedule }: Ve
               {showMap && (
                 <div className="relative overflow-hidden" style={{ height: 220 }}>
                   <iframe
-                    src={`${config.google_maps_url}&output=embed`}
+                    src={mapEmbedUrl}
                     width="100%"
                     height="220"
-                    style={{ border: 0, filter: 'invert(90%) hue-rotate(180deg)', width: '100%' }}
+                    style={{ border: 0, width: '100%' }}
                     allowFullScreen
                     loading="lazy"
                     referrerPolicy="no-referrer-when-downgrade"
                     title={`Map to ${venue}`}
                     aria-label={`Google Maps directions to ${venue}`}
+                  />
+                  <div
+                    className="absolute inset-0 pointer-events-none"
+                    style={{ boxShadow: 'inset 0 0 0 1px rgba(12,168,110,0.15), inset 0 0 32px 6px rgba(8,12,10,0.35)' }}
                   />
                 </div>
               )}

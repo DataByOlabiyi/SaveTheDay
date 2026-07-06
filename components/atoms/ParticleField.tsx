@@ -23,6 +23,40 @@ interface ParticleFieldProps {
   onBurstComplete?: () => void
 }
 
+const AMBIENT_BLUR = 6
+const BURST_BLUR    = 4
+
+// Recomputing shadowBlur/shadowColor per particle per frame is expensive — pre-render
+// one glow sprite per distinct color+blur combo instead and drawImage it every frame.
+const spriteCache = new Map<string, HTMLCanvasElement>()
+
+function getParticleSprite(color: string, blur: number): HTMLCanvasElement {
+  const key = `${color}:${blur}`
+  const cached = spriteCache.get(key)
+  if (cached) return cached
+
+  const radius  = 12
+  const padding = blur * 2
+  const size    = (radius + padding) * 2
+
+  const sprite = document.createElement('canvas')
+  sprite.width  = size
+  sprite.height = size
+
+  const sctx = sprite.getContext('2d')
+  if (sctx) {
+    sctx.fillStyle  = color
+    sctx.shadowBlur  = blur
+    sctx.shadowColor = color
+    sctx.beginPath()
+    sctx.arc(size / 2, size / 2, radius, 0, Math.PI * 2)
+    sctx.fill()
+  }
+
+  spriteCache.set(key, sprite)
+  return sprite
+}
+
 export function ParticleField({
   className = '',
   count = PARTICLES.AMBIENT.count,
@@ -99,15 +133,9 @@ export function ParticleField({
           p.y += p.speedY * dt
           p.opacity = (1 - progress) * (0.8 + Math.random() * 0.2)
 
-          ctx.save()
+          const r = p.size * (1 - progress * 0.5)
           ctx.globalAlpha = Math.max(0, p.opacity)
-          ctx.fillStyle = p.color
-          ctx.shadowBlur = 4
-          ctx.shadowColor = p.color
-          ctx.beginPath()
-          ctx.arc(p.x, p.y, p.size * (1 - progress * 0.5), 0, Math.PI * 2)
-          ctx.fill()
-          ctx.restore()
+          ctx.drawImage(getParticleSprite(p.color, BURST_BLUR), p.x - r, p.y - r, r * 2, r * 2)
         })
 
         if (allDead && !burstDoneRef.current) {
@@ -183,15 +211,8 @@ export function ParticleField({
           }
 
           // Glow rendering
-          ctx.save()
           ctx.globalAlpha = Math.max(0, p.opacity)
-          ctx.fillStyle = p.color
-          ctx.shadowBlur = 6
-          ctx.shadowColor = p.color
-          ctx.beginPath()
-          ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2)
-          ctx.fill()
-          ctx.restore()
+          ctx.drawImage(getParticleSprite(p.color, AMBIENT_BLUR), p.x - p.size, p.y - p.size, p.size * 2, p.size * 2)
 
           return p
         })
