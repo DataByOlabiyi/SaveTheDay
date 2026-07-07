@@ -133,6 +133,8 @@ export default function RootLayout({
         <PWAInstallPrompt />
         <Analytics />
         <WebVitals />
+        {/* Portal target for PhotoLightbox — keeps it out of any ancestor with opacity/transform/filter that would break position:fixed */}
+        <div id="lightbox-root" />
       </body>
     </html>
   )

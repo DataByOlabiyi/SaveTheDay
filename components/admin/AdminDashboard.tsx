@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { createSupabaseBrowserClient } from '@/lib/supabase/client'
-import type { Wedding, Guest, GuestbookEntry } from '@/lib/db/types'
+import type { Wedding, Guest, GuestbookEntry, GalleryAlbum, GalleryPhoto } from '@/lib/db/types'
 import { formatWeddingDate } from '@/lib/personalization/guest'
 import { getTheme } from '@/lib/themes'
 import { AddGuestModal } from './AddGuestModal'
@@ -123,6 +123,8 @@ interface AdminDashboardProps {
   galleryPhotoCount?:    number
   storyMilestoneCount?:  number
   initialSection?:       string
+  initialGalleryAlbums?: GalleryAlbum[]
+  initialGalleryPhotos?: GalleryPhoto[]
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -1026,7 +1028,7 @@ function InvitationCardSection({ wedding, appUrl }: { wedding: Wedding; appUrl: 
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export function AdminDashboard({ wedding, guests: initialGuests, userEmail, galleryPhotoCount = 0, storyMilestoneCount = 0, initialSection }: AdminDashboardProps) {
+export function AdminDashboard({ wedding, guests: initialGuests, userEmail, galleryPhotoCount = 0, storyMilestoneCount = 0, initialSection, initialGalleryAlbums, initialGalleryPhotos }: AdminDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -1894,7 +1896,7 @@ export function AdminDashboard({ wedding, guests: initialGuests, userEmail, gall
               {activeSection === 'gallery' && (
                 <motion.div key="gallery" {...fadeProps}>
                   <SectionHeading title="Gallery" description="Upload photos, organise albums, and manage what guests can download." />
-                  <GalleryManager weddingId={wedding.id} />
+                  <GalleryManager weddingId={wedding.id} initialAlbums={initialGalleryAlbums} initialPhotos={initialGalleryPhotos} />
                 </motion.div>
               )}
 

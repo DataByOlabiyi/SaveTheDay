@@ -11,7 +11,9 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
 
 interface GalleryManagerProps {
-  weddingId: string
+  weddingId:      string
+  initialAlbums?: GalleryAlbum[]
+  initialPhotos?: GalleryPhoto[]
 }
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -131,10 +133,10 @@ function AlbumOnboarding({
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export function GalleryManager({ weddingId }: GalleryManagerProps) {
-  const [albums,       setAlbums]       = useState<GalleryAlbum[]>([])
-  const [photos,       setPhotos]       = useState<GalleryPhoto[]>([])
-  const [loading,      setLoading]      = useState(true)
+export function GalleryManager({ weddingId, initialAlbums, initialPhotos }: GalleryManagerProps) {
+  const [albums,       setAlbums]       = useState<GalleryAlbum[]>(initialAlbums ?? [])
+  const [photos,       setPhotos]       = useState<GalleryPhoto[]>(initialPhotos ?? [])
+  const [loading,      setLoading]      = useState(!initialAlbums)
   const [activeAlbum,  setActiveAlbum]  = useState<string | null>(null)
   const [uploading,    setUploading]    = useState(false)
   const [uploadPct,    setUploadPct]    = useState(0)
@@ -165,7 +167,7 @@ export function GalleryManager({ weddingId }: GalleryManagerProps) {
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [weddingId])
+  useEffect(() => { if (initialAlbums && initialPhotos) return; load() }, [weddingId])
 
   const showSuccess = (msg: string) => { setSuccess(msg); setTimeout(() => setSuccess(null), 3000) }
 

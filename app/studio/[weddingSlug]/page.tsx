@@ -25,11 +25,12 @@ export default async function WeddingStudioPage({ params, searchParams }: PagePr
   const wedding = await getWeddingBySlugForOwner(params.weddingSlug, user.id)
   if (!wedding) notFound()
 
-  // Fetch guests, gallery count, and story count in parallel
+  // Fetch guests, gallery albums/photos, and story count in parallel
   const db = createAdminClient()
-  const [guests, { count: galleryPhotoCount }, { count: storyMilestoneCount }] = await Promise.all([
+  const [guests, { data: galleryAlbums }, { data: galleryPhotos }, { count: storyMilestoneCount }] = await Promise.all([
     getGuestsByWedding(wedding.id),
-    db.from('gallery_photos').select('id', { count: 'exact', head: true }).eq('wedding_id', wedding.id),
+    db.from('gallery_albums').select('*').eq('wedding_id', wedding.id).order('sort_order', { ascending: true }),
+    db.from('gallery_photos').select('*').eq('wedding_id', wedding.id).order('sort_order', { ascending: true }),
     db.from('story_milestones').select('id', { count: 'exact', head: true }).eq('wedding_id', wedding.id),
   ])
 
@@ -38,9 +39,11 @@ export default async function WeddingStudioPage({ params, searchParams }: PagePr
       wedding={wedding}
       guests={guests}
       userEmail={user.email ?? undefined}
-      galleryPhotoCount={galleryPhotoCount ?? 0}
+      galleryPhotoCount={galleryPhotos?.length ?? 0}
       storyMilestoneCount={storyMilestoneCount ?? 0}
       initialSection={searchParams?.section}
+      initialGalleryAlbums={galleryAlbums ?? []}
+      initialGalleryPhotos={galleryPhotos ?? []}
     />
   )
 }
