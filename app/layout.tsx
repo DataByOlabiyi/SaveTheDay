@@ -72,6 +72,10 @@ export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
   viewportFit: 'cover', // Respect notch/safe areas (iPhone X+)
+  // Opts out of Chromium's auto-dark/light rendering heuristics, which can
+  // repaint backgrounds without correctly adjusting rgba()-based text colors
+  // designed for this app's own (always-dark) theme.
+  colorScheme: 'dark',
   themeColor: [
     // Match system preference — dark (default brand) / light
     { media: '(prefers-color-scheme: dark)',  color: '#080C0A' },

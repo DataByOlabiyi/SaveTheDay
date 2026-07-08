@@ -245,7 +245,7 @@ export function PhotoLightbox({
             {allowDownload && onDownload && (
               <button
                 onClick={() => onDownload(photo)}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs tracking-wider uppercase transition-colors border border-emerald-DEFAULT/30 text-emerald-DEFAULT/70 hover:text-emerald-DEFAULT hover:border-emerald-DEFAULT/60"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs tracking-wider uppercase transition-colors bg-black/50 border border-emerald-DEFAULT/40 text-emerald-DEFAULT/90 hover:text-emerald-DEFAULT hover:border-emerald-DEFAULT/70 hover:bg-black/70"
                 aria-label="Download photo"
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -257,7 +257,7 @@ export function PhotoLightbox({
             <button
               ref={closeButtonRef}
               onClick={onClose}
-              className="w-8 h-8 flex items-center justify-center text-ivory/50 hover:text-ivory transition-colors"
+              className="w-8 h-8 flex items-center justify-center rounded-full bg-black/50 border border-white/10 text-ivory/80 hover:text-ivory hover:border-white/30 hover:bg-black/70 transition-colors"
               aria-label="Close lightbox"
             >
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -373,6 +373,11 @@ export function PhotoLightbox({
                       prev.has(photo.id) ? prev : new Set(prev).add(photo.id)
                     ))}
                   />
+                  {!loadedIds.has(photo.id) && (
+                    <div className="absolute inset-0 flex items-center justify-center" aria-hidden>
+                      <div className="w-8 h-8 rounded-full border-2 border-emerald-DEFAULT/25 border-t-emerald-DEFAULT animate-spin" />
+                    </div>
+                  )}
                 </motion.div>
               </motion.div>
             </AnimatePresence>
