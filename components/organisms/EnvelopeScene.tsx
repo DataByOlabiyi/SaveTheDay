@@ -6,6 +6,55 @@ import { ParticleField } from '@/components/atoms/ParticleField'
 import { FlameIcon } from '@/components/atoms/FlameIcon'
 import { vibrate, HAPTIC } from '@/lib/animations/timelines'
 
+// Static paper-grain textures, encoded once at module scope — never regenerated
+// per render. Must stay static (no <animate>): unlike FlameIcon's turbulence,
+// which unmounts after ~1.8s, this grain persists through the whole indefinite
+// envelope-float dwell, so an animated filter here would be an unbounded cost.
+const GRAIN_DARK = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'>
+    <filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7' stitchTiles='stitch'/>
+    <feColorMatrix type='matrix' values='0 0 0 0 0.05  0 0 0 0 0.15  0 0 0 0 0.09  0 0 0 0.35 0'/></filter>
+    <rect width='120' height='120' filter='url(#n)'/>
+  </svg>`
+)}")`
+
+const GRAIN_CREAM = `url("data:image/svg+xml,${encodeURIComponent(
+  `<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'>
+    <filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='2' seed='11' stitchTiles='stitch'/>
+    <feColorMatrix type='matrix' values='0 0 0 0 0.55  0 0 0 0 0.42  0 0 0 0 0.2  0 0 0 0.18 0'/></filter>
+    <rect width='140' height='140' filter='url(#n)'/>
+  </svg>`
+)}")`
+
+// Hand-authored deckled-edge silhouette — fixed points, not randomized, so the
+// shape is identical on every render and can't cause an SSR/client hydration
+// mismatch. Applied only to a static, non-rotating wrapper (see EnvelopeBody)
+// to avoid the clip-path + 3D-transform seam bug fixed earlier in this file.
+const DECKLE_CLIP = 'polygon(1% 1%, 14% 0.3%, 29% 1.6%, 50% 0.5%, 71% 1.5%, 86% 0.3%, 99% 1.2%, 99.3% 14%, 98.6% 29%, 99.6% 50%, 98.8% 71%, 99.5% 86%, 98.9% 99%, 86% 99.2%, 71% 98.5%, 50% 99.4%, 29% 98.6%, 14% 99.3%, 1% 98.8%, 0.8% 86%, 1.4% 71%, 0.6% 50%, 1.3% 29%, 0.7% 14%)'
+
+// Builds a smooth irregular "wax drip" blob from a ring of radii, using the
+// midpoint-quadratic technique (each vertex is a curve control point, each
+// midpoint an anchor) so the outline reads as an organic drip rather than a
+// faceted polygon.
+function buildBlobPath(radii: number[], cx: number, cy: number): string {
+  const pts = radii.map((r, i) => {
+    const a = (i * (360 / radii.length) * Math.PI) / 180
+    return [cx + r * Math.cos(a), cy + r * Math.sin(a)] as const
+  })
+  const mid = (a: readonly [number, number], b: readonly [number, number]) =>
+    [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2] as const
+  const start = mid(pts[pts.length - 1], pts[0])
+  let d = `M ${start[0].toFixed(2)} ${start[1].toFixed(2)} `
+  for (let i = 0; i < pts.length; i++) {
+    const next = pts[(i + 1) % pts.length]
+    const m = mid(pts[i], next)
+    d += `Q ${pts[i][0].toFixed(2)} ${pts[i][1].toFixed(2)} ${m[0].toFixed(2)} ${m[1].toFixed(2)} `
+  }
+  return d + 'Z'
+}
+
+const WAX_DRIP_PATH = buildBlobPath([31, 37, 33, 39, 30, 36, 32, 38, 31, 35, 37, 33], 46, 46)
+
 interface EnvelopeSceneProps {
   onSealCracked: () => void
   visible: boolean
@@ -48,7 +97,7 @@ export function EnvelopeScene({ onSealCracked, visible, monogram = 'S' }: Envelo
     <div
       className="relative w-full h-screen-safe flex flex-col items-center justify-center overflow-hidden"
       style={{
-        background: 'radial-gradient(ellipse at 50% 48%, rgba(8,32,20,0.95) 0%, rgba(2,7,4,1) 65%)',
+        background: 'radial-gradient(ellipse at 50% 48%, rgba(18,28,14,0.95) 0%, rgba(2,7,4,1) 65%)',
       }}
     >
       {/* Ambient particle field */}
@@ -183,7 +232,18 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
       className="relative"
       style={{ width: 'min(300px, 82vw)' }}
     >
-      {/* Ambient glow beneath envelope */}
+      {/* Ambient glow beneath envelope — emerald primary + a wider, dimmer gold
+          undertone so the light reads warmer, more like candlelight on paper */}
+      <motion.div
+        className="absolute pointer-events-none"
+        style={{
+          bottom: -30, left: '5%', right: '5%', height: 50,
+          background: 'radial-gradient(ellipse, rgba(201,168,76,0.08) 0%, transparent 65%)',
+          filter: 'blur(14px)',
+        }}
+        animate={isFloating ? { opacity: [0.5, 0.85, 0.5] } : { opacity: 0.4 }}
+        transition={{ duration: 3.6, repeat: Infinity, ease: 'easeInOut', delay: 0.4 }}
+      />
       <motion.div
         className="absolute pointer-events-none"
         style={{
@@ -202,14 +262,22 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
           filter: 'drop-shadow(0 28px 40px rgba(0,0,0,0.85)) drop-shadow(0 8px 16px rgba(0,0,0,0.6))',
         }}
       >
-        {/* perspective lives here, not on the outer wrapper, so it actually applies to the flap's rotateX below */}
-        <div className="absolute inset-0" style={{ perspective: '700px' }}>
+        {/* Deckled paper-edge silhouette — static, non-rotating, non-perspective
+            wrapper. Clips the whole assembly (not just individual panels) so the
+            envelope's true outer edge reads as organic/torn rather than a clean
+            rectangle. Kept as its own inert layer, separate from the perspective
+            and rotation below, so it can never interact with the clip-path +
+            3D-transform seam bug fixed earlier in this file. */}
+        <div className="absolute inset-0" style={{ clipPath: DECKLE_CLIP }}>
+          {/* perspective lives here, not on the outer wrapper, so it actually applies to the flap's rotateX below */}
+          <div className="absolute inset-0" style={{ perspective: '700px' }}>
 
           {/* ── Envelope base (back face) ── */}
           <div
             className="absolute inset-0"
             style={{
-              background: 'linear-gradient(155deg, #122B1C 0%, #0A1D12 45%, #061008 100%)',
+              background: `${GRAIN_DARK}, linear-gradient(155deg, #122B1C 0%, #0A1D12 45%, #061008 100%)`,
+              backgroundBlendMode: 'overlay',
               border: '1px solid rgba(12,168,110,0.28)',
               boxShadow: 'inset 0 1px 0 rgba(12,168,110,0.12), inset 0 -1px 0 rgba(0,0,0,0.4)',
             }}
@@ -220,8 +288,9 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             className="absolute inset-x-2 top-2"
             style={{
               bottom: '30%',
-              background: 'linear-gradient(170deg, #FAF4E8 0%, #F0E8D0 100%)',
-              boxShadow: '0 10px 24px rgba(0,0,0,0.35)',
+              background: `${GRAIN_CREAM}, linear-gradient(170deg, #FAF4E8 0%, #F0E8D0 100%)`,
+              backgroundBlendMode: 'soft-light',
+              boxShadow: '0 10px 24px rgba(20,10,5,0.35)',
               zIndex: 1,
             }}
             initial={{ y: 6, scale: 0.97, opacity: 0 }}
@@ -247,7 +316,8 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
           <div
             className="absolute inset-y-0 left-0 w-1/2"
             style={{
-              background: 'linear-gradient(135deg, rgba(22,58,38,0.95) 0%, rgba(10,28,18,0.85) 100%)',
+              background: `${GRAIN_DARK}, linear-gradient(135deg, rgba(22,58,38,0.95) 0%, rgba(10,28,18,0.85) 100%)`,
+              backgroundBlendMode: 'overlay',
               clipPath: 'polygon(0 0, 0 100%, 100% 50%)',
             }}
           />
@@ -256,7 +326,8 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
           <div
             className="absolute inset-y-0 right-0 w-1/2"
             style={{
-              background: 'linear-gradient(225deg, rgba(8,20,13,0.98) 0%, rgba(4,10,7,0.95) 100%)',
+              background: `${GRAIN_DARK}, linear-gradient(225deg, rgba(8,20,13,0.98) 0%, rgba(4,10,7,0.95) 100%)`,
+              backgroundBlendMode: 'overlay',
               clipPath: 'polygon(100% 0, 100% 100%, 0 50%)',
             }}
           />
@@ -265,10 +336,15 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
           <div
             className="absolute inset-x-0 bottom-0 h-1/2"
             style={{
-              background: 'linear-gradient(180deg, rgba(10,20,14,0.9) 0%, rgba(3,7,5,1) 100%)',
+              background: `${GRAIN_DARK}, linear-gradient(180deg, rgba(10,20,14,0.9) 0%, rgba(3,7,5,1) 100%)`,
+              backgroundBlendMode: 'overlay',
               clipPath: 'polygon(0 100%, 50% 0, 100% 100%)',
             }}
           />
+
+          {/* ── Postmark — small ink-stamp detail, always on the bottom triangle
+              so it's never occluded by the flap in any phase ── */}
+          <Postmark />
 
           {/* ── Fold crease line — horizontal seam between flap and body ── */}
           <div
@@ -299,7 +375,8 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
                 transformStyle: 'preserve-3d',
                 transformOrigin: 'top center',
                 backfaceVisibility: 'hidden',
-                background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
+                background: `${GRAIN_DARK}, linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)`,
+                backgroundBlendMode: 'overlay',
                 borderTop: '1px solid rgba(12,168,110,0.2)',
               }}
               animate={isOpening ? { rotateX: -115 } : {}}
@@ -308,7 +385,8 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
               {/* Flap inner — cream, only visible once rotated past 90deg */}
               <div style={{
                 position: 'absolute', inset: 0,
-                background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
+                background: `${GRAIN_CREAM}, linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)`,
+                backgroundBlendMode: 'soft-light',
                 backfaceVisibility: 'hidden',
                 transform: 'rotateX(180deg)',
               }} />
@@ -317,7 +395,7 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             {/* Cast shadow — sweeps over the liner as the flap lifts, then settles */}
             <motion.div
               className="absolute inset-0 pointer-events-none"
-              style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 70%)' }}
+              style={{ background: 'linear-gradient(180deg, rgba(20,10,5,0.55) 0%, transparent 70%)' }}
               initial={{ opacity: 0 }}
               animate={isOpening ? { opacity: [0, 0.6, 0.12] } : { opacity: 0 }}
               transition={{ duration: 1, delay: 0.1, ease: 'easeOut' }}
@@ -332,9 +410,32 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
 
           {/* ── Wax Seal ── */}
           <WaxSeal ref={sealRef} phase={phase} onTap={onSealTap} monogram={monogram} />
+          </div>
         </div>
       </div>
     </motion.div>
+  )
+}
+
+// ── Postmark ──────────────────────────────────────────────────────────────────
+// Small ink-stamp detail. Deliberately much smaller than the wax seal so it
+// stays a secondary flourish, not a competing focal point.
+function Postmark() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="absolute pointer-events-none"
+      style={{ left: '62%', top: '68%', width: 38, height: 38, transform: 'translate(-50%, -50%) rotate(-8deg)', zIndex: 2 }}
+      viewBox="0 0 38 38" fill="none"
+    >
+      <circle cx="19" cy="19" r="15" stroke="#073628" strokeOpacity="0.55" strokeWidth="1"
+        strokeDasharray="3 1.5 2 1 4 1.5 2.5 1" />
+      {[-8, -2, 4, 10].map((dy, i) => (
+        <path key={i}
+          d={`M 2 ${19 + dy} Q 10 ${15 + dy} 19 ${19 + dy} T 36 ${19 + dy}`}
+          stroke="#073628" strokeOpacity="0.45" strokeWidth="0.7" fill="none" />
+      ))}
+    </svg>
   )
 }
 
@@ -360,17 +461,19 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
       tabIndex={isClickable ? 0 : -1}
     >
       <motion.div
-        style={{ filter: 'drop-shadow(0 0 10px rgba(12,168,110,0.6))' }}
+        style={{ filter: 'drop-shadow(0 3px 3px rgba(0,0,0,0.55)) drop-shadow(0 0 10px rgba(12,168,110,0.6))' }}
         className={`relative inline-flex items-center justify-center ${isOpening ? 'opacity-0 transition-opacity duration-300' : ''}`}
       >
-        {/* Glow layer — replaces the old animated drop-shadow filter (filter keyframes forced a repaint every frame) */}
+        {/* Glow layer — warm gold core cooling to emerald at the rim, echoing the
+            flame's own gradient so its warmth visually carries into the seal.
+            Replaces the old animated drop-shadow filter (filter keyframes forced a repaint every frame) */}
         {isClickable && (
           <motion.div
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 pointer-events-none rounded-full"
             style={{
               width: 120,
               height: 120,
-              background: 'radial-gradient(circle, rgba(12,168,110,0.45) 0%, transparent 70%)',
+              background: 'radial-gradient(circle, rgba(232,204,122,0.25) 0%, rgba(12,168,110,0.4) 45%, transparent 70%)',
             }}
             animate={{ opacity: [0.4, 0.9, 0.4], scale: [0.9, 1.05, 0.9] }}
             transition={{ duration: 2.2, repeat: Infinity }}
@@ -396,39 +499,52 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
         <svg width="92" height="92" viewBox="0 0 92 92" fill="none">
           <defs>
             <radialGradient id="sealFill" cx="38%" cy="32%" r="62%">
-              <stop offset="0%"   stopColor="#1E7A58" stopOpacity="0.9"/>
-              <stop offset="60%"  stopColor="#0B5240" stopOpacity="1"/>
+              <stop offset="0%"   stopColor="#2E9670" stopOpacity="1"/>
+              <stop offset="45%"  stopColor="#0B5240" stopOpacity="1"/>
               <stop offset="100%" stopColor="#052E22" stopOpacity="1"/>
             </radialGradient>
             <radialGradient id="sealSheen" cx="38%" cy="28%" r="55%">
               <stop offset="0%"   stopColor="#4DD9A0" stopOpacity="0.18"/>
               <stop offset="100%" stopColor="#0CA86E"  stopOpacity="0"/>
             </radialGradient>
+            {/* Static emboss — low-frequency turbulence read as a bump map via
+                feDiffuseLighting, giving the wax an undulating "dripped" surface
+                instead of a flat fill. No <animate>: this paints once and stays,
+                unlike FlameIcon's turbulence which only runs during its ~1.8s phase. */}
+            <filter id="waxEmboss" x="-10%" y="-10%" width="120%" height="120%">
+              <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="2" seed="4" result="noise"/>
+              {/* Low-alpha warm tint, same recipe as the panel grain below — a full
+                  feDiffuseLighting rig read as a solid yellow wash here, since its
+                  output is opaque and dominated the emerald wax fill entirely. */}
+              <feColorMatrix in="noise" type="matrix"
+                values="0 0 0 0 0.85  0 0 0 0 0.72  0 0 0 0 0.35  0 0 0 0.22 0" result="tint"/>
+              <feComposite in="tint" in2="SourceGraphic" operator="in" result="clippedTint"/>
+              <feBlend in="SourceGraphic" in2="clippedTint" mode="overlay"/>
+            </filter>
           </defs>
 
-          {/* Outer sunburst lines */}
-          {Array.from({ length: 24 }).map((_, i) => {
-            const a = (i * 15 * Math.PI) / 180
+          {/* Outer sunburst lines — dialed back so it recedes into a background
+              detail rather than being the seal's dominant (and rather flat) signature */}
+          {Array.from({ length: 12 }).map((_, i) => {
+            const a = (i * 30 * Math.PI) / 180
             return <line key={i}
               x1={46 + 40 * Math.cos(a)} y1={46 + 40 * Math.sin(a)}
               x2={46 + 34 * Math.cos(a)} y2={46 + 34 * Math.sin(a)}
-              stroke="#0CA86E" strokeWidth="0.8" opacity="0.45"/>
+              stroke="#0CA86E" strokeWidth="0.8" opacity="0.2"/>
           })}
 
-          {/* Scalloped outer edge */}
-          {Array.from({ length: 24 }).map((_, i) => {
-            const a = (i * 15 * Math.PI) / 180
-            return <circle key={i}
-              cx={46 + 38 * Math.cos(a)} cy={46 + 38 * Math.sin(a)}
-              r="2.5" fill="#083D2C" stroke="#0CA86E" strokeWidth="0.6" opacity="0.7"/>
-          })}
+          {/* Wax base — an irregular "drip" blob instead of a perfect circle,
+              with a static emboss for a dripped-wax surface */}
+          <path d={WAX_DRIP_PATH} fill="url(#sealFill)" filter="url(#waxEmboss)"/>
+          <path d={WAX_DRIP_PATH} fill="url(#sealSheen)"/>
 
-          {/* Wax base */}
-          <circle cx="46" cy="46" r="32" fill="url(#sealFill)"/>
-          <circle cx="46" cy="46" r="32" fill="url(#sealSheen)"/>
+          {/* Outer rim — follows the same drip silhouette */}
+          <path d={WAX_DRIP_PATH} fill="none" stroke="#0CA86E" strokeWidth="1.2" opacity="0.8"/>
 
-          {/* Outer ring */}
-          <circle cx="46" cy="46" r="32" fill="none" stroke="#0CA86E" strokeWidth="1.2" opacity="0.8"/>
+          {/* Warm rim-light — thin arc along the upper-left, matching the scene's
+              upper-left light source */}
+          <path d={WAX_DRIP_PATH} fill="none" stroke="rgba(232,204,122,0.25)" strokeWidth="0.8"
+            strokeLinecap="round" strokeDasharray="34 90" strokeDashoffset="10"/>
 
           {/* Rope-style dashed ring */}
           <circle cx="46" cy="46" r="26" fill="none" stroke="#0CA86E" strokeWidth="0.6"
@@ -472,8 +588,11 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
             {monogram}
           </text>
 
-          {/* Surface sheen */}
+          {/* Surface sheen — broad ambient wash */}
           <ellipse cx="38" cy="34" rx="8" ry="5" fill="rgba(255,255,255,0.05)" transform="rotate(-30 38 34)"/>
+          {/* Glassy hotspot — a sharper, brighter catch-light distinct from the ambient sheen */}
+          <ellipse cx="36" cy="31" rx="5" ry="3" fill="rgba(255,255,255,0.35)" transform="rotate(-30 36 31)"
+            style={{ filter: 'blur(0.6px)' }}/>
         </svg>
       </motion.div>
     </button>
