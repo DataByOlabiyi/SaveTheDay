@@ -4,6 +4,15 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Opts the whole app out of Windows/Chromium Forced Colors mode, which
+   otherwise remaps this app's designed background/text colors to a system
+   palette (leaving actual <img> content untouched) — indistinguishable from
+   a broken theme rather than a real accessibility improvement here, since
+   the app's own contrast (near-white on near-black) is already very high. */
+html {
+  forced-color-adjust: none;
+}
+
 /* ──────────────────────────────────────────────────────────────
    CSS Custom Properties — The Unveiling Design System (Emerald)
    Supports dark mode (default) and light mode via .light class
