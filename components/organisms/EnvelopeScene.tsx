@@ -218,9 +218,15 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
           {/* ── Cream liner — revealed as flap opens ── */}
           <motion.div
             className="absolute inset-x-2 top-2"
-            style={{ bottom: '30%', background: 'linear-gradient(170deg, #FAF4E8 0%, #F0E8D0 100%)', zIndex: 1 }}
-            animate={isOpening ? { y: [0, -14], opacity: [0.9, 1] } : { opacity: 0 }}
-            transition={{ duration: 0.9, delay: 0.3, ease: [0.22, 1, 0.36, 1] }}
+            style={{
+              bottom: '30%',
+              background: 'linear-gradient(170deg, #FAF4E8 0%, #F0E8D0 100%)',
+              boxShadow: '0 10px 24px rgba(0,0,0,0.35)',
+              zIndex: 1,
+            }}
+            initial={{ y: 6, scale: 0.97, opacity: 0 }}
+            animate={isOpening ? { y: -20, scale: 1, opacity: 1 } : { y: 6, scale: 0.97, opacity: 0 }}
+            transition={{ duration: 1, delay: 0.45, ease: [0.22, 1, 0.36, 1] }}
           >
             <div style={{ position: 'absolute', inset: 6, border: '0.5px solid rgba(160,110,60,0.2)' }} />
             <svg style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', opacity: 0.16 }}
@@ -275,28 +281,47 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             }}
           />
 
-          {/* ── Flap (top triangle, folds back on open) ── */}
+          {/* ── Flap (top triangle, folds back on open) ──
+              The clip-path lives on this static, non-rotating mask — clip-path
+              combined directly with a 3D-rotated element renders with jagged,
+              unclipped seams in Chromium/WebKit. The actual rotating plane sits
+              inside, oversized, so the crisp triangle window never reveals its edges. */}
           <motion.div
-            className="absolute inset-x-0 top-0 h-1/2"
-            animate={isOpening ? { rotateX: -115 } : {}}
-            transition={{ duration: 0.85, delay: 0.1, ease: [0.455, 0.03, 0.515, 0.955] }}
-            style={{
-              transformStyle: 'preserve-3d',
-              transformOrigin: 'top center',
-              zIndex: 3,
-              clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-              background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
-              borderTop: '1px solid rgba(12,168,110,0.2)',
-            }}
+            className="absolute inset-x-0 top-0 h-1/2 overflow-hidden pointer-events-none"
+            style={{ clipPath: 'polygon(0 0, 100% 0, 50% 100%)', zIndex: 3 }}
+            animate={{ opacity: phase === 'opened' ? 0 : 1 }}
+            transition={{ duration: 0.4, delay: phase === 'opened' ? 0.5 : 0 }}
           >
-            {/* Flap inner — cream, visible as it flips back */}
-            <div style={{
-              position: 'absolute', inset: 0,
-              clipPath: 'polygon(0 0, 100% 0, 50% 100%)',
-              background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
-              backfaceVisibility: 'hidden',
-              transform: 'rotateX(180deg)',
-            }} />
+            <motion.div
+              className="absolute"
+              style={{
+                left: '-15%', right: '-15%', top: 0, height: '160%',
+                transformStyle: 'preserve-3d',
+                transformOrigin: 'top center',
+                backfaceVisibility: 'hidden',
+                background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
+                borderTop: '1px solid rgba(12,168,110,0.2)',
+              }}
+              animate={isOpening ? { rotateX: -115 } : {}}
+              transition={{ duration: 0.95, delay: 0.1, ease: [0.455, 0.03, 0.515, 0.955] }}
+            >
+              {/* Flap inner — cream, only visible once rotated past 90deg */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
+                backfaceVisibility: 'hidden',
+                transform: 'rotateX(180deg)',
+              }} />
+            </motion.div>
+
+            {/* Cast shadow — sweeps over the liner as the flap lifts, then settles */}
+            <motion.div
+              className="absolute inset-0 pointer-events-none"
+              style={{ background: 'linear-gradient(180deg, rgba(0,0,0,0.55) 0%, transparent 70%)' }}
+              initial={{ opacity: 0 }}
+              animate={isOpening ? { opacity: [0, 0.6, 0.12] } : { opacity: 0 }}
+              transition={{ duration: 1, delay: 0.1, ease: 'easeOut' }}
+            />
           </motion.div>
 
           {/* ── Emerald inner border glow ── */}
