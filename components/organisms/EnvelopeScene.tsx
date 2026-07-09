@@ -30,7 +30,7 @@ const GRAIN_CREAM = `url("data:image/svg+xml,${encodeURIComponent(
 // shape is identical on every render and can't cause an SSR/client hydration
 // mismatch. Applied only to a static, non-rotating wrapper (see EnvelopeBody)
 // to avoid the clip-path + 3D-transform seam bug fixed earlier in this file.
-const DECKLE_CLIP = 'polygon(1% 1%, 14% 0.3%, 29% 1.6%, 50% 0.5%, 71% 1.5%, 86% 0.3%, 99% 1.2%, 99.3% 14%, 98.6% 29%, 99.6% 50%, 98.8% 71%, 99.5% 86%, 98.9% 99%, 86% 99.2%, 71% 98.5%, 50% 99.4%, 29% 98.6%, 14% 99.3%, 1% 98.8%, 0.8% 86%, 1.4% 71%, 0.6% 50%, 1.3% 29%, 0.7% 14%)'
+const DECKLE_CLIP = 'polygon(1% 1%, 50% 0.5%, 99% 1.2%, 99.3% 14%, 99.6% 50%, 98.9% 86%, 86% 99.2%, 50% 99.4%, 1% 98.8%, 0.8% 86%, 0.6% 50%, 0.7% 14%)'
 
 // Builds a smooth irregular "wax drip" blob from a ring of radii, using the
 // midpoint-quadratic technique (each vertex is a curve control point, each
@@ -277,7 +277,6 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             className="absolute inset-0"
             style={{
               background: `${GRAIN_DARK}, linear-gradient(155deg, #122B1C 0%, #0A1D12 45%, #061008 100%)`,
-              backgroundBlendMode: 'overlay',
               border: '1px solid rgba(12,168,110,0.28)',
               boxShadow: 'inset 0 1px 0 rgba(12,168,110,0.12), inset 0 -1px 0 rgba(0,0,0,0.4)',
             }}
@@ -289,7 +288,6 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             style={{
               bottom: '30%',
               background: `${GRAIN_CREAM}, linear-gradient(170deg, #FAF4E8 0%, #F0E8D0 100%)`,
-              backgroundBlendMode: 'soft-light',
               boxShadow: '0 10px 24px rgba(20,10,5,0.35)',
               zIndex: 1,
             }}
@@ -312,12 +310,17 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             </svg>
           </motion.div>
 
-          {/* ── Left panel — lighter (light source from left) ── */}
+          {/* ── Left panel — lighter (light source from left) ──
+              No grain here: this panel (and its siblings below) sit under the
+              flap and are recomposited on every frame of the float-bob and
+              flap-rotation animations, so a textured background here is pure
+              per-frame cost with the texture mostly hidden or edge-on anyway.
+              Grain stays on the two large, always-flat surfaces (back face,
+              liner) where it's visible and only ever painted once. */}
           <div
             className="absolute inset-y-0 left-0 w-1/2"
             style={{
-              background: `${GRAIN_DARK}, linear-gradient(135deg, rgba(22,58,38,0.95) 0%, rgba(10,28,18,0.85) 100%)`,
-              backgroundBlendMode: 'overlay',
+              background: 'linear-gradient(135deg, rgba(22,58,38,0.95) 0%, rgba(10,28,18,0.85) 100%)',
               clipPath: 'polygon(0 0, 0 100%, 100% 50%)',
             }}
           />
@@ -326,8 +329,7 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
           <div
             className="absolute inset-y-0 right-0 w-1/2"
             style={{
-              background: `${GRAIN_DARK}, linear-gradient(225deg, rgba(8,20,13,0.98) 0%, rgba(4,10,7,0.95) 100%)`,
-              backgroundBlendMode: 'overlay',
+              background: 'linear-gradient(225deg, rgba(8,20,13,0.98) 0%, rgba(4,10,7,0.95) 100%)',
               clipPath: 'polygon(100% 0, 100% 100%, 0 50%)',
             }}
           />
@@ -336,8 +338,7 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
           <div
             className="absolute inset-x-0 bottom-0 h-1/2"
             style={{
-              background: `${GRAIN_DARK}, linear-gradient(180deg, rgba(10,20,14,0.9) 0%, rgba(3,7,5,1) 100%)`,
-              backgroundBlendMode: 'overlay',
+              background: 'linear-gradient(180deg, rgba(10,20,14,0.9) 0%, rgba(3,7,5,1) 100%)',
               clipPath: 'polygon(0 100%, 50% 0, 100% 100%)',
             }}
           />
@@ -375,8 +376,11 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
                 transformStyle: 'preserve-3d',
                 transformOrigin: 'top center',
                 backfaceVisibility: 'hidden',
-                background: `${GRAIN_DARK}, linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)`,
-                backgroundBlendMode: 'overlay',
+                // No grain on this face either: it's the one element actually
+                // being 3D-rotated every frame during the open sequence — the
+                // single most expensive place to force a textured-background
+                // recomposite, and the texture reads as a blur mid-rotation anyway.
+                background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
                 borderTop: '1px solid rgba(12,168,110,0.2)',
               }}
               animate={isOpening ? { rotateX: -115 } : {}}
@@ -385,8 +389,7 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
               {/* Flap inner — cream, only visible once rotated past 90deg */}
               <div style={{
                 position: 'absolute', inset: 0,
-                background: `${GRAIN_CREAM}, linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)`,
-                backgroundBlendMode: 'soft-light',
+                background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
                 backfaceVisibility: 'hidden',
                 transform: 'rotateX(180deg)',
               }} />
@@ -512,14 +515,21 @@ const WaxSeal = forwardRef<HTMLButtonElement, {
                 instead of a flat fill. No <animate>: this paints once and stays,
                 unlike FlameIcon's turbulence which only runs during its ~1.8s phase. */}
             <filter id="waxEmboss" x="-10%" y="-10%" width="120%" height="120%">
-              <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="2" seed="4" result="noise"/>
+              <feTurbulence type="fractalNoise" baseFrequency="0.045 0.09" numOctaves="1" seed="4" result="noise"/>
               {/* Low-alpha warm tint, same recipe as the panel grain below — a full
                   feDiffuseLighting rig read as a solid yellow wash here, since its
-                  output is opaque and dominated the emerald wax fill entirely. */}
+                  output is opaque and dominated the emerald wax fill entirely.
+                  Plain normal-alpha compositing (feMerge), not a named blend mode
+                  (feBlend mode=overlay) — this SVG sits beside the seal's own
+                  continuous glow-pulse/sonar-ring animations, so anything pricier
+                  than default compositing here is paid on every one of their frames. */}
               <feColorMatrix in="noise" type="matrix"
                 values="0 0 0 0 0.85  0 0 0 0 0.72  0 0 0 0 0.35  0 0 0 0.22 0" result="tint"/>
               <feComposite in="tint" in2="SourceGraphic" operator="in" result="clippedTint"/>
-              <feBlend in="SourceGraphic" in2="clippedTint" mode="overlay"/>
+              <feMerge>
+                <feMergeNode in="SourceGraphic"/>
+                <feMergeNode in="clippedTint"/>
+              </feMerge>
             </filter>
           </defs>
 
