@@ -369,29 +369,41 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             animate={{ opacity: phase === 'opened' ? 0 : 1 }}
             transition={{ duration: 0.4, delay: phase === 'opened' ? 0.5 : 0 }}
           >
+            {/* Safari/WebKit has a well-known bug where backface-visibility on
+                nested 3D children renders inverted (back face shows even when
+                facing away) if the ROTATING element itself also paints its own
+                background and sets backface-visibility on itself. The fix is the
+                standard cross-browser flip-card structure: the rotating element
+                stays a plain, unpainted transform container, and front/back are
+                two symmetric sibling faces inside it — not "parent is the front,
+                child is the back." */}
             <motion.div
               className="absolute"
               style={{
                 left: '-15%', right: '-15%', top: 0, height: '160%',
                 transformStyle: 'preserve-3d',
                 transformOrigin: 'top center',
-                backfaceVisibility: 'hidden',
-                // No grain on this face either: it's the one element actually
-                // being 3D-rotated every frame during the open sequence — the
-                // single most expensive place to force a textured-background
-                // recomposite, and the texture reads as a blur mid-rotation anyway.
-                background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
-                borderTop: '1px solid rgba(12,168,110,0.2)',
               }}
               animate={isOpening ? { rotateX: -115 } : {}}
               transition={{ duration: 0.95, delay: 0.1, ease: [0.455, 0.03, 0.515, 0.955] }}
             >
+              {/* Flap outer — dark green, facing the viewer at rest.
+                  No grain here: it's the one element actively 3D-rotated every
+                  frame during the open sequence — the most expensive place to
+                  force a textured-background recomposite, and the texture reads
+                  as a blur mid-rotation anyway. */}
+              <div style={{
+                position: 'absolute', inset: 0,
+                backfaceVisibility: 'hidden',
+                background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
+                borderTop: '1px solid rgba(12,168,110,0.2)',
+              }} />
               {/* Flap inner — cream, only visible once rotated past 90deg */}
               <div style={{
                 position: 'absolute', inset: 0,
-                background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
                 backfaceVisibility: 'hidden',
                 transform: 'rotateX(180deg)',
+                background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
               }} />
             </motion.div>
 
