@@ -369,14 +369,14 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
             animate={{ opacity: phase === 'opened' ? 0 : 1 }}
             transition={{ duration: 0.4, delay: phase === 'opened' ? 0.5 : 0 }}
           >
-            {/* Safari/WebKit has a well-known bug where backface-visibility on
-                nested 3D children renders inverted (back face shows even when
-                facing away) if the ROTATING element itself also paints its own
-                background and sets backface-visibility on itself. The fix is the
-                standard cross-browser flip-card structure: the rotating element
-                stays a plain, unpainted transform container, and front/back are
-                two symmetric sibling faces inside it — not "parent is the front,
-                child is the back." */}
+            {/* WebKit/Safari does not reliably compute backface-visibility for
+                nested 3D children — verified live: even with the correct
+                cross-browser sibling-face structure (plain rotating container,
+                two backface-visibility:hidden siblings), WebKit still shows the
+                rotated-away face at rest. backface-visibility is kept below as a
+                harmless hint for engines that do honor it, but the actual
+                hide/show is driven explicitly by opacity tied to `isOpening`
+                so correctness never depends on the 3D engine's own judgment. */}
             <motion.div
               className="absolute"
               style={{
@@ -392,19 +392,31 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
                   frame during the open sequence — the most expensive place to
                   force a textured-background recomposite, and the texture reads
                   as a blur mid-rotation anyway. */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                backfaceVisibility: 'hidden',
-                background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
-                borderTop: '1px solid rgba(12,168,110,0.2)',
-              }} />
-              {/* Flap inner — cream, only visible once rotated past 90deg */}
-              <div style={{
-                position: 'absolute', inset: 0,
-                backfaceVisibility: 'hidden',
-                transform: 'rotateX(180deg)',
-                background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
-              }} />
+              <motion.div
+                style={{
+                  position: 'absolute', inset: 0,
+                  backfaceVisibility: 'hidden',
+                  background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
+                  borderTop: '1px solid rgba(12,168,110,0.2)',
+                }}
+                animate={{ opacity: isOpening ? 0 : 1 }}
+                transition={{ duration: 0.12, delay: isOpening ? 0.68 : 0 }}
+              />
+              {/* Flap inner — cream. Fades in ~0.68s into the 0.1s-delay/0.95s
+                  rotation, roughly matching when the geometry crosses 90deg
+                  (measured empirically), instead of "whenever rotated past 90deg"
+                  per backface-visibility, which WebKit won't reliably honor. */}
+              <motion.div
+                style={{
+                  position: 'absolute', inset: 0,
+                  backfaceVisibility: 'hidden',
+                  transform: 'rotateX(180deg)',
+                  background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
+                }}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: isOpening ? 1 : 0 }}
+                transition={{ duration: 0.12, delay: isOpening ? 0.68 : 0 }}
+              />
             </motion.div>
 
             {/* Cast shadow — sweeps over the liner as the flap lifts, then settles */}
