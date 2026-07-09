@@ -375,8 +375,14 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
                 two backface-visibility:hidden siblings), WebKit still shows the
                 rotated-away face at rest. backface-visibility is kept below as a
                 harmless hint for engines that do honor it, but the actual
-                hide/show is driven explicitly by opacity tied to `isOpening`
-                so correctness never depends on the 3D engine's own judgment. */}
+                hide/show is driven explicitly by opacity tied to `isOpening`.
+                That opacity is set via a *plain* CSS transition, not a nested
+                Framer Motion value — on WebKit, a motion.div's `initial`/`animate`
+                opacity silently failed to apply here (computed opacity stayed 1
+                on both faces), most likely a timing quirk in how Framer Motion
+                schedules its initial-style effect for motion components nested
+                inside another motion.div's preserve-3d context. A plain style
+                object updated on ordinary React re-render has no such dependency. */}
             <motion.div
               className="absolute"
               style={{
@@ -392,30 +398,29 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
                   frame during the open sequence — the most expensive place to
                   force a textured-background recomposite, and the texture reads
                   as a blur mid-rotation anyway. */}
-              <motion.div
+              <div
                 style={{
                   position: 'absolute', inset: 0,
                   backfaceVisibility: 'hidden',
                   background: 'linear-gradient(155deg, #163322 0%, #0A1C12 60%, #050E08 100%)',
                   borderTop: '1px solid rgba(12,168,110,0.2)',
+                  opacity: isOpening ? 0 : 1,
+                  transition: `opacity 0.12s ease ${isOpening ? '0.68s' : '0s'}`,
                 }}
-                animate={{ opacity: isOpening ? 0 : 1 }}
-                transition={{ duration: 0.12, delay: isOpening ? 0.68 : 0 }}
               />
               {/* Flap inner — cream. Fades in ~0.68s into the 0.1s-delay/0.95s
                   rotation, roughly matching when the geometry crosses 90deg
                   (measured empirically), instead of "whenever rotated past 90deg"
                   per backface-visibility, which WebKit won't reliably honor. */}
-              <motion.div
+              <div
                 style={{
                   position: 'absolute', inset: 0,
                   backfaceVisibility: 'hidden',
                   transform: 'rotateX(180deg)',
                   background: 'linear-gradient(160deg, #F5ECD8 0%, #E8D8B8 100%)',
+                  opacity: isOpening ? 1 : 0,
+                  transition: `opacity 0.12s ease ${isOpening ? '0.68s' : '0s'}`,
                 }}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: isOpening ? 1 : 0 }}
-                transition={{ duration: 0.12, delay: isOpening ? 0.68 : 0 }}
               />
             </motion.div>
 
