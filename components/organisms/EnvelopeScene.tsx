@@ -445,6 +445,14 @@ function EnvelopeBody({ phase, sealRef, onSealTap, monogram }: EnvelopeBodyProps
           </div>
         </div>
       </div>
+
+      {/* ── Letter card — sibling-after the drop-shadow container so it paints
+          above the envelope's sealed stacking context AND its per-frame motion
+          stays out of the drop-shadow filter's recompute; inside the float
+          wrapper so it inherits the frozen mid-bob transform and stays
+          pixel-aligned (the float animation freezes at its current offset when
+          the phase leaves 'envelope-float'). ── */}
+      {isOpening && <LetterCard monogram={monogram} />}
     </motion.div>
   )
 }
@@ -468,6 +476,75 @@ function Postmark() {
           stroke="#073628" strokeOpacity="0.45" strokeWidth="0.7" fill="none" />
       ))}
     </svg>
+  )
+}
+
+// ── Letter Card ───────────────────────────────────────────────────────────────
+// The invitation card that slides out of the envelope pocket after the flap
+// opens. The mask window's bottom edge sits exactly on the fold-crease seam at
+// 50%, so the existing crease line dresses the cut. No clip-path, 3D, or
+// filters anywhere in this subtree.
+function LetterCard({ monogram }: { monogram: string }) {
+  const displayed = monogram.length > 3 ? monogram.charAt(0) : monogram
+
+  return (
+    <div
+      aria-hidden="true"
+      className="absolute inset-x-0 overflow-hidden pointer-events-none"
+      style={{ top: '-60%', bottom: '50%' }}
+    >
+      {/* y arithmetic is coupled to the card's dimensions: card height = 72%
+          envelope width × 7/6 = 84% of envelope width = 120% of envelope
+          height H (H = 0.7 × width). y: -70% of own height = 84% of H, so the
+          card top travels from the fold line (50% H) to −34% H — ~34% of H
+          above the envelope's top edge, ~28% of the card in clear air, card
+          bottom at 86% H still below the fold, inside the −60% window top with
+          margin. Changing the card's width or aspect ratio silently changes
+          the rise distance.
+          The ease's slow start is load-bearing: it keeps the card's top edge
+          at/below the retreating flap tip during t≈1.0–1.5s; the card paints
+          above the flap, so a fast-start ease would visibly cover the rotating
+          flap. */}
+      <motion.div
+        className="absolute"
+        style={{
+          top: '100%',
+          left: '50%',
+          width: '72%',
+          aspectRatio: '6 / 7',
+          x: '-50%',
+          background: 'linear-gradient(175deg, #FAF4E8 0%, #F0E8D0 100%)',
+          borderRadius: 2,
+          boxShadow: 'inset 0 1px 0 rgba(255,255,255,0.35), 0 6px 18px rgba(20,10,5,0.35)',
+        }}
+        initial={{ y: '0%' }}
+        animate={{ y: '-70%' }}
+        transition={{ duration: 1.2, delay: 0.4, ease: [0.65, 0, 0.35, 1] }}
+      >
+        <div style={{ position: 'absolute', inset: '3%', border: '0.5px solid rgba(160,110,60,0.2)' }} />
+        <svg
+          style={{ position: 'absolute', top: 0, left: 0 }}
+          width="100%" viewBox="0 0 100 40" fill="none"
+        >
+          <defs>
+            <linearGradient id="letterFlourish" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stopColor="rgba(160,110,60,0)"/>
+              <stop offset="50%" stopColor="rgba(160,110,60,0.35)"/>
+              <stop offset="100%" stopColor="rgba(160,110,60,0)"/>
+            </linearGradient>
+          </defs>
+          {displayed.length > 0 && (
+            <text x="50" y="22" textAnchor="middle" fill="#073628"
+              fontFamily="Georgia, serif" fontStyle="italic"
+              fontSize={displayed.length > 1 ? '9' : '13'}
+              letterSpacing="2" opacity="0.85">
+              {displayed}
+            </text>
+          )}
+          <line x1="41" y1="30" x2="59" y2="30" stroke="url(#letterFlourish)" strokeWidth="0.7"/>
+        </svg>
+      </motion.div>
+    </div>
   )
 }
 
