@@ -733,7 +733,7 @@ export function TheUnveilingPage({ wedding, guest, schedule = [], milestones, al
                   <GoldDivider className="mb-6" />
                   <p className="font-body text-ivory/45 text-sm leading-relaxed mb-8">
                     {config.gift_registry_note ??
-                      `Your presence at our wedding is the greatest gift we could ask for. If you&apos;d like to celebrate with a gift, tap below to view our registry.`}
+                      `Your presence at our wedding is the greatest gift we could ask for. If you'd like to celebrate with a gift, tap below to view our registry.`}
                   </p>
                   <motion.a
                     href={guest ? `/e/${wedding.slug}/${guest.slug}/registry` : `/e/${wedding.slug}/registry`}
