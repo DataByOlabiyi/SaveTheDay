@@ -226,9 +226,10 @@ export async function PATCH(req: NextRequest) {
 
     if (updateError) throw updateError
 
-    revalidatePath(`/e/${wedding.slug}`)
-    revalidatePath(`/e/${wedding.slug}/gallery`)
-    revalidatePath(`/e/${wedding.slug}/registry`)
+    // 'layout' cascades to every nested page under this segment — the bare
+    // invitation, gallery, registry, and every guest's personalized link —
+    // instead of enumerating each guest slug by hand.
+    revalidatePath(`/e/${wedding.slug}`, 'layout')
 
     delete (wedding.config as Record<string, unknown>).privacy_password_hash
 
