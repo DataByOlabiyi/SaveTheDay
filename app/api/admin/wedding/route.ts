@@ -8,6 +8,9 @@ import { checkRateLimitAsync } from '@/lib/utils/rateLimit'
 import { sanitizeText } from '@/lib/utils/sanitize'
 import { hashPassword } from '@/lib/utils/password'
 
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? 'https://placeholder.supabase.co'
+const ogImagePrefix = `${supabaseUrl}/storage/v1/object/public/wedding-gallery/`
+
 const dressCodeSchema = z.object({
   title:          z.string().max(100),
   description:    z.string().max(500).optional(),
@@ -82,6 +85,10 @@ const configSchema = z.object({
   })).max(20).optional(),
   intro_video_url:      z.string().url().max(500).optional().nullable(),
   invitation_theme:     z.string().max(50).optional(),
+  // Must point at our own Storage bucket — /api/og fetches this URL server-side on
+  // every request, so an arbitrary host here would be an SSRF vector.
+  og_image_url:         z.string().url().max(500).optional().nullable()
+    .refine(url => !url || url.startsWith(ogImagePrefix), { message: 'Invalid image URL' }),
 })
 
 const patchSchema = z.object({

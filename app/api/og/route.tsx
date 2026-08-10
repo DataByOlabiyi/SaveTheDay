@@ -1,6 +1,7 @@
 import { ImageResponse } from 'next/og'
 import { NextRequest } from 'next/server'
 import { getWeddingBySlug } from '@/lib/db/client'
+import { arrayBufferToBase64 } from '@/lib/utils/binary'
 
 export const runtime = 'edge'
 
@@ -14,6 +15,30 @@ export async function GET(request: NextRequest) {
   const name1 = wedding?.couple_names.name1 ?? 'The Couple'
   const name2 = wedding?.couple_names.name2 ?? ''
   const firstName = guestName.split(' ')[0]
+
+  // Satori's remote-image fetch behavior for an <img src> is unverified and
+  // uncontrollable, and this route backs guest-shared link previews — it must
+  // never 500 or return a broken image for a bot crawling a random guest link.
+  // Fetching and converting to a data URI ourselves, inside one timed try/catch
+  // with every failure mode swallowed silently, is the only way to guarantee that.
+  let hasPhoto = false
+  let photoDataUri = ''
+
+  if (wedding?.config.og_image_url) {
+    try {
+      const res = await fetch(wedding.config.og_image_url, { signal: AbortSignal.timeout(2500) })
+      if (res.ok) {
+        const buffer = await res.arrayBuffer()
+        if (buffer.byteLength > 0) {
+          photoDataUri = `data:image/jpeg;base64,${arrayBufferToBase64(buffer)}`
+          hasPhoto = true
+        }
+      }
+    } catch {
+      // Never surface — an errored fetch here would be a spam vector
+      // (triggerable by anyone pasting a guest's link) with no couple-facing benefit.
+    }
+  }
 
   return new ImageResponse(
     (
@@ -30,6 +55,33 @@ export async function GET(request: NextRequest) {
           fontFamily: 'Georgia, serif',
         }}
       >
+        {hasPhoto && (
+          // eslint-disable-next-line @next/next/no-img-element, jsx-a11y/alt-text
+          <img
+            src={photoDataUri}
+            alt=""
+            width={1200}
+            height={630}
+            style={{
+              position: 'absolute',
+              inset: 0,
+              width: 1200,
+              height: 630,
+              objectFit: 'cover',
+            }}
+          />
+        )}
+        {hasPhoto && (
+          <div
+            style={{
+              position: 'absolute',
+              inset: 0,
+              display: 'flex',
+              background: 'radial-gradient(ellipse 85% 72% at 50% 50%, rgba(8,12,10,0.82) 0%, rgba(8,12,10,0.64) 40%, rgba(8,12,10,0.50) 70%, rgba(8,12,10,0.42) 100%)',
+            }}
+          />
+        )}
+
         {/* Decorative corner elements */}
         <div
           style={{
@@ -38,7 +90,9 @@ export async function GET(request: NextRequest) {
             left: 30,
             right: 30,
             bottom: 30,
-            border: '1px solid rgba(201, 168, 76, 0.15)',
+            // hasPhoto===false branch must stay byte-identical to the pre-photo-feature
+            // literal so a wedding with no cover photo renders pixel-for-pixel unchanged.
+            border: `1px solid ${hasPhoto ? 'rgba(201, 168, 76, 0.35)' : 'rgba(201, 168, 76, 0.15)'}`,
             display: 'flex',
           }}
         />
@@ -49,7 +103,7 @@ export async function GET(request: NextRequest) {
             left: 36,
             right: 36,
             bottom: 36,
-            border: '0.5px solid rgba(201, 168, 76, 0.08)',
+            border: `0.5px solid ${hasPhoto ? 'rgba(201, 168, 76, 0.18)' : 'rgba(201, 168, 76, 0.08)'}`,
             display: 'flex',
           }}
         />
@@ -59,7 +113,7 @@ export async function GET(request: NextRequest) {
           style={{
             position: 'absolute',
             inset: 0,
-            background: 'radial-gradient(ellipse 60% 50% at 50% 50%, rgba(201, 168, 76, 0.1) 0%, transparent 70%)',
+            background: `radial-gradient(ellipse 60% 50% at 50% 50%, ${hasPhoto ? 'rgba(201, 168, 76, 0.16)' : 'rgba(201, 168, 76, 0.1)'} 0%, transparent 70%)`,
             display: 'flex',
           }}
         />

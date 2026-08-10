@@ -120,6 +120,7 @@ export interface WeddingConfig {
   montage_images?:  string[]
   montage_video?:   string
   intro_video_url?: string
+  og_image_url?:    string
 
   // ── Music ──
   music_track?:    string

@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import { useRouter } from 'next/navigation'
 import { INVITATION_THEMES } from '@/lib/themes'
 import type { Wedding, WeddingConfig, DressCodeColor, Accommodation } from '@/lib/db/types'
+import { OgImageUploader } from './OgImageUploader'
 
 /* ─────────────────────────────────────────────────────────
    SVG Icon helper — viewBox 0 0 24 24, Heroicons outline
@@ -409,6 +410,18 @@ export function WeddingSettingsEditor({ wedding, onSaved }: WeddingSettingsEdito
             )
           })}
         </div>
+      </div>
+
+      {/* ── Share Preview Photo ── */}
+      <div className="admin-card p-5">
+        <h3 className="text-xs tracking-widest uppercase text-ivory/30 mb-1">Share Preview Photo</h3>
+        <p className="text-[11px] text-ivory/25 mb-5">
+          Shown as the background when your invite link is shared in WhatsApp, iMessage, or social media.
+        </p>
+        <OgImageUploader
+          wedding={wedding}
+          onUpdated={(w) => { setConfig(w.config); onSaved?.(w) }}
+        />
       </div>
 
       {/* ── Couple & Event ── */}
