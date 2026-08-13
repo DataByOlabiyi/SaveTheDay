@@ -41,6 +41,8 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     guestName: guest?.name,
     appUrl,
     weddingSlug: params.weddingSlug,
+    // Canonicalize to the /e/ route this page redirects to — /w/ is legacy, redirect-only
+    path: `/e/${params.weddingSlug}`,
   })
 
   return {

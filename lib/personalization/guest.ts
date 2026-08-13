@@ -75,8 +75,13 @@ export function buildOGMetadata(params: {
   guestName?: string
   appUrl: string
   weddingSlug: string
+  // The canonical path for the exact page being rendered (e.g. `/e/${slug}` or
+  // `/e/${slug}/${guestSlug}`). Meta's crawler (which WhatsApp shares) uses og:url
+  // as a cache key — every guest link declaring the same og:url would collapse
+  // onto one shared cached preview instead of each guest getting their own.
+  path: string
 }) {
-  const { coupleName1, coupleName2, guestName, appUrl, weddingSlug } = params
+  const { coupleName1, coupleName2, guestName, appUrl, weddingSlug, path } = params
   const ogImageUrl = `${appUrl}/api/og?slug=${weddingSlug}${guestName ? `&name=${encodeURIComponent(guestName)}` : ''}`
 
   return {
@@ -85,7 +90,7 @@ export function buildOGMetadata(params: {
       : `${coupleName1} & ${coupleName2} have something for you 🔒`,
     description: 'A personal message, just for you. Tap to open.',
     image: ogImageUrl,
-    url: `${appUrl}/${weddingSlug}`,
+    url: `${appUrl}${path}`,
   }
 }
 

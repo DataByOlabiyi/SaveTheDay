@@ -30,6 +30,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     guestName: guest?.name,
     appUrl,
     weddingSlug: params.weddingSlug,
+    path: `/e/${params.weddingSlug}/${params.guestSlug}`,
   })
 
   return {

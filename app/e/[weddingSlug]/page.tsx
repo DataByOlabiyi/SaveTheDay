@@ -36,6 +36,7 @@ export async function generateMetadata({ params, searchParams }: PageProps): Pro
     guestName: guest?.name,
     appUrl,
     weddingSlug: params.weddingSlug,
+    path: `/e/${params.weddingSlug}`,
   })
 
   return {
